@@ -2,14 +2,11 @@ node_modules/
 site/node_modules/
 site/dist/
 site/.astro/
+tools/spordle/node_modules/
 .direnv/
 tmp/
 render/out/
-
-# Private team records and browser sessions; never publish or commit.
-/private/
-/tmp/
 __pycache__/
-.env
-.env.*
-!.env.example
+*.pyc
+# Spordle captures: real minors' data, owner-only, never committed
+private/
