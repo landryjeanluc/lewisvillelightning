@@ -1,0 +1,166 @@
+---
+import Base from "../layouts/Base.astro";
+import Matchup from "../components/Matchup.astro";
+import EventRow from "../components/EventRow.astro";
+import { team, nextGame, nextPractice, upcoming, results, articles, sides } from "../lib/data";
+import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
+
+const g = nextGame();
+const p = nextPractice();
+const up = upcoming().filter((e: any) => e.id !== g?.id);
+const recent = results();
+const latest = articles.slice(0, 3);
+const s = g ? sides(g) : null;
+---
+<Base wide>
+  {g ? (
+    <section class="hero">
+      <div class="hero-top">
+        <span class="eyebrow">{team.level} {team.division} · {g.gameType === "regular" ? "Regular season" : g.gameType}</span>
+        <h1 class="display--italic hero-title">{relativeDay(g.startsAt) === "Today" ? "Game Day" : "Next Game"}</h1>
+      </div>
+
+      <Matchup game={g} />
+
+      <div class="hero-info">
+        <div class="info">
+          <span class="eyebrow">Date</span>
+          <time datetime={machine(g.startsAt)}>{longDate(g.startsAt)}</time>
+        </div>
+        <div class="info info--feature">
+          <span class="eyebrow">Puck drop</span>
+          <span class="big num">{time(g.startsAt)}</span>
+        </div>
+        <div class="info">
+          <span class="eyebrow">{s!.weAreHome ? "Home ice" : "Away rink"}</span>
+          <span>{g.venue.name}</span>
+        </div>
+      </div>
+
+      <a class="cta" href={`/schedule/${g.id}`}>Game details</a>
+    </section>
+  ) : (
+    <section class="hero hero--empty">
+      <h1>No games scheduled</h1>
+      <p class="muted">The schedule will fill in once the season data syncs.</p>
+    </section>
+  )}
+
+  <div class="cols">
+    <section class="section">
+      <div class="rule-head"><h2>Up next</h2></div>
+      {p && (
+        <div class="practice card">
+          <span class="eyebrow">Next practice</span>
+          <p class="practice-when">{shortDate(p.startsAt)} · {time(p.startsAt)}</p>
+          <p class="dim">{p.venue.name}{p.notes ? ` — ${p.notes}` : ""}</p>
+        </div>
+      )}
+      <div class="list" style="--flow: var(--s-2)">
+        {up.length ? up.map((e: any) => <EventRow event={e} />) : <p class="dim">Nothing else on the calendar yet.</p>}
+      </div>
+      <a class="more" href="/schedule">Full schedule →</a>
+    </section>
+
+    <section class="section">
+      <div class="rule-head"><h2>Recent results</h2></div>
+      <div class="list" style="--flow: var(--s-2)">
+        {recent.length ? recent.map((e: any) => <EventRow event={e} />) : <p class="dim">No games played yet this season.</p>}
+      </div>
+
+      {latest.length > 0 && (
+        <>
+          <div class="rule-head" style="margin-top: var(--s-7)"><h2>Latest news</h2></div>
+          <div class="list" style="--flow: var(--s-3)">
+            {latest.map((a: any) => (
+              <a class="news card card--link" href={`/news/${a.slug}`}>
+                <span class="eyebrow">{shortDate(a.publishedAt)}</span>
+                <h3 class="news-title">{a.title}</h3>
+                {a.summary && <p class="dim">{a.summary}</p>}
+              </a>
+            ))}
+          </div>
+          <a class="more" href="/news">All news →</a>
+        </>
+      )}
+    </section>
+  </div>
+</Base>
+
+<style>
+  .hero {
+    position: relative;
+    padding: var(--s-7) var(--s-5) var(--s-8);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-xl);
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgb(28 143 232 / .10), transparent 60%),
+      linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-sunken) 85%, transparent));
+    overflow: hidden;
+  }
+  /* scratched-ice sheen along the bottom edge */
+  .hero::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent, rgb(173 191 215 / .07));
+    mask-image: linear-gradient(180deg, transparent, #000 70%);
+  }
+  .hero-top { text-align: center; margin-bottom: var(--s-5); }
+  .hero-title {
+    font-size: var(--t-hero);
+    background: linear-gradient(180deg, #fff 32%, var(--ice-300) 78%, var(--steel-400));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 28px rgb(28 143 232 / .35));
+    margin-top: var(--s-2);
+  }
+
+  .hero-info {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: var(--s-4); margin-top: var(--s-6);
+    border-top: 1px solid var(--hairline); padding-top: var(--s-5);
+    position: relative; z-index: 1;
+  }
+  .info { display: flex; flex-direction: column; gap: var(--s-2); align-items: center; text-align: center; }
+  .info--feature .big {
+    font-size: var(--t-xl); line-height: 1;
+    color: var(--white); text-shadow: 0 0 30px rgb(28 143 232 / .6);
+  }
+  .info:nth-child(2) { border-inline: 1px solid var(--hairline); }
+  @media (max-width: 620px) {
+    .hero-info { grid-template-columns: 1fr; }
+    .info:nth-child(2) { border-inline: 0; border-block: 1px solid var(--hairline); padding-block: var(--s-4); }
+  }
+
+  .cta {
+    display: block; width: fit-content; margin: var(--s-6) auto 0;
+    padding: var(--s-3) var(--s-6);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; text-decoration: none;
+    color: var(--white);
+    background: linear-gradient(180deg, var(--volt-500), var(--blue-600));
+    border-radius: 999px; box-shadow: var(--glow-volt);
+    position: relative; z-index: 1;
+    transition: transform .2s var(--ease-out-back), box-shadow .2s var(--ease);
+  }
+  .cta:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 60px -6px rgb(28 143 232 / .8); }
+
+  .hero--empty { text-align: center; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-7); align-items: start; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; gap: 0; } }
+
+  .list > * + * { margin-top: var(--flow, var(--s-2)); }
+  .practice { padding: var(--s-4); margin-bottom: var(--s-4); }
+  .practice-when {
+    font-family: var(--font-display); font-weight: 900; font-style: italic;
+    font-size: var(--t-lg); text-transform: uppercase; margin-top: var(--s-1);
+  }
+  .news { display: block; padding: var(--s-4); text-decoration: none; }
+  .news-title { font-size: var(--t-md); margin-block: var(--s-2); }
+  .more {
+    display: inline-block; margin-top: var(--s-4);
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-text); text-decoration: none;
+  }
+  .more:hover { color: var(--volt-300); }
+</style>

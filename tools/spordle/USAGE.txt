@@ -1,0 +1,62 @@
+Private Spordle collector — team 223790 only
+
+CURRENT ROUTE: Chromium extension on Helios
+The separate Playwright browser was rejected by Vercel (Code 21). Do not use it
+for live collection. The code below is retained as an experimental adapter only.
+
+The working-browser helper is in tools/spordle/extension. Load it unpacked in
+Helios Chromium from:
+  /home/jl/.local/share/lewisville-collector/tools/spordle/extension
+Its ID is oinaiobkbpedpffnkohdkfbhlgfkdbkh.
+The native receiver ca.lewisville.private_capture writes owner-only files on Helios.
+Open the normal Spordle team page, choose a roster/schedule/results view, click
+the extension and Capture this team page. Capture each desired view separately.
+It reads the active page only after a click; it has no cookies or network permissions.
+No automatic refreshing, alarm, or recurring task is enabled.
+
+To bring captures to Hecaton:
+  python3 tools/spordle/pull_helios.py
+Only team browser-captures and latest-browser.json are transferred. Browser
+profiles, login state, and unrelated files remain on Helios. Capture data remains
+under the Git-ignored private directory on both machines. Roster normalization
+and future update automation still require the first real capture to be inspected.
+
+EXPERIMENTAL PLAYWRIGHT ADAPTER (not the current collection route)
+
+This is a local browser collector, not a hosted website. Nothing is published.
+It uses a dedicated Chromium profile under private/spordle/browser-profile.
+The user signs in through Spordle's normal browser UI. Do not copy passwords,
+session cookies, or bearer tokens into configuration files or chat.
+
+Prerequisites: Node.js 22+ and Chromium.
+From tools/spordle:
+  npm ci --ignore-scripts
+  npm test
+  npm run setup
+  npm run sync
+  npm run status
+
+SPORDLE_CHROMIUM can select the Chromium executable. The default matches JL's
+NixOS installation. Run setup in a desktop terminal with a visible display.
+Setup opens the team page; sign in if needed, visit roster/schedule tabs, then
+press Enter in that terminal. A challenge or expired login needs user attention.
+The collector does not solve browser challenges or reuse another browser profile.
+
+All session state, snapshots, and change records stay under private/, ignored by
+Git and created with owner-only permissions. No HAR, request headers, or cookies
+are exported with team data. Do not point a web server at the repository root or
+private directory; a future authenticated site needs an explicit data-serving layer.
+
+Collection is deliberately restricted to this team. The first real capture must
+be inspected to confirm Spordle's roster/schedule schemas and completeness before
+player-card data or an unattended schedule is considered ready. No timer is enabled.
+The capture status says captured_needs_schema_validation until that work is done.
+
+Successful source captures: private/spordle/223790/latest.json and snapshots/
+Change records: private/spordle/223790/changes/
+Last attempt: private/spordle/223790/status.json
+Failed or incomplete attempts preserve the last successful snapshot.
+
+One collector may run at a time. If the process is killed abruptly, check that
+its PID from private/spordle/collector.lock no longer exists before removing the
+stale lock. Never run setup and sync simultaneously on the dedicated profile.

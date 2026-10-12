@@ -1,0 +1,13 @@
+{
+  "name": "lightning-private-spordle-collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test core.test.mjs",
+    "setup": "node collector.mjs setup",
+    "sync": "node collector.mjs sync",
+    "status": "node collector.mjs status"
+  },
+  "dependencies": {"playwright-core": "1.64.0"}
+}

@@ -1,0 +1,82 @@
+---
+import Base from "../../layouts/Base.astro";
+import PlayerCard from "../../components/PlayerCard.astro";
+import { roster, stats, displayName, showBirthYear } from "../../lib/data";
+import { svPct, gaa } from "../../lib/format";
+
+export function getStaticPaths() {
+  return roster.players.map((p: any) => ({ params: { id: p.id }, props: { player: p } }));
+}
+const { player: p } = Astro.props as { player: any };
+
+const skater = stats.skaters.find((s: any) => s.playerId === p.id);
+const goalie = stats.goalies.find((s: any) => s.playerId === p.id);
+
+const line = skater
+  ? [
+      { k: "GP", v: skater.gp }, { k: "G", v: skater.g }, { k: "A", v: skater.a },
+      { k: "PTS", v: skater.pts ?? skater.g + skater.a }, { k: "PIM", v: skater.pim },
+    ]
+  : goalie
+    ? [
+        { k: "GP", v: goalie.gp }, { k: "W", v: goalie.w }, { k: "L", v: goalie.l },
+        { k: "SV%", v: svPct(goalie.svPct ?? (goalie.sa ? goalie.sv / goalie.sa : null)) },
+        { k: "GAA", v: gaa(goalie.gaa ?? (goalie.min ? (goalie.ga * 60) / goalie.min : null)) },
+        { k: "SO", v: goalie.so },
+      ]
+    : [];
+---
+<Base title={displayName(p)} wide>
+  <a class="back" href="/roster">← Roster</a>
+
+  <div class="player">
+    <PlayerCard player={p} size="lg" />
+
+    <div class="detail">
+      <span class="eyebrow">#{p.number} · {p.position}{p.captain ? ` · ${p.captain === "C" ? "Captain" : "Alternate Captain"}` : ""}</span>
+      <h1>{displayName(p)}</h1>
+
+      {line.length > 0 && (
+        <div class="statline">
+          {line.map((s) => (
+            <div class="stat">
+              <span class="stat-v num">{s.v}</span>
+              <span class="stat-k eyebrow">{s.k}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <dl class="bio">
+        <div><dt class="dim">Position</dt><dd>{p.position}</dd></div>
+        {p.shoots && <div><dt class="dim">Shoots</dt><dd>{p.shoots === "L" ? "Left" : "Right"}</dd></div>}
+        {showBirthYear() && p.birthYear && <div><dt class="dim">Born</dt><dd>{p.birthYear}</dd></div>}
+        {p.affiliate && <div><dt class="dim">Status</dt><dd>Affiliate player</dd></div>}
+      </dl>
+
+      {!skater && !goalie && <p class="dim">No statistics recorded yet this season.</p>}
+    </div>
+  </div>
+</Base>
+
+<style>
+  .back { display: inline-block; margin-bottom: var(--s-5); font-size: var(--t-sm);
+          font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+          color: var(--text-dim); text-decoration: none; }
+  .back:hover { color: var(--text); }
+  .player { display: flex; gap: var(--s-8); align-items: flex-start; flex-wrap: wrap; }
+  .detail { flex: 1; min-width: 280px; }
+  .detail h1 { margin-block: var(--s-2) var(--s-5); }
+  .statline {
+    display: grid; grid-auto-flow: column; justify-content: start; gap: var(--s-6);
+    padding: var(--s-4) var(--s-5); margin-bottom: var(--s-5);
+    border: 1px solid var(--hairline); border-radius: var(--r-lg);
+    background: var(--surface); overflow-x: auto;
+  }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); }
+  .stat-v { font-size: var(--t-lg); line-height: 1; }
+  .bio { display: grid; gap: var(--s-3); }
+  .bio div { display: flex; gap: var(--s-4); border-bottom: 1px solid var(--hairline); padding-bottom: var(--s-2); }
+  .bio dt { min-width: 7rem; font-size: var(--t-sm); letter-spacing: .06em; text-transform: uppercase; }
+  .bio dd { margin: 0; font-weight: 600; }
+</style>

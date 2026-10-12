@@ -1,0 +1,50 @@
+---
+import Base from "../../layouts/Base.astro";
+import { articles } from "../../lib/data";
+import { renderMarkdown } from "../../lib/markdown";
+import { longDate, machine } from "../../lib/format";
+
+export function getStaticPaths() {
+  return articles.map((a: any) => ({ params: { slug: a.slug }, props: { article: a } }));
+}
+const { article: a } = Astro.props as { article: any };
+const html = renderMarkdown(a.body);
+---
+<Base title={a.title} description={a.summary ?? undefined}>
+  <a class="back" href="/news">← News</a>
+  <article class="post">
+    <span class="eyebrow">
+      <time datetime={machine(a.publishedAt)}>{longDate(a.publishedAt)}</time>
+      {a.author && <> · {a.author}</>}
+    </span>
+    <h1>{a.title}</h1>
+    {a.summary && <p class="lede muted">{a.summary}</p>}
+    {a.image && <img class="hero-img" src={`/${a.image.replace(/^assets\//, "")}`} alt="" />}
+    <div class="body" set:html={html} />
+    {a.tags.length > 0 && (
+      <ul class="tags">{a.tags.map((t: string) => <li class="pill">{t}</li>)}</ul>
+    )}
+  </article>
+</Base>
+
+<style>
+  .back { display: inline-block; margin-bottom: var(--s-5); font-size: var(--t-sm);
+          font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+          color: var(--text-dim); text-decoration: none; }
+  .back:hover { color: var(--text); }
+  .post { max-width: 68ch; }
+  .post h1 { margin-block: var(--s-3) var(--s-4); }
+  .lede { font-size: var(--t-md); margin-bottom: var(--s-5); }
+  .hero-img { width: 100%; border-radius: var(--r-lg); margin-bottom: var(--s-6); }
+  .body :global(p) { margin-block: var(--s-4); }
+  .body :global(h2) { font-size: var(--t-lg); margin-block: var(--s-6) var(--s-3); }
+  .body :global(h3) { font-size: var(--t-md); margin-block: var(--s-5) var(--s-2); }
+  .body :global(ul), .body :global(ol) { margin-block: var(--s-4); padding-left: 1.4em; }
+  .body :global(li) { margin-block: var(--s-2); }
+  .body :global(a) { color: var(--accent-text); }
+  .body :global(blockquote) {
+    margin: var(--s-5) 0; padding-left: var(--s-4);
+    border-left: 3px solid var(--volt-500); color: var(--text-muted);
+  }
+  .tags { display: flex; gap: var(--s-2); flex-wrap: wrap; list-style: none; padding: 0; margin-top: var(--s-6); }
+</style>

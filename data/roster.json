@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "source": { "provider": "spordle", "teamId": "223790", "fetchedAt": null, "note": "FIXTURE DATA — placeholder names only, NOT real minors. Spordle session replaces wholesale." },
+  "privacy": {
+    "publicNameFormat": "first-initial-last",
+    "publishBirthYear": false,
+    "publishPhotos": false,
+    "note": "Controls what the public build renders. See docs/DATA-CONTRACT.md#privacy."
+  },
+  "players": [
+    { "id": "pl-09", "number": 9,  "firstName": "Player", "lastName": "Nine",     "position": "C", "shoots": "L", "birthYear": null, "photo": null, "cardArt": null, "captain": "C",  "affiliate": false },
+    { "id": "pl-12", "number": 12, "firstName": "Player", "lastName": "Twelve",   "position": "LW","shoots": "R", "birthYear": null, "photo": null, "cardArt": null, "captain": null, "affiliate": false },
+    { "id": "pl-17", "number": 17, "firstName": "Player", "lastName": "Seventeen","position": "RW","shoots": "R", "birthYear": null, "photo": null, "cardArt": null, "captain": "A",  "affiliate": false },
+    { "id": "pl-04", "number": 4,  "firstName": "Player", "lastName": "Four",     "position": "D", "shoots": "L", "birthYear": null, "photo": null, "cardArt": null, "captain": "A",  "affiliate": false },
+    { "id": "pl-22", "number": 22, "firstName": "Player", "lastName": "TwentyTwo","position": "D", "shoots": "R", "birthYear": null, "photo": null, "cardArt": null, "captain": null, "affiliate": false },
+    { "id": "pl-31", "number": 31, "firstName": "Player", "lastName": "ThirtyOne","position": "G", "shoots": "L", "birthYear": null, "photo": null, "cardArt": null, "captain": null, "affiliate": false }
+  ],
+  "staff": [
+    { "id": "st-1", "name": "Head Coach",      "role": "Head Coach" },
+    { "id": "st-2", "name": "Assistant Coach", "role": "Assistant Coach" },
+    { "id": "st-3", "name": "Team Manager",    "role": "Manager" }
+  ]
+}

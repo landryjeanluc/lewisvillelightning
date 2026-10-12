@@ -1,0 +1,108 @@
+---
+import Base from "../layouts/Base.astro";
+import { stats, skatersByPoints, goaliesSorted, displayName } from "../lib/data";
+import { svPct, gaa, longDate } from "../lib/format";
+
+const t = stats.team;
+const skaters = skatersByPoints();
+const goalies = goaliesSorted();
+const pct = t.gp > 0 ? ((t.pts / (t.gp * 2)) * 100).toFixed(1) + "%" : "—";
+const diff = t.gf - t.ga;
+---
+<Base title="Stats" wide>
+  <header class="page-head">
+    <span class="eyebrow">Team statistics{stats.asOf ? ` · as of ${longDate(stats.asOf + "T12:00:00-03:00")}` : ""}</span>
+    <h1>By the Numbers</h1>
+  </header>
+
+  <section class="record">
+    {[
+      { k: "Record", v: `${t.w}–${t.l}${t.otl ? `–${t.otl}` : ""}` },
+      { k: "Points", v: t.pts },
+      { k: "Points %", v: pct },
+      { k: "Goals for", v: t.gf },
+      { k: "Goals against", v: t.ga },
+      { k: "Differential", v: (diff > 0 ? "+" : "") + diff },
+    ].map((s) => (
+      <div class="rec card">
+        <span class="rec-v num">{s.v}</span>
+        <span class="rec-k eyebrow">{s.k}</span>
+      </div>
+    ))}
+  </section>
+
+  <section class="section">
+    <div class="rule-head"><h2>Skaters</h2></div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th class="l">Player</th><th>Pos</th><th>GP</th><th>G</th><th>A</th><th>PTS</th><th>PIM</th></tr>
+        </thead>
+        <tbody>
+          {skaters.map((s: any) => (
+            <tr>
+              <td class="l"><a href={`/players/${s.player.id}`}><span class="jn num">{s.player.number}</span>{displayName(s.player)}</a></td>
+              <td>{s.player.position}</td>
+              <td class="num">{s.gp}</td><td class="num">{s.g}</td><td class="num">{s.a}</td>
+              <td class="num hi">{s.pts}</td><td class="num">{s.pim}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {goalies.length > 0 && (
+    <section class="section">
+      <div class="rule-head"><h2>Goaltenders</h2></div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th class="l">Player</th><th>GP</th><th>W</th><th>L</th><th>SV%</th><th>GAA</th><th>SO</th></tr>
+          </thead>
+          <tbody>
+            {goalies.map((s: any) => (
+              <tr>
+                <td class="l"><a href={`/players/${s.player.id}`}><span class="jn num">{s.player.number}</span>{displayName(s.player)}</a></td>
+                <td class="num">{s.gp}</td><td class="num">{s.w}</td><td class="num">{s.l}</td>
+                <td class="num hi">{svPct(s.svPct)}</td><td class="num">{gaa(s.gaa)}</td><td class="num">{s.so}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .page-head { margin-bottom: var(--s-6); }
+  .page-head h1 { margin-top: var(--s-2); }
+  .record {
+    display: grid; gap: var(--s-3); margin-bottom: var(--s-7);
+    grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  }
+  .rec { display: flex; flex-direction: column; align-items: center; gap: var(--s-1); padding: var(--s-4) var(--s-2); }
+  .rec-v { font-size: var(--t-lg); line-height: 1; }
+  .rec-k { text-align: center; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--r-lg); }
+  table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); min-width: 520px; }
+  thead th {
+    position: sticky; top: 0;
+    background: var(--bg-raised);
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+    padding: var(--s-3) var(--s-3); text-align: center; white-space: nowrap;
+  }
+  th.l, td.l { text-align: left; }
+  tbody td { padding: var(--s-3); text-align: center; border-top: 1px solid var(--hairline); }
+  tbody tr:hover { background: var(--surface); }
+  td.l a { display: flex; align-items: center; gap: var(--s-3); text-decoration: none; font-weight: 600; }
+  .jn {
+    display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none;
+    font-size: var(--t-xs); color: var(--volt-300);
+    background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px;
+  }
+  .hi { color: var(--white); font-weight: 700; }
+</style>

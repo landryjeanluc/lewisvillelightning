@@ -1,0 +1,196 @@
+---
+/**
+ * Off-site render targets. These routes carry no nav, no footer and a fixed
+ * pixel canvas — render/render.mjs points headless chromium at them and
+ * screenshots the viewport. Because they import the same tokens and the same
+ * Matchup component as the website, a poster can never drift from the site.
+ */
+import "../../../styles/global.css";
+import Matchup from "../../../components/Matchup.astro";
+import { games, sides, team } from "../../../lib/data";
+import { longDate, time } from "../../../lib/format";
+
+const FORMATS = {
+  poster: { w: 1920, h: 1080, u: "22px",   title: 1 },
+  story:  { w: 1080, h: 1920, u: "20px",   title: 1 },
+  square: { w: 1080, h: 1080, u: "17px",   title: 1 },
+} as const;
+
+export function getStaticPaths() {
+  const fmts = ["poster", "story", "square"] as const;
+  return games.flatMap((g: any) =>
+    fmts.map((f) => ({ params: { format: f, id: g.id }, props: { game: g, format: f } })),
+  );
+}
+const { game, format } = Astro.props as { game: any; format: keyof typeof FORMATS };
+const F = FORMATS[format];
+const s = sides(game);
+const isFinal = game.status === "final";
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <title>{format} — {game.id}</title>
+  </head>
+  <body class={`fmt-${format}`}>
+    <div class="poster" data-w={F.w} data-h={F.h}>
+      <!-- arena plate ------------------------------------------------ -->
+      <div class="plate" aria-hidden="true">
+        <div class="beams"></div>
+        <div class="glow glow--l" style={`--c:${s.left.colours.primary}`}></div>
+        <div class="glow glow--r" style={`--c:${s.right.colours.primary}`}></div>
+        <div class="ice"></div>
+        <div class="mist"></div>
+      </div>
+
+      <!-- content ---------------------------------------------------- -->
+      <div class="inner">
+        <header class="top">
+          <p class="kicker">{team.division} • {team.level} Hockey</p>
+          <h1 class="headline">{isFinal ? "Final" : "Game Day"}</h1>
+        </header>
+
+        <div class="band"><Matchup game={game} /></div>
+
+        <footer class="info">
+          <div class="cell"><span class="ilabel">{longDate(game.startsAt)}</span></div>
+          <div class="cell cell--time"><span class="itime">{time(game.startsAt)}</span></div>
+          <div class="cell"><span class="ilabel">{game.venue.name}</span></div>
+        </footer>
+      </div>
+    </div>
+
+    <style define:vars={{ pw: F.w + "px", ph: F.h + "px", pu: F.u }}>
+      html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+      body::before, body::after { display: none; }   /* no site-wide grain here */
+
+      .poster {
+        position: relative;
+        width: var(--pw); height: var(--ph);
+        overflow: hidden;
+        background: linear-gradient(175deg, #05091C 0%, #070F28 42%, #040814 100%);
+        isolation: isolate;
+      }
+
+      /* ---- arena plate ---- */
+      .plate { position: absolute; inset: 0; z-index: 0; }
+      .beams {
+        position: absolute; inset: -14% -10% 26%;
+        background:
+          linear-gradient(196deg, rgb(170 214 255 / .40) 0 1.6%, transparent 22%),
+          linear-gradient(176deg, rgb(255 255 255 / .26) 0 1.1%, transparent 19%),
+          linear-gradient(164deg, rgb(170 214 255 / .34) 0 1.6%, transparent 22%),
+          linear-gradient(208deg, rgb(255 255 255 / .20) 0 .9%, transparent 16%),
+          linear-gradient(152deg, rgb(255 255 255 / .20) 0 .9%, transparent 16%);
+        filter: blur(7px);
+        mask-image: linear-gradient(180deg, #000 10%, transparent 86%);
+      }
+      .glow {
+        position: absolute; top: 12%; width: 46%; height: 68%;
+        background: radial-gradient(52% 48% at 50% 50%, color-mix(in srgb, var(--c) 72%, transparent), transparent 70%);
+        filter: blur(40px); opacity: .62;
+      }
+      .glow--l { left: -4%; }
+      .glow--r { right: -4%; }
+      /* Ice as a reflective sheet, not a texture: a bright horizon, the team
+         glows mirrored down into it, and only the faintest skate scratches. */
+      .ice {
+        position: absolute; left: 0; right: 0; bottom: 0; height: 30%;
+        background:
+          linear-gradient(180deg, rgb(200 226 252 / .30) 0 1px, transparent 1px),
+          linear-gradient(180deg, rgb(150 190 235 / .16), rgb(16 32 64 / .5) 62%, rgb(6 12 28 / .85));
+      }
+      .ice::before {            /* mirrored arena light, stretched and dimmed */
+        content: ""; position: absolute; inset: 0;
+        background:
+          radial-gradient(42% 100% at 22% 0%, rgb(190 60 80 / .22), transparent 72%),
+          radial-gradient(42% 100% at 78% 0%, rgb(40 120 220 / .26), transparent 72%),
+          radial-gradient(30% 90% at 50% 0%, rgb(255 255 255 / .16), transparent 70%);
+        filter: blur(14px);
+      }
+      .ice::after {             /* skate scratches: long, sparse, low contrast */
+        content: ""; position: absolute; inset: 0; opacity: .13;
+        background-image:
+          repeating-linear-gradient(94deg, transparent 0 37px, rgb(226 240 255 / .5) 37px 38px),
+          repeating-linear-gradient(86deg, transparent 0 61px, rgb(226 240 255 / .35) 61px 62px);
+        mask-image: linear-gradient(180deg, transparent, #000 55%, transparent);
+      }
+      .mist {
+        position: absolute; left: -10%; right: -10%; bottom: 8%; height: 30%;
+        background: radial-gradient(60% 100% at 50% 100%, rgb(210 230 250 / .22), transparent 70%);
+        filter: blur(30px);
+      }
+
+      /* ---- content ---- */
+      .inner {
+        position: relative; z-index: 1;
+        height: 100%;
+        display: grid; grid-template-rows: auto 1fr auto;
+        padding: calc(var(--pu) * 2.4) calc(var(--pu) * 2.8);
+      }
+      .top { text-align: center; }
+      .kicker {
+        margin: 0 0 calc(var(--pu) * .5);
+        font-family: var(--font-ui); font-weight: 700;
+        font-size: calc(var(--pu) * 1.0);
+        letter-spacing: .3em; text-transform: uppercase; color: var(--ice-200);
+      }
+      .headline {
+        margin: 0;
+        font-family: var(--font-display); font-style: italic; font-weight: 900;
+        font-size: calc(var(--pu) * 5.4); line-height: .86;
+        letter-spacing: -.02em; text-transform: uppercase;
+        background: linear-gradient(180deg, #fff 28%, #DCE6F2 58%, #9AA6B5 92%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        filter: drop-shadow(0 calc(var(--pu)*.2) calc(var(--pu)*1.2) rgb(28 143 232 / .45));
+      }
+
+      .band { display: grid; align-items: center; }
+      /* on the poster the VS floats on the fissure — no chip behind it */
+      .band :global(.vs-text) { background: none; text-shadow: 0 0 calc(var(--pu) * 1.8) rgb(28 143 232 / .95), 0 2px 10px rgb(0 0 0 / .8); }
+      /* drive the shared Matchup component at poster scale */
+      .band :global(.matchup) { --u: var(--pu); }
+      .band :global(.crest) { width: calc(var(--pu) * 17.5); }
+      .band :global(.glow) { filter: blur(calc(var(--pu) * 2.2)); opacity: .9; }
+
+      .info {
+        display: grid; grid-template-columns: 1fr auto 1fr;
+        align-items: center; gap: calc(var(--pu) * 1.2);
+        border-top: 1px solid rgb(173 191 215 / .3);
+        padding-top: calc(var(--pu) * 1.1);
+      }
+      .cell { text-align: center; }
+      .ilabel {
+        font-family: var(--font-ui); font-weight: 700;
+        font-size: calc(var(--pu) * 1.05);
+        letter-spacing: .16em; text-transform: uppercase; color: var(--ice-100);
+      }
+      .cell--time {
+        padding-inline: calc(var(--pu) * 1.6);
+        border-inline: 1px solid rgb(173 191 215 / .3);
+      }
+      .itime {
+        font-family: var(--font-display); font-style: italic; font-weight: 900;
+        font-size: calc(var(--pu) * 2.6); line-height: 1;
+        color: #fff; text-shadow: 0 0 calc(var(--pu) * 1.4) rgb(28 143 232 / .85);
+      }
+
+      /* 9:16 and 1:1 stack the matchup vertically instead of side-by-side */
+      .fmt-story .band :global(.matchup),
+      .fmt-square .band :global(.matchup) {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto 1fr;
+        gap: calc(var(--pu) * .4);
+      }
+      .fmt-story .band :global(.vs),
+      .fmt-square .band :global(.vs) { min-height: calc(var(--pu) * 3.4); }
+      .fmt-story .band :global(.fissure),
+      .fmt-square .band :global(.fissure) { transform: rotate(90deg) scaleX(.5); }
+      .fmt-story .headline { font-size: calc(var(--pu) * 4.6); }
+      .fmt-square .headline { font-size: calc(var(--pu) * 3.8); }
+      .fmt-square .info { gap: calc(var(--pu) * .6); }
+      .fmt-square .ilabel { font-size: calc(var(--pu) * .88); letter-spacing: .1em; }
+    </style>
+  </body>
+</html>

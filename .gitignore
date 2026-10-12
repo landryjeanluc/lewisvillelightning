@@ -1,0 +1,15 @@
+node_modules/
+site/node_modules/
+site/dist/
+site/.astro/
+.direnv/
+tmp/
+render/out/
+
+# Private team records and browser sessions; never publish or commit.
+/private/
+/tmp/
+__pycache__/
+.env
+.env.*
+!.env.example

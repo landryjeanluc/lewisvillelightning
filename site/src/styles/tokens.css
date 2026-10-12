@@ -1,0 +1,143 @@
+/* ===========================================================================
+   Lewisville Lightning — design tokens
+   Palette sampled directly from the official crest (assets/brand), extended
+   into a full dark "broadcast arena" scale. One source of truth for both the
+   website and the game-day poster renderer.
+   ========================================================================= */
+
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/fonts/BarlowCondensed-Black.ttf") format("truetype");
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/fonts/BarlowCondensed-BlackItalic.ttf") format("truetype");
+  font-weight: 900; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/fonts/BarlowCondensed-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/fonts/BarlowCondensed-BoldItalic.ttf") format("truetype");
+  font-weight: 700; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/fonts/BarlowCondensed-SemiBold.ttf") format("truetype");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Condensed";
+  src: url("/fonts/BarlowCondensed-Medium.ttf") format("truetype");
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Semi Condensed";
+  src: url("/fonts/BarlowSemiCondensed-Bold.ttf") format("truetype");
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Semi Condensed";
+  src: url("/fonts/BarlowSemiCondensed-SemiBold.ttf") format("truetype");
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Barlow Semi Condensed";
+  src: url("/fonts/BarlowSemiCondensed-Medium.ttf") format("truetype");
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+
+:root {
+  /* --- brand, straight off the crest ------------------------------------ */
+  --navy-950: #040814;
+  --navy-900: #070D22;
+  --navy-850: #0A1433;
+  --navy-800: #0B1D54;   /* crest navy */
+  --navy-700: #111F47;
+  --navy-600: #16306E;
+
+  --blue-600: #1E5FA8;
+  --blue-500: #2D6DAB;   /* crest mid blue */
+  --blue-400: #5891C5;
+  --blue-300: #7FB3E0;
+
+  --volt-500: #1C8FE8;   /* electric accent — energy, links, live state */
+  --volt-400: #3BA5FF;
+  --volt-300: #6FC0FF;
+
+  --steel-600: #4A4D55;
+  --steel-500: #707277;  /* crest grey */
+  --steel-400: #9A9CA2;
+  --ice-300:   #ADBFD7;  /* crest pale */
+  --ice-200:   #CFDCEC;
+  --ice-100:   #E8EFF7;
+  --white:     #F7F8F9;
+
+  --win:  #2FBF71;
+  --loss: #E0566B;
+  --tie:  --steel-400;
+  --live: #FF4D4D;
+
+  /* --- semantic ---------------------------------------------------------- */
+  --bg:          var(--navy-950);
+  --bg-raised:   #0A1128;
+  --bg-sunken:   #02050E;
+  --surface:     rgba(255 255 255 / 0.035);
+  --surface-2:   rgba(255 255 255 / 0.06);
+  --hairline:    rgba(173 191 215 / 0.14);
+  --hairline-sv: rgba(173 191 215 / 0.26);
+
+  --text:        var(--white);
+  --text-muted:  var(--ice-300);
+  --text-dim:    var(--steel-400);
+  --accent:      var(--volt-500);
+  --accent-text: var(--volt-300);
+
+  /* --- type -------------------------------------------------------------- */
+  --font-display: "Barlow Condensed", "DejaVu Sans Condensed", system-ui, sans-serif;
+  --font-ui:      "Barlow Semi Condensed", "Barlow Condensed", system-ui, sans-serif;
+  --font-num:     "Barlow Semi Condensed", system-ui, sans-serif;
+
+  /* fluid scale — min at 360px, max at 1440px */
+  --t-hero:  clamp(3.25rem, 1.2rem + 9vw,   8rem);
+  --t-xxl:   clamp(2.5rem,  1.3rem + 5.2vw, 5rem);
+  --t-xl:    clamp(2rem,    1.4rem + 2.6vw, 3.25rem);
+  --t-lg:    clamp(1.5rem,  1.2rem + 1.3vw, 2.125rem);
+  --t-md:    clamp(1.125rem, 1rem + 0.5vw,  1.375rem);
+  --t-base:  1.0625rem;
+  --t-sm:    0.9375rem;
+  --t-xs:    0.8125rem;
+  --t-micro: 0.6875rem;
+
+  --track-label: 0.18em;   /* the spaced-out "U13 B • COMPETITIVE HOCKEY" look */
+  --track-tight: -0.015em;
+
+  /* --- space / shape ----------------------------------------------------- */
+  --s-1: 0.25rem; --s-2: 0.5rem;  --s-3: 0.75rem; --s-4: 1rem;
+  --s-5: 1.5rem;  --s-6: 2rem;    --s-7: 3rem;    --s-8: 4rem;
+  --s-9: 6rem;    --s-10: 8rem;
+
+  --r-sm: 4px; --r-md: 8px; --r-lg: 14px; --r-xl: 22px;
+  --shear: 4deg;              /* the forward lean shared with the crest lettering */
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / .4);
+  --shadow-md: 0 6px 24px -6px rgb(0 0 0 / .55);
+  --shadow-lg: 0 24px 60px -16px rgb(0 0 0 / .7);
+  --glow-volt: 0 0 48px -8px rgb(28 143 232 / .55);
+
+  --wrap: 1200px;
+  --wrap-wide: 1480px;
+
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --ease-out-back: cubic-bezier(.34,1.26,.64,1);
+
+  color-scheme: dark;
+}
+
+/* Dark-only by design. The crest, the ice and the arena light are the identity;
+   a light variant weakened every one of them. color-scheme keeps form controls
+   and scrollbars in register. */

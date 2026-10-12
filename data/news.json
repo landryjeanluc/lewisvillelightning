@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "source": { "provider": "spordle", "teamId": "223790", "fetchedAt": null, "note": "FIXTURE DATA — Spordle session replaces wholesale." },
+  "articles": [
+    {
+      "id": "n-0001",
+      "title": "Season opener: Lightning host the Predators",
+      "slug": "season-opener-lightning-host-predators",
+      "publishedAt": "2026-10-12T09:00:00-03:00",
+      "author": null,
+      "summary": "The Lightning open the U13 B schedule at Kay Arena against Shediac / Cap-Pelé.",
+      "body": "FIXTURE ARTICLE. Replace with real Spordle news content.\n\nPuck drops at 5:30 PM at Kay Arena.",
+      "image": null,
+      "tags": ["game-preview"],
+      "spordleId": null,
+      "lang": "en"
+    }
+  ]
+}

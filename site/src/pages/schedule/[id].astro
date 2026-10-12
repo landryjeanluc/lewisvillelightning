@@ -1,0 +1,96 @@
+---
+import Base from "../../layouts/Base.astro";
+import Matchup from "../../components/Matchup.astro";
+import { allEvents, sides, outcome, team } from "../../lib/data";
+import { longDate, time, relativeDay, machine, isToday } from "../../lib/format";
+
+export function getStaticPaths() {
+  return allEvents.map((e: any) => ({ params: { id: e.id }, props: { event: e } }));
+}
+const { event } = Astro.props as { event: any };
+
+const isGame = event.type === "game";
+const s = isGame ? sides(event) : null;
+const o = isGame ? outcome(event) : null;
+const today = isToday(event.startsAt);
+const title = isGame ? `${s!.weAreHome ? "vs" : "at"} ${s!.them.short}` : "Practice";
+---
+<Base title={title} wide>
+  <a class="back" href="/schedule">← Schedule</a>
+
+  <article class="gameday">
+    <div class="gd-top">
+      <span class="eyebrow">
+        {team.level} {team.division}
+        {isGame && <> · {event.gameType === "regular" ? "Regular season" : event.gameType}</>}
+      </span>
+      <h1 class="display--italic gd-title">
+        {o ? "Final" : today ? "Game Day" : isGame ? "Matchup" : "Practice"}
+      </h1>
+      <p class="gd-when muted">{relativeDay(event.startsAt)}</p>
+    </div>
+
+    {isGame ? <Matchup game={event} /> : (
+      <div class="practice-art">
+        <img src="/brand/lightning-crest.png" alt="" width="200" height="196" class="crest" />
+      </div>
+    )}
+
+    <dl class="facts">
+      <div><dt class="eyebrow">Date</dt>
+        <dd><time datetime={machine(event.startsAt)}>{longDate(event.startsAt)}</time></dd></div>
+      <div class="feature"><dt class="eyebrow">{isGame ? "Puck drop" : "Ice time"}</dt>
+        <dd class="big num">{time(event.startsAt)}</dd></div>
+      <div><dt class="eyebrow">Venue</dt><dd>{event.venue.name}</dd></div>
+      {isGame && <div><dt class="eyebrow">Home / Away</dt>
+        <dd>{s!.weAreHome ? `Home — ${team.home_arena}` : "Away"}</dd></div>}
+      {event.venue.address && <div><dt class="eyebrow">Address</dt><dd>{event.venue.address}</dd></div>}
+      {event.notes && <div><dt class="eyebrow">Notes</dt><dd>{event.notes}</dd></div>}
+    </dl>
+
+    {event.status === "cancelled" && <p class="banner banner--bad">This {isGame ? "game" : "practice"} is cancelled.</p>}
+    {event.status === "postponed" && <p class="banner">This {isGame ? "game" : "practice"} is postponed.</p>}
+  </article>
+</Base>
+
+<style>
+  .back {
+    display: inline-block; margin-bottom: var(--s-5);
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim); text-decoration: none;
+  }
+  .back:hover { color: var(--text); }
+  .gameday {
+    padding: var(--s-7) var(--s-5) var(--s-8);
+    border: 1px solid var(--hairline); border-radius: var(--r-xl);
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgb(28 143 232 / .10), transparent 60%),
+      linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-sunken) 85%, transparent));
+  }
+  .gd-top { text-align: center; margin-bottom: var(--s-6); }
+  .gd-title {
+    font-size: var(--t-hero); margin-top: var(--s-2);
+    background: linear-gradient(180deg, #fff 32%, var(--ice-300) 78%, var(--steel-400));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 28px rgb(28 143 232 / .35));
+  }
+  .gd-when { font-size: var(--t-md); }
+  .practice-art { display: grid; place-items: center; padding-block: var(--s-6); }
+  .practice-art img { width: 200px; }
+
+  .facts {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: var(--s-5); margin-top: var(--s-7);
+    border-top: 1px solid var(--hairline); padding-top: var(--s-5);
+  }
+  .facts div { display: flex; flex-direction: column; gap: var(--s-2); text-align: center; align-items: center; }
+  .facts dd { margin: 0; }
+  .feature .big { font-size: var(--t-xl); line-height: 1; text-shadow: 0 0 30px rgb(28 143 232 / .6); }
+
+  .banner {
+    margin-top: var(--s-5); padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--hairline-sv); border-radius: var(--r-md);
+    text-align: center; font-weight: 700;
+  }
+  .banner--bad { border-color: rgb(224 86 107 / .5); color: var(--loss); }
+</style>

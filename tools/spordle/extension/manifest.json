@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lightning Private Team Capture",
+  "version": "0.1.0",
+  "description": "Save the currently visible Lewisville team page privately on Helios.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiLdGBmZ6qveAE2au/gPfcza6enx6rk9MdoLz9wPnJyP8tiT3/lbamzHBf0MDZs0aaRXfAyf3QReV9Gqjdd/UVd5XzC0spZDMts5gBH304WpQ1hihy9Y0wO8CJ0I/csPLFUpiw7eRS7y/fmGE1SCCey/FdXraHzwSrXKsK6mRMm0kW/Fjwzac6k4Ru1WFeGGwrMgBXMyJXmkundnxhHuHPAEbBvQVMYtL48F6rMpxYEZxanhAi2SaXvvd7tWNMRGCfp4ZYo4E8FLIsVi5xyVhRDEPfbkcHyXl8qaZQIHQRyl5g3gkoRPACRVFFFxv3X3tCeIJFz0grb2z5PRYRviKnwIDAQAB",
+  "permissions": ["activeTab", "scripting", "nativeMessaging"],
+  "action": {"default_title": "Capture Lightning team data", "default_popup": "popup.html"},
+  "background": {"service_worker": "background.js"}
+}

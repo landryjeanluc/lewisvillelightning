@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "source": { "provider": "spordle", "teamId": "223790", "fetchedAt": null, "note": "FIXTURE DATA — zeros until Spordle is wired." },
+  "asOf": null,
+  "team": { "gp": 0, "w": 0, "l": 0, "otl": 0, "t": 0, "gf": 0, "ga": 0, "pts": 0, "streak": null },
+  "skaters": [
+    { "playerId": "pl-09", "gp": 0, "g": 0, "a": 0, "pts": 0, "pim": 0, "ppg": 0, "shg": 0, "gwg": 0 },
+    { "playerId": "pl-12", "gp": 0, "g": 0, "a": 0, "pts": 0, "pim": 0, "ppg": 0, "shg": 0, "gwg": 0 },
+    { "playerId": "pl-17", "gp": 0, "g": 0, "a": 0, "pts": 0, "pim": 0, "ppg": 0, "shg": 0, "gwg": 0 },
+    { "playerId": "pl-04", "gp": 0, "g": 0, "a": 0, "pts": 0, "pim": 0, "ppg": 0, "shg": 0, "gwg": 0 },
+    { "playerId": "pl-22", "gp": 0, "g": 0, "a": 0, "pts": 0, "pim": 0, "ppg": 0, "shg": 0, "gwg": 0 }
+  ],
+  "goalies": [
+    { "playerId": "pl-31", "gp": 0, "w": 0, "l": 0, "otl": 0, "ga": 0, "sa": 0, "sv": 0, "svPct": null, "gaa": null, "so": 0, "min": 0 }
+  ]
+}

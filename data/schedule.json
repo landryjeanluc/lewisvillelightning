@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "source": { "provider": "spordle", "teamId": "223790", "fetchedAt": null, "note": "FIXTURE DATA — only the 2026-10-13 game is confirmed real. Spordle session replaces this file wholesale." },
+  "events": [
+    {
+      "id": "g-2026-10-13-shediac",
+      "type": "game",
+      "startsAt": "2026-10-13T17:30:00-03:00",
+      "endsAt": null,
+      "venue": { "name": "Kay Arena", "surface": null, "address": null, "mapUrl": null },
+      "home": { "teamId": "lewisville-lightning", "score": null },
+      "away": { "teamId": "shediac-cap-pele-predators", "score": null },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 B",
+      "notes": null,
+      "spordleId": null
+    },
+    {
+      "id": "p-2026-10-15-kay",
+      "type": "practice",
+      "startsAt": "2026-10-15T18:00:00-03:00",
+      "endsAt": "2026-10-15T19:00:00-03:00",
+      "venue": { "name": "Kay Arena", "surface": null, "address": null, "mapUrl": null },
+      "status": "scheduled",
+      "notes": "FIXTURE — placeholder practice"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+---
+import "../styles/global.css";
+import { team, isFixtureData } from "../lib/data";
+
+interface Props { title?: string; description?: string; wide?: boolean }
+const {
+  title,
+  description = `Schedule, roster, stats and news for the ${team.name} — ${team.level} ${team.division} minor hockey.`,
+  wide = false,
+} = Astro.props;
+
+const pageTitle = title ? `${title} · ${team.name}` : `${team.name}`;
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+const nav = [
+  { href: "/",         label: "Home" },
+  { href: "/schedule", label: "Schedule" },
+  { href: "/roster",   label: "Roster" },
+  { href: "/stats",    label: "Stats" },
+  { href: "/news",     label: "News" },
+];
+const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#040814" />
+    <link rel="icon" href="/brand/lightning-crest.png" />
+    <link rel="preload" href="/fonts/BarlowCondensed-BlackItalic.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/fonts/BarlowSemiCondensed-SemiBold.ttf" as="font" type="font/ttf" crossorigin />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <a href="#main" class="skip">Skip to content</a>
+
+    <header class="site-head">
+      <div class="wrap--wide head-inner">
+        <a href="/" class="brand" aria-label={`${team.name} home`}>
+          <img src="/brand/lightning-crest.png" alt="" width="52" height="51" class="crest" />
+          <span class="brand-text">
+            <span class="brand-name">{team.name}</span>
+            <span class="brand-sub">{team.level} {team.division}</span>
+          </span>
+        </a>
+
+        <nav aria-label="Primary">
+          <ul class="nav">
+            {nav.map((n) => (
+              <li>
+                <a href={n.href} aria-current={isActive(n.href) ? "page" : undefined}>{n.label}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    {isFixtureData && (
+      <div class="fixture-banner" role="status">
+        <strong>Placeholder data.</strong> Schedule, roster and stats are fixtures until the
+        Spordle sync runs — only the Oct&nbsp;13 game is real. Player names shown are not real.
+      </div>
+    )}
+
+    <main id="main" class={wide ? "wrap--wide" : "wrap"}>
+      <slot />
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap--wide foot-inner">
+        <img src="/brand/lightning-crest.png" alt="" width="40" height="39" class="crest" />
+        <p class="dim">
+          {team.name} · {team.level} {team.division} · Home ice: {team.home_arena}
+        </p>
+        <p class="dim">
+          <a href={team.association_website}>Lewisville Minor Hockey Association</a>
+        </p>
+      </div>
+    </footer>
+
+    <style>
+      .skip {
+        position: absolute; left: -9999px; top: 0; z-index: 100;
+        background: var(--volt-500); color: #fff; padding: var(--s-3) var(--s-4);
+        font-weight: 700;
+      }
+      .skip:focus { left: 0; }
+
+      .site-head {
+        position: sticky; top: 0; z-index: 50;
+        background: color-mix(in srgb, var(--bg) 82%, transparent);
+        backdrop-filter: blur(14px) saturate(140%);
+        border-bottom: 1px solid var(--hairline);
+      }
+      .head-inner {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: var(--s-5); padding-block: var(--s-3); flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: center; gap: var(--s-3); text-decoration: none; }
+      .brand img { width: 52px; height: auto; }
+      .brand-text { display: flex; flex-direction: column; line-height: 1; }
+      .brand-name {
+        font-family: var(--font-display); font-weight: 900; font-style: italic;
+        font-size: 1.5rem; letter-spacing: var(--track-tight); text-transform: uppercase;
+      }
+      .brand-sub {
+        font-size: var(--t-micro); font-weight: 700; letter-spacing: var(--track-label);
+        text-transform: uppercase; color: var(--text-dim); margin-top: 3px;
+      }
+
+      .nav { display: flex; gap: var(--s-5); list-style: none; padding: 0; }
+      .nav a {
+        position: relative; display: block; padding-block: var(--s-2);
+        font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+        letter-spacing: .1em; text-transform: uppercase; text-decoration: none;
+        color: var(--text-muted); transition: color .18s var(--ease);
+      }
+      .nav a:hover { color: var(--text); }
+      .nav a[aria-current="page"] { color: var(--text); }
+      .nav a[aria-current="page"]::after {
+        content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+        background: var(--volt-500); box-shadow: var(--glow-volt);
+      }
+      @media (max-width: 560px) {
+        .head-inner { justify-content: center; }
+        .nav { gap: var(--s-4); }
+      }
+
+      .fixture-banner {
+        background: rgb(224 86 107 / .1);
+        border-bottom: 1px solid rgb(224 86 107 / .3);
+        color: var(--ice-200);
+        font-size: var(--t-sm);
+        padding: var(--s-3) var(--s-4);
+        text-align: center;
+      }
+      .fixture-banner strong { color: var(--loss); }
+
+      main { padding-block: var(--s-7) var(--s-9); }
+
+      .site-foot {
+        border-top: 1px solid var(--hairline);
+        background: var(--bg-sunken);
+        padding-block: var(--s-7);
+      }
+      .foot-inner {
+        display: flex; flex-direction: column; align-items: center; gap: var(--s-2);
+        text-align: center; font-size: var(--t-sm);
+      }
+    </style>
+  </body>
+</html>

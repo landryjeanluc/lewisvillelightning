@@ -1,0 +1,72 @@
+---
+import Base from "../../layouts/Base.astro";
+import EventRow from "../../components/EventRow.astro";
+import { allEvents, games, stats } from "../../lib/data";
+import { monthAbbr } from "../../lib/format";
+
+const now = new Date();
+const future = allEvents.filter((e: any) => new Date(e.startsAt) >= now);
+const past = allEvents.filter((e: any) => new Date(e.startsAt) < now).reverse();
+
+/** Group a list of events by "OCTOBER 2026" for scannable month headers. */
+function byMonth(list: any[]) {
+  const out: { key: string; label: string; items: any[] }[] = [];
+  for (const e of list) {
+    const dte = new Date(e.startsAt);
+    const key = `${dte.getUTCFullYear()}-${monthAbbr(e.startsAt)}`;
+    const label = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Moncton", month: "long", year: "numeric",
+    }).format(dte).toUpperCase();
+    const last = out[out.length - 1];
+    if (last?.key === key) last.items.push(e);
+    else out.push({ key, label, items: [e] });
+  }
+  return out;
+}
+const rec = stats.team;
+---
+<Base title="Schedule">
+  <header class="page-head">
+    <span class="eyebrow">Season schedule</span>
+    <h1>Games &amp; Practices</h1>
+    <p class="muted">
+      {games.length} game{games.length === 1 ? "" : "s"} on the calendar ·
+      Record {rec.w}–{rec.l}{rec.otl ? `–${rec.otl}` : ""}
+    </p>
+  </header>
+
+  <section class="section">
+    <div class="rule-head"><h2>Upcoming</h2></div>
+    {future.length === 0 && <p class="dim">Nothing scheduled yet.</p>}
+    {byMonth(future).map((grp) => (
+      <div class="month">
+        <h3 class="month-label">{grp.label}</h3>
+        <div class="list">{grp.items.map((e: any) => <EventRow event={e} />)}</div>
+      </div>
+    ))}
+  </section>
+
+  {past.length > 0 && (
+    <section class="section">
+      <div class="rule-head"><h2>Completed</h2></div>
+      {byMonth(past).map((grp) => (
+        <div class="month">
+          <h3 class="month-label">{grp.label}</h3>
+          <div class="list">{grp.items.map((e: any) => <EventRow event={e} />)}</div>
+        </div>
+      ))}
+    </section>
+  )}
+</Base>
+
+<style>
+  .page-head { margin-bottom: var(--s-7); }
+  .page-head h1 { margin-block: var(--s-2); }
+  .month + .month { margin-top: var(--s-6); }
+  .month-label {
+    font-size: var(--t-xs); font-family: var(--font-ui); font-weight: 700;
+    letter-spacing: var(--track-label); color: var(--text-dim);
+    margin-bottom: var(--s-3);
+  }
+  .list > * + * { margin-top: var(--s-2); }
+</style>

@@ -1,0 +1,42 @@
+import importlib.util
+from pathlib import Path
+import unittest
+
+spec = importlib.util.spec_from_file_location('normalize', Path(__file__).with_name('normalize.py'))
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+
+class RosterTest(unittest.TestCase):
+    def capture(self):
+        return {'sourceUrl':'https://page.spordle.com/lewisville/teams/223790','capturedAt':'2026-10-12T00:00:00Z',
+                'data':{'headings':['Synthetic U13 B'], 'tables':[
+                    {'rows':[['GOALIES','POSITION'],['G\nGOALIE EXAMPLE\n31','G']]},
+                    {'rows':[['PLAYERS','POSITION'],['P\nPLAYER EXAMPLE\n7','F']]},
+                    {'rows':[['TEAM STAFF','POSITION'],['C\nCOACH EXAMPLE','Head Coach']]}]}}
+
+    def test_avatar_removed_number_and_position_preserved(self):
+        roster=module.roster_from_capture(self.capture())
+        self.assertEqual(roster['players'][0]['name'],'GOALIE EXAMPLE')
+        self.assertEqual(roster['players'][0]['jersey_number'],31)
+        self.assertEqual(roster['players'][1]['position'],'Forward')
+        self.assertEqual(roster['staff'][0]['role'],'Head Coach')
+
+    def test_incomplete_or_duplicate_roster_rejected(self):
+        missing=self.capture();missing['data']['tables'][1]['rows'][1][0]='P\nPLAYER EXAMPLE'
+        with self.assertRaises(ValueError): module.roster_from_capture(missing)
+        duplicate=self.capture();duplicate['data']['tables'][1]['rows'][1][0]='P\nPLAYER EXAMPLE\n31'
+        with self.assertRaises(ValueError): module.roster_from_capture(duplicate)
+
+    def test_schedule_keeps_incomplete_dates_and_never_invents_scores(self):
+        capture = self.capture()
+        capture['data']['visibleText'] = 'Next 30 days (Oct 12, 2026 - Nov 10, 2026)\nPrint Schedule\nAdd to Calendar\nTUESDAY, OCTOBER 13, 2026\nKay Arena (Main) - Moncton, NB\nEXHIBITION•10\n?\nSHEDIAC\nU13 BMixed\nTUE, OCT 13\n05:30 P.M.\nU13-B DAVEY\nU13 BMixed\nFRIDAY, OCTOBER 16, 2026\nPrevious\nNext'
+        schedule = module.schedule_from_capture(capture)
+        self.assertEqual(schedule['games'][0]['time_local'], '17:30')
+        self.assertEqual(schedule['games'][0]['home_team'], 'U13-B DAVEY')
+        self.assertIsNone(schedule['games'][0]['score'])
+        self.assertEqual(schedule['status'], 'partial_view')
+        self.assertEqual(schedule['incomplete_dates'][0]['date'], '2026-10-16')
+
+
+if __name__ == '__main__': unittest.main()
