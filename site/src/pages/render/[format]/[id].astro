@@ -7,7 +7,8 @@
  */
 import "../../../styles/global.css";
 import Matchup from "../../../components/Matchup.astro";
-import { games, sides, team } from "../../../lib/data";
+import Spotlight from "../../../components/Spotlight.astro";
+import { games, sides, team, spotlightFor } from "../../../lib/data";
 import { longDate, time } from "../../../lib/format";
 
 const FORMATS = {
@@ -26,6 +27,7 @@ const { game, format } = Astro.props as { game: any; format: keyof typeof FORMAT
 const F = FORMATS[format];
 const s = sides(game);
 const isFinal = game.status === "final";
+const star = spotlightFor(game.id);
 ---
 <!doctype html>
 <html lang="en" data-theme="dark">
@@ -52,6 +54,12 @@ const isFinal = game.status === "final";
         </header>
 
         <div class="band"><Matchup game={game} /></div>
+
+        {star && (
+          <div class="spotbar">
+            <Spotlight player={star} size="sm" />
+          </div>
+        )}
 
         <footer class="info">
           <div class="cell"><span class="ilabel">{longDate(game.startsAt)}</span></div>
@@ -126,9 +134,24 @@ const isFinal = game.status === "final";
       .inner {
         position: relative; z-index: 1;
         height: 100%;
-        display: grid; grid-template-rows: auto 1fr auto;
-        padding: calc(var(--pu) * 2.4) calc(var(--pu) * 2.8);
+        display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto;
+        padding: calc(var(--pu) * 1.9) calc(var(--pu) * 2.8) calc(var(--pu) * 1.7);
+        gap: calc(var(--pu) * .45);
       }
+
+      /* featured player — one of the roster every game, rotation in
+         data/spotlight.json so a re-render never reassigns someone's game */
+      .spotbar {
+        display: flex; justify-content: center;
+        padding-block: calc(var(--pu) * .5);
+      }
+      .spotbar :global(.pcard) { --cw: calc(var(--pu) * 6.4); }
+      .spotbar :global(.pc-plate) { display: none; }
+      .spotbar :global(.pcard) { aspect-ratio: 1 / 1.08; }
+      .spotbar :global(.spot) { gap: calc(var(--pu) * 1.1); }
+      .spotbar :global(.spot-label) { font-size: calc(var(--pu) * .62); }
+      .spotbar :global(.spot-name)  { font-size: calc(var(--pu) * 1.55); }
+      .spotbar :global(.spot-meta)  { font-size: calc(var(--pu) * .74); }
       .top { text-align: center; }
       .kicker {
         margin: 0 0 calc(var(--pu) * .5);
@@ -146,12 +169,12 @@ const isFinal = game.status === "final";
         filter: drop-shadow(0 calc(var(--pu)*.2) calc(var(--pu)*1.2) rgb(28 143 232 / .45));
       }
 
-      .band { display: grid; align-items: center; }
+      .band { display: grid; align-items: center; min-height: 0; }
       /* on the poster the VS floats on the fissure — no chip behind it */
       .band :global(.vs-text) { background: none; text-shadow: 0 0 calc(var(--pu) * 1.8) rgb(28 143 232 / .95), 0 2px 10px rgb(0 0 0 / .8); }
       /* drive the shared Matchup component at poster scale */
       .band :global(.matchup) { --u: var(--pu); }
-      .band :global(.crest) { width: calc(var(--pu) * 17.5); }
+      .band :global(.crest) { width: calc(var(--pu) * 13.5); }
       .band :global(.glow) { filter: blur(calc(var(--pu) * 2.2)); opacity: .9; }
 
       .info {
@@ -191,6 +214,9 @@ const isFinal = game.status === "final";
       .fmt-square .headline { font-size: calc(var(--pu) * 3.8); }
       .fmt-square .info { gap: calc(var(--pu) * .6); }
       .fmt-square .ilabel { font-size: calc(var(--pu) * .88); letter-spacing: .1em; }
+      .fmt-story .spotbar :global(.pcard)  { --cw: calc(var(--pu) * 8.0); }
+      .fmt-square .spotbar :global(.pcard) { --cw: calc(var(--pu) * 5.4); }
+      .fmt-square .spotbar :global(.spot-name) { font-size: calc(var(--pu) * 1.3); }
     </style>
   </body>
 </html>

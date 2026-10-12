@@ -1,6 +1,9 @@
 {
   "version": 1,
-  "source": { "provider": "manual", "fetchedAt": "2026-10-12T14:30:00-03:00" },
+  "source": {
+    "provider": "manual",
+    "fetchedAt": "2026-10-12T14:30:00-03:00"
+  },
   "teams": [
     {
       "id": "lewisville-lightning",
@@ -8,7 +11,11 @@
       "short": "Lightning",
       "town": "Lewisville",
       "crest": "assets/brand/lightning-crest-hi.png",
-      "colours": { "primary": "#0B1D54", "secondary": "#2D6DAB", "accent": "#9A9CA2" }
+      "colours": {
+        "primary": "#0B1D54",
+        "secondary": "#2D6DAB",
+        "accent": "#9A9CA2"
+      }
     },
     {
       "id": "shediac-cap-pele-predators",
@@ -16,7 +23,23 @@
       "short": "Predators",
       "town": "Shediac",
       "crest": "assets/brand/predators-crest.png",
-      "colours": { "primary": "#C8102E", "secondary": "#1A1A1A", "accent": "#F2A900" }
+      "colours": {
+        "primary": "#C8102E",
+        "secondary": "#1A1A1A",
+        "accent": "#F2A900"
+      }
+    },
+    {
+      "id": "dieppe",
+      "name": "Dieppe",
+      "short": "Dieppe",
+      "town": "Dieppe",
+      "crest": null,
+      "colours": {
+        "primary": "#1F6F3F",
+        "secondary": "#111111",
+        "accent": "#F0C230"
+      }
     }
   ]
 }

@@ -38,5 +38,30 @@ class RosterTest(unittest.TestCase):
         self.assertEqual(schedule['status'], 'partial_view')
         self.assertEqual(schedule['incomplete_dates'][0]['date'], '2026-10-16')
 
+    def standings_capture(self):
+        capture = self.capture()
+        capture['data']['headings'] = ['U13-B TEST', 'STANDINGS']
+        capture['data']['visibleText'] = 'STANDINGS\nExhibition Games Other\n'
+        capture['data']['tables'] = [{'rows': [['#','TEAM','GP','W','L','PTS'],
+                                              ['1','U7 TEST','0','0','0','0'],
+                                              ['1','U13-B TEST','0','0','0','0']]}]
+        return capture
+
+    def test_zero_game_mixed_division_table_is_not_verified_league_standings(self):
+        standings = module.standings_from_capture(self.standings_capture())
+        self.assertTrue(standings['mixed_divisions'])
+        self.assertTrue(standings['all_displayed_teams_have_zero_games'])
+        self.assertFalse(standings['league_standings_verified'])
+        self.assertEqual(standings['team']['games_played'], 0)
+        self.assertEqual(standings['team']['name'], 'U13-B TEST')
+
+    def test_standings_requires_exact_target_team_and_intact_rows(self):
+        capture = self.standings_capture()
+        capture['data']['tables'][0]['rows'][2][1] = 'U13-AA OTHER'
+        with self.assertRaises(ValueError): module.standings_from_capture(capture)
+        capture = self.standings_capture()
+        capture['data']['tables'][0]['rows'][2].pop()
+        with self.assertRaises(ValueError): module.standings_from_capture(capture)
+
 
 if __name__ == '__main__': unittest.main()

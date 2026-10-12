@@ -112,23 +112,74 @@ def schedule_from_capture(capture):
             'coverage': 'Rendered schedule view only, not a complete season schedule.'}
 
 
+def standings_from_capture(capture):
+    candidates = [table['rows'] for table in capture['data']['tables']
+                  if table.get('rows') and {'TEAM', 'GP', 'PTS'}.issubset(table['rows'][0])]
+    if len(candidates) != 1:
+        raise ValueError('Expected one identifiable standings table.')
+    rows = candidates[0]
+    headers = rows[0]
+    if len(set(headers)) != len(headers) or any(len(row) != len(headers) for row in rows[1:]):
+        raise ValueError('Malformed standings table; existing standings preserved.')
+    records = [dict(zip(headers, row)) for row in rows[1:]]
+    team_name = capture['data']['headings'][0]
+    matching = [row for row in records if row['TEAM'].strip().casefold() == team_name.casefold()]
+    if len(matching) != 1:
+        raise ValueError('The requested team could not be uniquely identified in standings.')
+    source_row = matching[0]
+    integer_fields = {'#':'displayed_rank', 'GP':'games_played', 'W':'wins', 'RW':'regulation_wins',
+                      'OTW':'overtime_wins', 'SOW':'shootout_wins', 'T':'ties', 'L':'losses',
+                      'RL':'regulation_losses', 'OTL':'overtime_losses', 'SOL':'shootout_losses',
+                      'PTS':'points', 'GF':'goals_for', 'GA':'goals_against', 'DIFF':'goal_difference', 'PIM':'penalty_minutes'}
+    team = {'name': team_name, 'source_values': source_row}
+    for column, field in integer_fields.items():
+        if column in source_row:
+            team[field] = int(source_row[column])
+    for column, field in {'PTS%':'points_percentage', 'GF/GP':'goals_for_per_game', 'GA/GP':'goals_against_per_game'}.items():
+        if column in source_row:
+            team[field] = float(source_row[column])
+    if 'PIM/GP' in source_row:
+        team['penalty_minutes_per_game_display'] = source_row['PIM/GP']
+    context = re.search(r'^STANDINGS\n([^\n]+)', capture['data']['visibleText'], re.MULTILINE)
+    competition = context.group(1) if context else None
+    divisions = sorted({match.group() for row in records if (match := re.search(r'\bU\d+\b', row['TEAM']))})
+    all_zero_games = bool(records) and all(int(row['GP']) == 0 for row in records)
+    return {'team_id': '223790', 'source_url': capture['sourceUrl'], 'captured_at': capture['capturedAt'],
+            'competition_display': competition, 'team': team, 'displayed_team_count': len(records),
+            'observed_divisions': divisions, 'mixed_divisions': len(divisions) > 1,
+            'all_displayed_teams_have_zero_games': all_zero_games,
+            'league_standings_verified': False,
+            'rank_interpretation': 'Zero-game display order, not an earned league position.' if all_zero_games else 'Position in the captured table only.',
+            'coverage': 'Requested team row only. Table context retained; competition must be verified before presenting this as U13 B league standings.'}
+
+
 def main():
     captures = [(p, json.loads(p.read_text())) for p in sorted((ROOT / 'browser-captures').glob('*.json'))]
     roster_views = []
     schedule_views = []
+    standings_views = []
     inventory = []
     for path, capture in captures:
         headers = [table['rows'][0] for table in capture['data']['tables'] if table.get('rows')]
         is_roster = any(header and header[0].upper() == 'GOALIES' for header in headers)
         is_schedule = 'Print Schedule' in capture['data']['visibleText'] and 'Add to Calendar' in capture['data']['visibleText']
-        kind = 'roster' if is_roster else 'schedule' if is_schedule else 'unclassified_view'
+        is_standings = any({'TEAM', 'GP', 'PTS'}.issubset(header) for header in headers)
+        kind = 'roster' if is_roster else 'schedule' if is_schedule else 'standings' if is_standings else 'unclassified_view'
         inventory.append({'file': str(path.relative_to(ROOT)), 'captured_at': capture['capturedAt'],
                           'kind': kind, 'table_headers': headers})
         if is_roster:
             roster_views.append((path, capture))
         if is_schedule:
             schedule_views.append((path, capture))
+        if is_standings:
+            standings_views.append((path, capture))
     write_json(ROOT / 'normalized/capture-inventory.json', inventory)
+    if standings_views:
+        standings_path, standings_capture = max(standings_views, key=lambda item: item[1]['capturedAt'])
+        standings = standings_from_capture(standings_capture)
+        standings['source_capture'] = str(standings_path.relative_to(ROOT))
+        write_json(ROOT / 'normalized/standings.json', standings)
+        print(f"Standings: team row saved; competition={standings['competition_display']}; league standings not verified.")
     if schedule_views:
         schedule_path, schedule_capture = max(schedule_views, key=lambda item: item[1]['capturedAt'])
         schedule = schedule_from_capture(schedule_capture)
@@ -156,6 +207,17 @@ def main():
     if previous is None or any(changes[key] for key in ['added','removed','updated']):
         write_json(ROOT / 'normalized/roster-changes' / path.name, changes)
     print(f"Normalized {len(roster['players'])} players and {len(roster['staff'])} staff. Player-card data saved privately; photos and statistics remain unset.")
+    status_file = ROOT / 'collection-status.json'
+    status = json.loads(status_file.read_text()) if status_file.exists() else {'team_id': '223790'}
+    status.update({'roster_collected': True, 'player_count': len(roster['players']),
+                   'schedule_collected': bool(schedule_views), 'standings_collected': bool(standings_views),
+                   'visibility': 'local_only', 'automatic_checks_enabled': False})
+    if schedule_views:
+        status.update({'schedule_status': schedule['status'], 'rendered_game_count': len(schedule['games']),
+                       'incomplete_event_dates': [row['date'] for row in schedule['incomplete_dates']]})
+    if standings_views:
+        status.update({'standings_competition_display': standings['competition_display'], 'league_standings_verified': False})
+    write_json(status_file, status)
 
 
 if __name__ == '__main__':

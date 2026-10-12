@@ -1,0 +1,49 @@
+---
+import PlayerCard from "./PlayerCard.astro";
+import type { Player } from "../lib/data";
+
+interface Props { player: Player; size?: "sm" | "md"; label?: string }
+const { player, size = "sm", label = "Player Spotlight" } = Astro.props;
+const POS: Record<string, string> = {
+  C: "Centre", LW: "Left Wing", RW: "Right Wing", F: "Forward", D: "Defence", G: "Goaltender",
+};
+---
+<div class="spot">
+  <PlayerCard player={player} size={size} />
+  <div class="spot-text">
+    <span class="spot-label">{label}</span>
+    <span class="spot-name">{player.firstName} {player.lastName}</span>
+    <span class="spot-meta">
+      <span class="spot-num">#{player.number}</span>
+      {POS[player.position] ?? player.position}
+      {player.captain && <span class="spot-c">{player.captain === "C" ? "Captain" : "Alternate"}</span>}
+    </span>
+  </div>
+</div>
+
+<style>
+  .spot {
+    display: flex; align-items: center; gap: var(--s-5);
+  }
+  .spot-text { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+  .spot-label {
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--volt-300);
+  }
+  .spot-name {
+    font-family: var(--font-display); font-style: italic; font-weight: 900;
+    font-size: var(--t-lg); line-height: .95; text-transform: uppercase;
+    letter-spacing: var(--track-tight); color: var(--white);
+    text-wrap: balance;
+  }
+  .spot-meta {
+    display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap;
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim);
+  }
+  .spot-num { color: var(--volt-300); font-weight: 700; }
+  .spot-c {
+    padding: 1px 6px; border: 1px solid var(--hairline-sv); border-radius: 3px;
+    font-size: var(--t-micro); color: var(--ice-200);
+  }
+</style>

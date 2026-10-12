@@ -1,7 +1,8 @@
 ---
 import Base from "../../layouts/Base.astro";
 import Matchup from "../../components/Matchup.astro";
-import { allEvents, sides, outcome, team } from "../../lib/data";
+import Spotlight from "../../components/Spotlight.astro";
+import { allEvents, sides, outcome, team, spotlightFor } from "../../lib/data";
 import { longDate, time, relativeDay, machine, isToday } from "../../lib/format";
 
 export function getStaticPaths() {
@@ -14,6 +15,7 @@ const s = isGame ? sides(event) : null;
 const o = isGame ? outcome(event) : null;
 const today = isToday(event.startsAt);
 const title = isGame ? `${s!.weAreHome ? "vs" : "at"} ${s!.them.short}` : "Practice";
+const star = isGame ? spotlightFor(event.id) : undefined;
 ---
 <Base title={title} wide>
   <a class="back" href="/schedule">← Schedule</a>
@@ -33,6 +35,12 @@ const title = isGame ? `${s!.weAreHome ? "vs" : "at"} ${s!.them.short}` : "Pract
     {isGame ? <Matchup game={event} /> : (
       <div class="practice-art">
         <img src="/brand/lightning-crest.png" alt="" width="200" height="196" class="crest" />
+      </div>
+    )}
+
+    {star && (
+      <div class="spotwrap">
+        <Spotlight player={star} size="md" />
       </div>
     )}
 
@@ -93,4 +101,9 @@ const title = isGame ? `${s!.weAreHome ? "vs" : "at"} ${s!.them.short}` : "Pract
     text-align: center; font-weight: 700;
   }
   .banner--bad { border-color: rgb(224 86 107 / .5); color: var(--loss); }
+  .spotwrap {
+    display: flex; justify-content: center;
+    margin-top: var(--s-7); padding-top: var(--s-6);
+    border-top: 1px solid var(--hairline);
+  }
 </style>

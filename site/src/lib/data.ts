@@ -1,5 +1,5 @@
 import {
-  opponentsSchema, scheduleSchema, rosterSchema, statsSchema, newsSchema,
+  opponentsSchema, scheduleSchema, rosterSchema, statsSchema, newsSchema, spotlightSchema,
   type GameEvent, type PracticeEvent, type Player, type Team,
 } from "./schema";
 
@@ -8,6 +8,7 @@ import scheduleRaw from "../../../data/schedule.json";
 import rosterRaw from "../../../data/roster.json";
 import statsRaw from "../../../data/stats.json";
 import newsRaw from "../../../data/news.json";
+import spotlightRaw from "../../../data/spotlight.json";
 import teamRaw from "../../../team.json";
 
 /** Parse with a message that names the file and the exact JSON path that failed. */
@@ -29,6 +30,7 @@ export const schedule  = parse<any>(scheduleSchema,  scheduleRaw,  "schedule.jso
 export const roster    = parse<any>(rosterSchema,    rosterRaw,    "roster.json");
 export const stats     = parse<any>(statsSchema,     statsRaw,     "stats.json");
 export const news      = parse<any>(newsSchema,      newsRaw,      "news.json");
+export const spotlight = parse<any>(spotlightSchema, spotlightRaw, "spotlight.json");
 export const team = teamRaw as {
   name: string; division: string; level: string; home_arena: string;
   association_website: string;
@@ -161,3 +163,20 @@ export function crestUrl(t: Team): string {
   if (!t.crest) return "";
   return "/brand/" + t.crest.replace(/^.*\//, "").replace("lightning-crest-hi", "lightning-crest");
 }
+
+/* ------------------------------------------------------------- spotlight */
+
+/** The player featured on this game's banner, or undefined if unassigned. */
+export function spotlightFor(gameId: string): Player | undefined {
+  const pid = spotlight.assignments[gameId];
+  return pid ? getPlayer(pid) : undefined;
+}
+
+/** Rotation progress, for the roster page. */
+export function spotlightProgress() {
+  const used = new Set(Object.values(spotlight.assignments) as string[]);
+  const featured = roster.players.filter((p: Player) => used.has(p.id));
+  return { cycle: spotlight.cycle, featured, remaining: roster.players.length - featured.length };
+}
+export const hasBeenFeatured = (id: string) =>
+  (Object.values(spotlight.assignments) as string[]).includes(id);

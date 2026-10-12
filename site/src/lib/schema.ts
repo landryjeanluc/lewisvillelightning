@@ -190,11 +190,23 @@ export const newsSchema = z.object({
   ),
 });
 
+
+/* ---------------------------------------------------------------- spotlight */
+
+export const spotlightSchema = z.object({
+  version: z.literal(1),
+  note: z.string().optional(),
+  cycle: z.number().int().min(1),
+  /** gameId -> playerId. Permanent once written; see tools/assign_spotlight.py */
+  assignments: z.record(z.string(), z.string()),
+});
+
 export type Opponents = z.infer<typeof opponentsSchema>;
 export type Schedule = z.infer<typeof scheduleSchema>;
 export type Roster = z.infer<typeof rosterSchema>;
 export type Stats = z.infer<typeof statsSchema>;
 export type News = z.infer<typeof newsSchema>;
+export type Spotlight = z.infer<typeof spotlightSchema>;
 export type GameEvent = z.infer<typeof gameEvent>;
 export type PracticeEvent = z.infer<typeof practiceEvent>;
 export type Player = Roster["players"][number];
