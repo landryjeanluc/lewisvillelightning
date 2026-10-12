@@ -10,13 +10,14 @@ can never drift apart, and no image model ever retypes a date.
 ## Layout
 
 ```
-data/          the contract — schedule, roster, stats, news, opponents
+data/          the contract — schedule, roster, stats, news, opponents, spotlight
 docs/          DATA-CONTRACT.md: what the Spordle sync must produce
 assets/
   brand/       crest extracted at 533x522 + opponent crests
   fonts/       Barlow Condensed / Semi Condensed (OFL), vendored
 site/          Astro site (static output)
 render/        headless-chromium game-day graphics renderer
+tools/spordle/ capture collector + to_data.py adapter onto the contract
 output/<date>/ rendered posters
 ```
 
@@ -84,3 +85,47 @@ steel `#707277`, ice `#ADBFD7`, with `#1C8FE8` as the electric accent. Display
 face is Barlow Condensed Black Italic; UI face is Barlow Semi Condensed. The
 site is dark-only by design — the crest, the ice and the arena light are the
 identity, and a light variant weakened all three.
+
+
+## Syncing from Spordle
+
+The collector captures Spordle views into `private/spordle/223790/` (gitignored
+— it holds real minors' data). The adapter maps those onto the contract:
+
+```
+python3 tools/spordle/to_data.py     # normalized captures -> data/*.json
+cd site && npm run validate
+```
+
+It reports anything it had to guess. Spordle stores names in **ALL CAPS**, and
+on an Acadian roster the correct spelling of a surname is person-specific
+(*LeBlanc* vs *Leblanc*, *Degrâce* vs *DeGrâce*). Names are title-cased with an
+exact-match table for genuinely internal-capital surnames; everything it guesses
+is printed for confirmation and can be pinned in
+`tools/spordle/name-overrides.json`.
+
+Known gaps in the current capture: the schedule is a **partial view** (next 30
+days, 2 games), two dates were captured without detail, and no stats or news
+view has been collected. Standings exist in a capture but are the whole
+association at zero — the season has not started.
+
+## Player spotlight
+
+Every game banner features one player, drawn at random from those not yet
+featured this cycle, so the whole roster gets a turn before anyone repeats.
+
+```
+python3 tools/assign_spotlight.py            # assign any unassigned games
+python3 tools/assign_spotlight.py --status   # show the rotation
+python3 tools/assign_spotlight.py --reassign <game-id>
+```
+
+Assignments persist in `data/spotlight.json` — once a game is assigned, a
+re-render never hands that game to a different player. When all 19 have been
+featured the cycle increments and the pool refills. The card falls back to the
+jersey number until `cardArt` lands in `data/roster.json`.
+
+## Deploying
+
+See `docs/DEPLOY.md`. Short version: it is a static site on arachnea:8111 behind
+basic auth; content updates are an rsync, no rebuild.
