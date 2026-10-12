@@ -1,13 +1,20 @@
 ---
 import Base from "../layouts/Base.astro";
-import { stats, skatersByPoints, goaliesSorted, displayName } from "../lib/data";
-import { svPct, gaa, longDate } from "../lib/format";
+import EmptyState from "../components/EmptyState.astro";
+import { stats, skatersByPoints, goaliesSorted, displayName, nextGame, sides, roster } from "../lib/data";
+import { svPct, gaa, longDate, shortDate, time } from "../lib/format";
 
 const t = stats.team;
 const skaters = skatersByPoints();
 const goalies = goaliesSorted();
 const pct = t.gp > 0 ? ((t.pts / (t.gp * 2)) * 100).toFixed(1) + "%" : "—";
 const diff = t.gf - t.ga;
+
+// Preseason: exhibition games only, nothing recorded yet. A wall of zeros and
+// an empty table header reads as a broken page, so say what is actually true.
+const noStats = skaters.length === 0 && goalies.length === 0 && t.gp === 0;
+const g = nextGame();
+const s = g ? sides(g) : null;
 ---
 <Base title="Stats" wide>
   <header class="page-head">
@@ -15,9 +22,24 @@ const diff = t.gf - t.ga;
     <h1>By the Numbers</h1>
   </header>
 
+  {noStats ? (
+    <EmptyState
+      title="The season hasn't started"
+      note={`No statistics are recorded yet \u2014 the Lightning's first games are exhibition. Player and team numbers will appear here once regular-season games are played and Spordle posts the results.`}
+    >
+      {g && s && (
+        <p class="first-up">
+          First up: <strong>{s.weAreHome ? "vs" : "at"} {s.them.short}</strong>
+          {" \u00b7 "}{shortDate(g.startsAt)}{" \u00b7 "}{time(g.startsAt)}
+        </p>
+      )}
+      <p class="roster-link"><a href="/roster">See the {roster.players.length}-player roster &rarr;</a></p>
+    </EmptyState>
+  ) : (
+  <>
   <section class="record">
     {[
-      { k: "Record", v: `${t.w}–${t.l}${t.otl ? `–${t.otl}` : ""}` },
+      { k: "Record", v: `${t.w}\u2013${t.l}${t.otl ? `\u2013${t.otl}` : ""}` },
       { k: "Points", v: t.pts },
       { k: "Points %", v: pct },
       { k: "Goals for", v: t.gf },
@@ -31,26 +53,28 @@ const diff = t.gf - t.ga;
     ))}
   </section>
 
-  <section class="section">
-    <div class="rule-head"><h2>Skaters</h2></div>
-    <div class="tablewrap">
-      <table>
-        <thead>
-          <tr><th class="l">Player</th><th>Pos</th><th>GP</th><th>G</th><th>A</th><th>PTS</th><th>PIM</th></tr>
-        </thead>
-        <tbody>
-          {skaters.map((s: any) => (
-            <tr>
-              <td class="l"><a href={`/players/${s.player.id}`}><span class="jn num">{s.player.number}</span>{displayName(s.player)}</a></td>
-              <td>{s.player.position}</td>
-              <td class="num">{s.gp}</td><td class="num">{s.g}</td><td class="num">{s.a}</td>
-              <td class="num hi">{s.pts}</td><td class="num">{s.pim}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </section>
+  {skaters.length > 0 && (
+    <section class="section">
+      <div class="rule-head"><h2>Skaters</h2></div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th class="l">Player</th><th>Pos</th><th>GP</th><th>G</th><th>A</th><th>PTS</th><th>PIM</th></tr>
+          </thead>
+          <tbody>
+            {skaters.map((s: any) => (
+              <tr>
+                <td class="l"><a href={`/players/${s.player.id}`}><span class="jn num">{s.player.number}</span>{displayName(s.player)}</a></td>
+                <td>{s.player.position}</td>
+                <td class="num">{s.gp}</td><td class="num">{s.g}</td><td class="num">{s.a}</td>
+                <td class="num hi">{s.pts}</td><td class="num">{s.pim}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
 
   {goalies.length > 0 && (
     <section class="section">
@@ -73,6 +97,9 @@ const diff = t.gf - t.ga;
       </div>
     </section>
   )}
+  </>
+  )}
+
 </Base>
 
 <style>
@@ -105,4 +132,8 @@ const diff = t.gf - t.ga;
     background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px;
   }
   .hi { color: var(--white); font-weight: 700; }
+  .first-up { font-size: var(--t-md); }
+  .first-up strong { font-family: var(--font-display); font-style: italic; text-transform: uppercase; }
+  .roster-link a { color: var(--accent-text); font-weight: 700; font-size: var(--t-sm);
+                   letter-spacing: .06em; text-transform: uppercase; text-decoration: none; }
 </style>

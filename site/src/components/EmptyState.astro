@@ -1,0 +1,23 @@
+---
+interface Props { title: string; note?: string; icon?: boolean }
+const { title, note, icon = true } = Astro.props;
+---
+<div class="empty card">
+  {icon && <img src="/brand/lightning-crest.png" alt="" width="64" height="63" class="crest" />}
+  <p class="empty-title">{title}</p>
+  {note && <p class="dim empty-note">{note}</p>}
+  <slot />
+</div>
+
+<style>
+  .empty {
+    display: flex; flex-direction: column; align-items: center; gap: var(--s-3);
+    padding: var(--s-7) var(--s-5); text-align: center;
+  }
+  .empty img { width: 64px; opacity: .55; margin-bottom: var(--s-2); }
+  .empty-title {
+    font-family: var(--font-display); font-weight: 900; font-style: italic;
+    font-size: var(--t-lg); text-transform: uppercase; letter-spacing: var(--track-tight);
+  }
+  .empty-note { max-width: 46ch; font-size: var(--t-sm); }
+</style>

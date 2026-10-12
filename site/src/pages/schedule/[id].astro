@@ -24,7 +24,7 @@ const star = isGame ? spotlightFor(event.id) : undefined;
     <div class="gd-top">
       <span class="eyebrow">
         {team.level} {team.division}
-        {isGame && <> · {event.gameType === "regular" ? "Regular season" : event.gameType}</>}
+        {isGame && <> · {event.gameType === "regular" ? "Regular season" : event.gameType === "exhibition" ? "Exhibition game" : event.gameType}</>}
       </span>
       <h1 class="display--italic gd-title">
         {o ? "Final" : today ? "Game Day" : isGame ? "Matchup" : "Practice"}

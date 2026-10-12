@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Matchup from "../components/Matchup.astro";
 import EventRow from "../components/EventRow.astro";
+import EmptyState from "../components/EmptyState.astro";
 import { team, nextGame, nextPractice, upcoming, results, articles, sides } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
@@ -16,7 +17,7 @@ const s = g ? sides(g) : null;
   {g ? (
     <section class="hero">
       <div class="hero-top">
-        <span class="eyebrow">{team.level} {team.division} · {g.gameType === "regular" ? "Regular season" : g.gameType}</span>
+        <span class="eyebrow">{team.level} {team.division} · {g.gameType === "regular" ? "Regular season" : g.gameType === "exhibition" ? "Exhibition" : g.gameType}</span>
         <h1 class="display--italic hero-title">{relativeDay(g.startsAt) === "Today" ? "Game Day" : "Next Game"}</h1>
       </div>
 
@@ -65,7 +66,12 @@ const s = g ? sides(g) : null;
     <section class="section">
       <div class="rule-head"><h2>Recent results</h2></div>
       <div class="list" style="--flow: var(--s-2)">
-        {recent.length ? recent.map((e: any) => <EventRow event={e} />) : <p class="dim">No games played yet this season.</p>}
+        {recent.length
+          ? recent.map((e: any) => <EventRow event={e} />)
+          : <EmptyState
+              icon={false}
+              title="No games played yet"
+              note="The season is just getting underway — the first games on the calendar are exhibition. Results will appear here as they are played." />}
       </div>
 
       {latest.length > 0 && (

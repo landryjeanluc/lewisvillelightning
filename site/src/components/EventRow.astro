@@ -28,6 +28,9 @@ const href = `/schedule/${event.id}`;
       ) : (
         <span class="opp"><span class="va">Practice</span></span>
       )}
+      {isGame && event.gameType && event.gameType !== "regular" && (
+        <span class="pill pill--type">{event.gameType}</span>
+      )}
       {event.status === "cancelled"  && <span class="pill pill--loss">Cancelled</span>}
       {event.status === "postponed"  && <span class="pill">Postponed</span>}
       {event.status === "in_progress"&& <span class="pill pill--live">Live</span>}
@@ -71,6 +74,7 @@ const href = `/schedule/${event.id}`;
   .va { color: var(--text-dim); font-style: normal; font-weight: 700; font-size: .8em; }
   .line2 { display: flex; align-items: center; gap: var(--s-3); font-size: var(--t-sm); margin-top: 2px; }
   .when { font-size: var(--t-sm); white-space: nowrap; }
+  .pill--type { color: var(--ice-200); border-color: var(--hairline-sv); }
   @media (max-width: 560px) {
     .row { grid-template-columns: auto 1fr; }
     .when { display: none; }
