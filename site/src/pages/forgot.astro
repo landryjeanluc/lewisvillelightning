@@ -1,0 +1,37 @@
+---
+import Auth from "../layouts/Auth.astro";
+---
+<Auth title="Reset your password">
+  <form id="f">
+    <p class="dim" style="font-size:var(--t-sm)">
+      Enter your email and we'll send you a link to choose a new password.
+    </p>
+    <label>Email<input name="email" type="email" required autocomplete="username" autofocus /></label>
+    <button type="submit">Send reset link</button>
+    <p id="msg" class="auth-msg" hidden></p>
+    <a class="auth-link" href="/login">Back to sign in</a>
+  </form>
+</Auth>
+
+<script>
+  const f = document.getElementById("f") as HTMLFormElement;
+  const msg = document.getElementById("msg") as HTMLElement;
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector("button") as HTMLButtonElement;
+    btn.disabled = true;
+    const d = new FormData(f);
+    const r = await fetch("/api/auth/forgot", {
+      method: "POST", credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: d.get("email") }),
+    });
+    const body = await r.json().catch(() => null);
+    // Deliberately the same message either way — this must not reveal who has
+    // an account.
+    msg.textContent = body?.detail ?? "If that address has an account, a reset link is on its way.";
+    msg.className = "auth-msg ok";
+    msg.hidden = false;
+    btn.disabled = false;
+  });
+</script>

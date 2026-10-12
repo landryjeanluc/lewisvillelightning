@@ -1,0 +1,46 @@
+---
+import Auth from "../layouts/Auth.astro";
+---
+<Auth title="Choose a new password">
+  <form id="f">
+    <label>New password
+      <input name="password" type="password" required minlength="8" autocomplete="new-password" autofocus />
+    </label>
+    <label>Again<input name="confirm" type="password" required minlength="8" autocomplete="new-password" /></label>
+    <button type="submit">Set password</button>
+    <p id="msg" class="auth-msg" hidden></p>
+    <a class="auth-link" href="/login">Back to sign in</a>
+  </form>
+</Auth>
+
+<script>
+  const f = document.getElementById("f") as HTMLFormElement;
+  const msg = document.getElementById("msg") as HTMLElement;
+  const token = new URLSearchParams(location.search).get("token") ?? "";
+  const say = (text: string, ok = false) => {
+    msg.textContent = text; msg.className = `auth-msg ${ok ? "ok" : "err"}`; msg.hidden = false;
+  };
+  if (!token) say("That link is missing its token. Request a new one from the sign-in page.");
+
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const d = new FormData(f);
+    if (d.get("password") !== d.get("confirm")) { say("Those two passwords do not match."); return; }
+    const btn = f.querySelector("button") as HTMLButtonElement;
+    btn.disabled = true;
+    const r = await fetch("/api/auth/reset", {
+      method: "POST", credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token, password: d.get("password") }),
+    });
+    const body = await r.json().catch(() => null);
+    btn.disabled = false;
+    if (r.ok) {
+      say("Password set. Taking you to sign in…", true);
+      setTimeout(() => (location.href = "/login"), 1200);
+      return;
+    }
+    const detail = body?.detail;
+    say(Array.isArray(detail) ? detail[0]?.msg ?? "Could not set the password." : detail ?? "Could not set the password.");
+  });
+</script>

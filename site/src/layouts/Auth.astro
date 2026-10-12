@@ -1,0 +1,71 @@
+---
+import "../styles/global.css";
+import { team } from "../lib/data";
+interface Props { title: string }
+const { title } = Astro.props;
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · {team.name}</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#040814" />
+    <link rel="icon" href="/brand/lightning-crest.png" />
+  </head>
+  <body>
+    <main class="auth">
+      <img src="/brand/lightning-crest.png" alt="" width="96" height="94" class="crest" />
+      <h1 class="auth-name">{team.name}</h1>
+      <p class="eyebrow">{team.level} {team.division}</p>
+      <div class="auth-card card"><slot /></div>
+      {team.slogan && <p class="auth-slogan">{team.slogan}</p>}
+    </main>
+    <style>
+      .auth {
+        min-height: 100dvh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: var(--s-3);
+        padding: var(--s-6) var(--s-4);
+      }
+      .auth img { width: 96px; }
+      .auth-name {
+        font-family: var(--font-display); font-style: italic; font-weight: 900;
+        font-size: var(--t-xl); text-transform: uppercase; letter-spacing: var(--track-tight);
+        margin-top: var(--s-3);
+      }
+      .auth-card {
+        width: min(100%, 25rem); padding: var(--s-6);
+        display: grid; gap: var(--s-4); margin-top: var(--s-5);
+      }
+      .auth-slogan {
+        margin-top: var(--s-6); font-family: var(--font-display); font-style: italic;
+        font-weight: 900; font-size: var(--t-sm); text-transform: uppercase;
+        letter-spacing: var(--track-tight); color: var(--text-dim); text-align: center;
+      }
+      :global(.auth-card label) {
+        display: grid; gap: var(--s-2); font-size: var(--t-xs); font-weight: 700;
+        letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+      }
+      :global(.auth-card input) {
+        padding: var(--s-3); font-size: 1rem; font-weight: 600; color: var(--text);
+        background: var(--bg-sunken); border: 1px solid var(--hairline-sv);
+        border-radius: var(--r-md);
+      }
+      :global(.auth-card button) {
+        padding: var(--s-3) var(--s-5); font-family: var(--font-ui); font-size: var(--t-sm);
+        font-weight: 700; letter-spacing: var(--track-label); text-transform: uppercase;
+        color: #fff; cursor: pointer; border: 0; border-radius: 999px;
+        background: linear-gradient(180deg, var(--volt-500), var(--blue-600));
+      }
+      :global(.auth-card button:disabled) { opacity: .55; cursor: default; }
+      :global(.auth-msg) { font-size: var(--t-sm); }
+      :global(.auth-msg.err) { color: var(--loss); }
+      :global(.auth-msg.ok)  { color: var(--win); }
+      :global(.auth-link) {
+        font-size: var(--t-sm); color: var(--accent-text); text-decoration: none;
+        justify-self: center;
+      }
+    </style>
+  </body>
+</html>

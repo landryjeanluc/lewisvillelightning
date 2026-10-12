@@ -154,6 +154,110 @@ async def main():
             results.append(ok("deleting a user keeps the stats they entered",
                               r.status_code == 200 and before == after, f"{before} -> {after}"))
 
+            # ---------------- gate, brute force, password reset ----------------
+            import hashlib
+            from datetime import datetime, timedelta, timezone
+
+            # a clean session for the gate checks
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                r = await anon.get("/auth/verify")
+                results.append(ok("nginx gate: anonymous verify -> 401", r.status_code == 401))
+            r = await c.get("/auth/verify")
+            results.append(ok("nginx gate: signed-in verify -> 204", r.status_code == 204,
+                              f"got {r.status_code}"))
+
+            # --- brute force ---
+            await pool.execute("DELETE FROM login_attempts")
+            await pool.execute(
+                "INSERT INTO users (email, display_name, password_hash, role)"
+                " VALUES ('target@lvlnb.ca','Target',$1,'viewer') ON CONFLICT DO NOTHING",
+                bcrypt.hashpw(b"correct-horse", bcrypt.gensalt(rounds=4)).decode())
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as bf:
+                codes = []
+                for _ in range(6):
+                    rr = await bf.post("/auth/login",
+                                       json={"email": "target@lvlnb.ca", "password": "nope"})
+                    codes.append(rr.status_code)
+                results.append(ok("5 wrong passwords -> 401, the 6th -> 429",
+                                  codes[:5] == [401] * 5 and codes[5] == 429, f"{codes}"))
+                rr = await bf.post("/auth/login",
+                                   json={"email": "target@lvlnb.ca", "password": "correct-horse"})
+                results.append(ok("locked out even with the RIGHT password",
+                                  rr.status_code == 429, f"got {rr.status_code}"))
+                results.append(ok("429 carries Retry-After", "retry-after" in rr.headers))
+
+                # a different account is unaffected by that lockout
+                rr = await bf.post("/auth/login",
+                                   json={"email": "admin@lvlnb.ca", "password": "hockey123"})
+                results.append(ok("lockout is per-account, not global", rr.status_code == 200,
+                                  f"got {rr.status_code}"))
+
+            # --- forgot: must not reveal who has an account ---
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                r1 = await anon.post("/auth/forgot", json={"email": "target@lvlnb.ca"})
+                r2 = await anon.post("/auth/forgot", json={"email": "nobody@nowhere.ca"})
+                results.append(ok("forgot: same answer for known and unknown address",
+                                  r1.status_code == r2.status_code == 200
+                                  and r1.json()["detail"] == r2.json()["detail"]))
+                n_tokens = await pool.fetchval("SELECT count(*) FROM password_resets")
+                results.append(ok("forgot: token only created for a real account", n_tokens == 1,
+                                  f"{n_tokens} tokens"))
+
+                # the raw token is never stored
+                stored = await pool.fetchval("SELECT token_hash FROM password_resets LIMIT 1")
+                results.append(ok("only the token HASH is stored", len(stored) == 64))
+
+                r = await anon.post("/auth/reset", json={"token": "garbage", "password": "brandnew1"})
+                results.append(ok("bad reset token -> 400", r.status_code == 400))
+
+                # mint one we know the plaintext of
+                raw = "known-test-token-value"
+                uid = await pool.fetchval("SELECT id FROM users WHERE email='target@lvlnb.ca'")
+                await pool.execute(
+                    "INSERT INTO password_resets (user_id, token_hash, expires_at)"
+                    " VALUES ($1,$2,$3)", uid, hashlib.sha256(raw.encode()).hexdigest(),
+                    datetime.now(timezone.utc) + timedelta(hours=1))
+
+                r = await anon.post("/auth/reset", json={"token": raw, "password": "short"})
+                results.append(ok("reset enforces password length -> 422", r.status_code == 422))
+
+                r = await anon.post("/auth/reset", json={"token": raw, "password": "brandnewpass"})
+                results.append(ok("reset succeeds with a good token", r.status_code == 200))
+                r = await anon.post("/auth/reset", json={"token": raw, "password": "anotherpass1"})
+                results.append(ok("reset token is single use -> 400", r.status_code == 400))
+
+                r = await anon.post("/auth/login",
+                                    json={"email": "target@lvlnb.ca", "password": "brandnewpass"})
+                results.append(ok("reset clears the lockout and the new password works",
+                                  r.status_code == 200, f"got {r.status_code}"))
+
+                # expired token
+                raw2 = "expired-token-value"
+                await pool.execute(
+                    "INSERT INTO password_resets (user_id, token_hash, expires_at)"
+                    " VALUES ($1,$2,$3)", uid, hashlib.sha256(raw2.encode()).hexdigest(),
+                    datetime.now(timezone.utc) - timedelta(minutes=1))
+                r = await anon.post("/auth/reset", json={"token": raw2, "password": "yetanother1"})
+                results.append(ok("expired reset token -> 400", r.status_code == 400))
+
+            # --- a reset must log out sessions that were already open ---
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as sess:
+                await sess.post("/auth/login",
+                                json={"email": "target@lvlnb.ca", "password": "brandnewpass"})
+                results.append(ok("session valid before reset",
+                                  (await sess.get("/auth/verify")).status_code == 204))
+                raw3 = "third-token-value"
+                await pool.execute(
+                    "INSERT INTO password_resets (user_id, token_hash, expires_at)"
+                    " VALUES ($1,$2,$3)", uid, hashlib.sha256(raw3.encode()).hexdigest(),
+                    datetime.now(timezone.utc) + timedelta(hours=1))
+                async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as other:
+                    await other.post("/auth/reset", json={"token": raw3, "password": "finalpass123"})
+                results.append(ok("existing session is invalidated by the reset",
+                                  (await sess.get("/auth/verify")).status_code == 401,
+                                  f"got {(await sess.get('/auth/verify')).status_code}"))
+
+            await c.post("/auth/login", json={"email": "admin@lvlnb.ca", "password": "hockey123"})
             n = await pool.fetchval("SELECT count(*) FROM audit_log")
             results.append(ok("user-management actions are audited too", n >= 3, f"{n} rows"))
 

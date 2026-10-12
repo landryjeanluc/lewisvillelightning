@@ -10,16 +10,21 @@ Env:  DATABASE_URL, SESSION_SECRET, DATA_DIR, COOKIE_SECURE
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import os
+import secrets
+import smtplib
+from email.message import EmailMessage
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Literal
 
 import asyncpg
 import bcrypt
-from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
+from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, Response, status
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from pydantic import BaseModel, Field, field_validator
 
@@ -29,6 +34,23 @@ DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).resolve().parents[1] /
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "1") == "1"
 SESSION_MAX_AGE = 60 * 60 * 24 * 30          # 30 days — a season's worth of games
 COOKIE_NAME = "lvlnb_session"
+
+# Brute force: a wrong password is cheap for an attacker and expensive for us,
+# so count failures in a rolling window and refuse past a threshold. Per-email
+# stops someone grinding one account; per-IP stops them spraying many.
+LOCKOUT_WINDOW   = timedelta(minutes=15)
+MAX_FAILS_EMAIL  = 5
+MAX_FAILS_IP     = 20
+RESET_TTL        = timedelta(hours=1)
+PUBLIC_BASE_URL  = os.environ.get("PUBLIC_BASE_URL", "https://lvlnb.ca")
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+SMTP_FROM = os.environ.get("SMTP_FROM", "no-reply@lvlnb.ca")
+
+log = logging.getLogger("lvlnb")
 
 if not SESSION_SECRET:
     # Refuse to start rather than silently sign sessions with a guessable key.
@@ -88,13 +110,17 @@ async def current_user(
     if not lvlnb_session:
         return None
     try:
-        uid = signer.loads(lvlnb_session, max_age=SESSION_MAX_AGE)
+        payload = signer.loads(lvlnb_session, max_age=SESSION_MAX_AGE)
     except BadSignature:
         return None
+    # Older cookies carried a bare id; treat them as epoch 1.
+    uid, epoch = payload if isinstance(payload, list) else (payload, 1)
     row = await pool.fetchrow(
-        "SELECT id, email, display_name, role FROM users WHERE id = $1", uid
+        "SELECT id, email, display_name, role, session_epoch FROM users WHERE id = $1", uid
     )
-    return User(**dict(row)) if row else None
+    if row is None or row["session_epoch"] != epoch:
+        return None          # password changed since this cookie was issued
+    return User(**{k: row[k] for k in ("id", "email", "display_name", "role")})
 
 async def require_admin(user: Annotated[User | None, Depends(current_user)]) -> User:
     if user is None:
@@ -103,29 +129,179 @@ async def require_admin(user: Annotated[User | None, Depends(current_user)]) -> 
         raise HTTPException(status.HTTP_403_FORBIDDEN, "admin role required")
     return user
 
+def client_ip(request) -> str:
+    # nginx sets X-Forwarded-For; trust the first hop since only our own proxy
+    # can reach this service (it listens on loopback).
+    fwd = request.headers.get("x-forwarded-for", "")
+    return fwd.split(",")[0].strip() or (request.client.host if request.client else "?")
+
+def _hash_token(raw: str) -> str:
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+def send_mail(to: str, subject: str, body: str) -> bool:
+    """Send if SMTP is configured; otherwise say so rather than pretending."""
+    if not SMTP_HOST:
+        return False
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Subject"] = SMTP_FROM, to, subject
+    msg.set_content(body)
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as s:
+            s.starttls()
+            if SMTP_USER:
+                s.login(SMTP_USER, SMTP_PASS)
+            s.send_message(msg)
+        return True
+    except Exception as exc:                      # noqa: BLE001 - never 500 a login flow
+        log.warning("reset email to %s failed: %s", to, exc)
+        return False
+
+async def _recent_failures(c, email: str, ip: str) -> tuple[int, int]:
+    since = datetime.now(timezone.utc) - LOCKOUT_WINDOW
+    by_email = await c.fetchval(
+        "SELECT count(*) FROM login_attempts"
+        " WHERE lower(email) = lower($1) AND success = false AND at > $2", email, since)
+    by_ip = await c.fetchval(
+        "SELECT count(*) FROM login_attempts"
+        " WHERE ip = $1 AND success = false AND at > $2", ip, since)
+    return by_email, by_ip
+
 class LoginBody(BaseModel):
     email: str
     password: str
 
 @app.post("/auth/login")
-async def login(body: LoginBody, response: Response, pool: Annotated[asyncpg.Pool, Depends(db)]):
-    row = await pool.fetchrow(
-        "SELECT id, email, display_name, role, password_hash FROM users WHERE lower(email) = lower($1)",
-        body.email,
-    )
-    # Compare against a dummy hash when the user is unknown so a wrong email and
-    # a wrong password take the same time to answer.
-    stored = row["password_hash"] if row else "$2b$12$" + "." * 53
-    ok = bcrypt.checkpw(body.password.encode(), stored.encode())
-    if not row or not ok:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "wrong email or password")
+async def login(body: LoginBody, request: Request, response: Response,
+                pool: Annotated[asyncpg.Pool, Depends(db)]):
+    ip = client_ip(request)
+    async with pool.acquire() as c:
+        fails_email, fails_ip = await _recent_failures(c, body.email, ip)
+        if fails_email >= MAX_FAILS_EMAIL or fails_ip >= MAX_FAILS_IP:
+            # Record the blocked try too, so hammering extends the window
+            # rather than resetting it.
+            await c.execute(
+                "INSERT INTO login_attempts (email, ip, success) VALUES ($1,$2,false)",
+                body.email, ip)
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                "too many failed sign-ins — wait 15 minutes and try again",
+                headers={"Retry-After": str(int(LOCKOUT_WINDOW.total_seconds()))},
+            )
 
-    await pool.execute("UPDATE users SET last_login_at = now() WHERE id = $1", row["id"])
+        row = await c.fetchrow(
+            "SELECT id, email, display_name, role, password_hash, session_epoch"
+            " FROM users WHERE lower(email) = lower($1)", body.email)
+        # Compare against a dummy hash when the user is unknown so a wrong email
+        # and a wrong password take the same time to answer.
+        stored = row["password_hash"] if row else "$2b$12$" + "." * 53
+        ok = bcrypt.checkpw(body.password.encode(), stored.encode())
+
+        await c.execute(
+            "INSERT INTO login_attempts (email, ip, success) VALUES ($1,$2,$3)",
+            body.email, ip, bool(row and ok))
+
+        if not row or not ok:
+            left = MAX_FAILS_EMAIL - (fails_email + 1)
+            detail = "wrong email or password"
+            if 0 < left <= 2:
+                detail += f" — {left} attempt{'s' if left > 1 else ''} left before a 15 minute lockout"
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail)
+
+        await c.execute("UPDATE users SET last_login_at = now() WHERE id = $1", row["id"])
+
     response.set_cookie(
-        COOKIE_NAME, signer.dumps(row["id"]),
+        COOKIE_NAME, signer.dumps([row["id"], row["session_epoch"]]),
         max_age=SESSION_MAX_AGE, httponly=True, samesite="lax", secure=COOKIE_SECURE, path="/",
     )
     return User(**{k: row[k] for k in ("id", "email", "display_name", "role")})
+
+@app.get("/auth/verify")
+async def verify(user: Annotated[User | None, Depends(current_user)]):
+    """For nginx auth_request: 204 when the session is good, 401 otherwise.
+
+    nginx consults this for every request to the static site, which is how a
+    plain static build can still be behind a login.
+    """
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not signed in")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+class ForgotBody(BaseModel):
+    email: str
+
+@app.post("/auth/forgot")
+async def forgot(body: ForgotBody, request: Request,
+                 pool: Annotated[asyncpg.Pool, Depends(db)]):
+    """Always answers the same, whether or not the address has an account —
+    otherwise this endpoint becomes a way to enumerate who is on the team."""
+    ip = client_ip(request)
+    row = await pool.fetchrow(
+        "SELECT id, email, display_name FROM users WHERE lower(email) = lower($1)", body.email)
+    emailed = False
+    if row:
+        raw = secrets.token_urlsafe(32)
+        await pool.execute(
+            "INSERT INTO password_resets (user_id, token_hash, expires_at, requested_ip)"
+            " VALUES ($1,$2,$3,$4)",
+            row["id"], _hash_token(raw),
+            datetime.now(timezone.utc) + RESET_TTL, ip)
+        link = f"{PUBLIC_BASE_URL}/reset?token={raw}"
+        emailed = send_mail(
+            row["email"], "Reset your Lewisville Lightning password",
+            f"Hi {row['display_name']},\n\n"
+            f"Use this link within the hour to choose a new password:\n\n{link}\n\n"
+            "If you did not ask for this, you can ignore it — nothing has changed.\n")
+        if not emailed:
+            # No SMTP configured. Do not drop it silently: record it so an admin
+            # can hand the link over, and say so in the log.
+            await pool.execute(
+                "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'reset_link_undelivered',$2)",
+                row["id"], json.dumps({"email": row["email"], "link": link}))
+            log.warning("SMTP not configured — reset link for %s: %s", row["email"], link)
+    return {"ok": True,
+            "detail": "If that address has an account, a reset link is on its way.",
+            "delivered": emailed}
+
+class ResetBody(BaseModel):
+    token: str
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def _pw(cls, v: str) -> str:
+        if len(v) < MIN_PASSWORD:
+            raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+        return v
+
+@app.post("/auth/reset")
+async def reset(body: ResetBody, pool: Annotated[asyncpg.Pool, Depends(db)]):
+    async with pool.acquire() as c, c.transaction():
+        row = await c.fetchrow(
+            "SELECT id, user_id, expires_at, used_at FROM password_resets WHERE token_hash = $1",
+            _hash_token(body.token))
+        now = datetime.now(timezone.utc)
+        if row is None or row["used_at"] is not None or row["expires_at"] < now:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                                "that reset link is invalid or has expired")
+        # Bumping session_epoch logs out every device that was already signed in
+        # as this user — the point of a reset.
+        await c.execute(
+            "UPDATE users SET password_hash = $1, session_epoch = session_epoch + 1"
+            " WHERE id = $2", hash_password(body.password), row["user_id"])
+        await c.execute("UPDATE password_resets SET used_at = now() WHERE id = $1", row["id"])
+        # Any other outstanding link for this user is now moot.
+        await c.execute(
+            "UPDATE password_resets SET used_at = now()"
+            " WHERE user_id = $1 AND used_at IS NULL", row["user_id"])
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'password_reset',$2)",
+            row["user_id"], json.dumps({"via": "reset_link"}))
+        # A successful reset clears the lockout, so a locked-out user who
+        # resets can get straight back in.
+        await c.execute(
+            "DELETE FROM login_attempts WHERE lower(email) ="
+            " (SELECT lower(email) FROM users WHERE id = $1)", row["user_id"])
+    return {"ok": True}
 
 @app.post("/auth/logout")
 async def logout(response: Response):
@@ -369,7 +545,9 @@ async def update_user(
             if val is not None:
                 args.append(val); sets.append(f"{col} = ${len(args)}")
         if body.password is not None:
-            args.append(hash_password(body.password)); sets.append(f"password_hash = ${len(args)}")
+            args.append(hash_password(body.password))
+            sets.append(f"password_hash = ${len(args)}")
+            sets.append("session_epoch = session_epoch + 1")
         if not sets:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "nothing to change")
         args.append(user_id)

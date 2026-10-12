@@ -45,3 +45,34 @@ CREATE TABLE IF NOT EXISTS audit_log (
   payload  JSONB
 );
 CREATE INDEX IF NOT EXISTS audit_log_at_idx ON audit_log (at DESC);
+
+-- ---------------------------------------------------------------- auth v2 --
+
+-- Bumped whenever a password changes, and carried in the session cookie, so a
+-- reset instantly invalidates every cookie that user already had out there.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS session_epoch INT NOT NULL DEFAULT 1;
+
+-- Every attempt, good or bad. Brute-force limits read it; it is also the
+-- audit trail for "who tried to get in".
+CREATE TABLE IF NOT EXISTS login_attempts (
+  id      BIGSERIAL PRIMARY KEY,
+  at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  email   TEXT,
+  ip      TEXT,
+  success BOOLEAN NOT NULL
+);
+CREATE INDEX IF NOT EXISTS login_attempts_email_idx ON login_attempts (lower(email), at DESC);
+CREATE INDEX IF NOT EXISTS login_attempts_ip_idx    ON login_attempts (ip, at DESC);
+
+-- Only the hash is stored: a leaked database must not hand someone a working
+-- reset link.
+CREATE TABLE IF NOT EXISTS password_resets (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ,
+  requested_ip TEXT
+);
+CREATE INDEX IF NOT EXISTS password_resets_user_idx ON password_resets (user_id, created_at DESC);

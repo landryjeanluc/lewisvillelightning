@@ -1,0 +1,39 @@
+---
+import Auth from "../layouts/Auth.astro";
+---
+<Auth title="Sign in">
+  <form id="f">
+    <label>Email<input name="email" type="email" required autocomplete="username" autofocus /></label>
+    <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
+    <button type="submit">Sign in</button>
+    <p id="msg" class="auth-msg err" hidden></p>
+    <a class="auth-link" href="/forgot">Forgot your password?</a>
+  </form>
+</Auth>
+
+<script>
+  const f = document.getElementById("f") as HTMLFormElement;
+  const msg = document.getElementById("msg") as HTMLElement;
+  // nginx sends us here with ?next=<the page they wanted>
+  const next = new URLSearchParams(location.search).get("next") || "/";
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector("button") as HTMLButtonElement;
+    btn.disabled = true;
+    const d = new FormData(f);
+    const r = await fetch("/api/auth/login", {
+      method: "POST", credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: d.get("email"), password: d.get("password") }),
+    });
+    const body = await r.json().catch(() => null);
+    btn.disabled = false;
+    if (r.ok) {
+      // only follow same-origin paths, never an absolute URL from the query
+      location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+      return;
+    }
+    msg.textContent = body?.detail ?? "Sign in failed.";
+    msg.hidden = false;
+  });
+</script>
