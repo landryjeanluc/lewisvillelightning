@@ -1,5 +1,6 @@
 ---
-import { crestUrl, type GameEvent } from "../lib/data";
+import TeamCrest from "./TeamCrest.astro";
+import { type GameEvent } from "../lib/data";
 import { sides } from "../lib/data";
 
 interface Props { game: GameEvent; size?: "hero" | "compact" }
@@ -10,7 +11,7 @@ const showScore = game.status === "final" || game.status === "in_progress";
 <div class:list={["matchup", `matchup--${size}`]}>
   <div class="side side--left" style={`--team: ${left.colours.primary}; --team-2: ${left.colours.secondary}`}>
     <div class="glow" aria-hidden="true"></div>
-    <img class="crest" src={crestUrl(left)} alt={`${left.name} crest`} loading="eager" />
+    <TeamCrest team={left} eager />
     <div class="label">
       <span class="town">{left.name.replace(new RegExp(`\\s*${left.short}$`), "")}</span>
       <span class="nick">{left.short}</span>
@@ -36,7 +37,7 @@ const showScore = game.status === "final" || game.status === "in_progress";
 
   <div class="side side--right" style={`--team: ${right.colours.primary}; --team-2: ${right.colours.secondary}`}>
     <div class="glow" aria-hidden="true"></div>
-    <img class="crest" src={crestUrl(right)} alt={`${right.name} crest`} loading="eager" />
+    <TeamCrest team={right} eager />
     <div class="label">
       <span class="town">{right.name.replace(new RegExp(`\\s*${right.short}$`), "")}</span>
       <span class="nick">{right.short}</span>
@@ -76,13 +77,12 @@ const showScore = game.status === "final" || game.status === "in_progress";
     filter: blur(calc(var(--u) * 1.6));
     opacity: .75;
   }
-  .crest {
-    width: calc(var(--u) * 15);
+  .side :global(.tc) {
+    --crest-size: calc(var(--u) * 15);
     max-width: 100%;
-    height: auto;
     filter: drop-shadow(0 calc(var(--u) * .5) calc(var(--u) * 1.4) rgb(0 0 0 / .6));
   }
-  .matchup--compact .crest { width: calc(var(--u) * 7); }
+  .matchup--compact .side :global(.tc) { --crest-size: calc(var(--u) * 7); }
 
   .label { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1; }
   .town {
@@ -119,6 +119,6 @@ const showScore = game.status === "final" || game.status === "in_progress";
 
   @media (max-width: 520px) {
     .matchup { gap: calc(var(--u) * .6); }
-    .crest { width: calc(var(--u) * 11); }
+    .side :global(.tc) { --crest-size: calc(var(--u) * 11); }
   }
 </style>

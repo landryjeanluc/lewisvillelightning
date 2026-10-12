@@ -1,0 +1,52 @@
+---
+import { crestUrl, type Team } from "../lib/data";
+
+/**
+ * A team's crest, or a monogram in their colours when we don't have one.
+ *
+ * Opponents arrive from Spordle all season and most will never have a crest
+ * file. An empty <img src> renders as a broken-image icon, so the fallback is
+ * a real badge rather than a hole in the layout.
+ */
+interface Props { team: Team; size?: number; eager?: boolean }
+const { team, size = 34, eager = false } = Astro.props;
+
+// "Shediac / Cap-Pelé Predators" -> "P" ; "Dieppe" -> "D"
+const initials = (team.short || team.name)
+  .replace(/[^\p{L}\s-]/gu, "")
+  .split(/[\s-]+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((w: string) => w[0].toUpperCase())
+  .join("");
+---
+{team.crest ? (
+  <img class="tc tc-img" src={crestUrl(team)} alt={`${team.name} crest`}
+       width={size} height={size} loading={eager ? "eager" : "lazy"} />
+) : (
+  <span class="tc tc-mono" role="img" aria-label={`${team.name} crest unavailable`}
+        style={`--size:${size}px; --c:${team.colours.primary}; --c2:${team.colours.secondary}`}>
+    <span>{initials}</span>
+  </span>
+)}
+
+<style>
+  .tc { flex: none; }
+  .tc-img { width: var(--crest-size, auto); height: auto; object-fit: contain; }
+
+  .tc-mono {
+    display: inline-grid; place-items: center;
+    width: var(--crest-size, var(--size)); aspect-ratio: 1;
+    border-radius: 22%;
+    background:
+      radial-gradient(120% 120% at 30% 18%, color-mix(in srgb, var(--c) 86%, white 14%), var(--c) 55%, var(--c2) 100%);
+    border: 1px solid rgb(255 255 255 / .22);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), 0 2px 10px rgb(0 0 0 / .45);
+  }
+  .tc-mono > span {
+    font-family: var(--font-display); font-style: italic; font-weight: 900;
+    font-size: calc(var(--crest-size, var(--size)) * 0.5);
+    line-height: 1; letter-spacing: -.02em; color: #fff;
+    text-shadow: 0 1px 2px rgb(0 0 0 / .6);
+  }
+</style>

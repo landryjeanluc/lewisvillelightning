@@ -1,5 +1,6 @@
 ---
-import { sides, outcome, crestUrl, US } from "../lib/data";
+import TeamCrest from "./TeamCrest.astro";
+import { sides, outcome, US } from "../lib/data";
 import { monthAbbr, dayNum, weekdayAbbr, time, relativeDay, machine } from "../lib/format";
 
 interface Props { event: any }
@@ -20,7 +21,7 @@ const href = `/schedule/${event.id}`;
     <div class="line1">
       {isGame ? (
         <>
-          <img class="mini" src={crestUrl(s!.them)} alt="" width="34" height="34" />
+          <TeamCrest team={s!.them} size={34} />
           <span class="opp">
             <span class="va">{s!.weAreHome ? "vs" : "at"}</span> {s!.them.short}
           </span>
@@ -64,7 +65,7 @@ const href = `/schedule/${event.id}`;
     text-transform: uppercase; color: var(--text-dim);
   }
   .chip-day { font-size: 1.5rem; color: var(--text); }
-  .mini { width: 34px; height: auto; flex: none; }
+  .row :global(.tc) { --crest-size: 34px; }
   .body { min-width: 0; }
   .line1 { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
   .opp {
