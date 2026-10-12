@@ -1,0 +1,16 @@
+[project]
+name = "lvlnb-api"
+version = "0.1.0"
+description = "Lewisville Lightning stats API — per-game scoresheet entry"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "asyncpg>=0.30",
+  "bcrypt>=4.2",
+  "itsdangerous>=2.2",
+  "pydantic>=2.9",
+]
+
+[tool.uv]
+package = false
