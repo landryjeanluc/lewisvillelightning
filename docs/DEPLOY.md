@@ -15,92 +15,59 @@ port **8111**, behind HTTP basic auth, with TLS terminated upstream by NPM.
 | NPM proxy-host `lvlnb.ca` → `http://192.168.1.20:8111` | not done (JL, NPM UI) |
 | DNS `lvlnb.ca` → public IP | not done (JL, registrar) |
 
-## The rebuild is deliberately not run
+## The rebuild — what it actually changes
 
-arachnea's current system generation was built **2026-10-10**. `flake.lock` was
-updated **2026-10-11** (`flake.lock: update inputs (helios)`). A
-`nixos-rebuild switch` today therefore ships that input bump to **all 51 running
-services** on the box — nextcloud, immich, postgres, cdecb, honda, the arr
-stack — not just this new vhost. That is a fleet update, and it is JL's to
-time, not something to trigger as a side effect of adding a team website.
+An earlier version of this doc warned that switching would carry a `flake.lock`
+bump to all 51 services on the box. **That was wrong.** Building the new system
+and diffing it against the running one shows:
 
-When you want it:
+```
+Added packages:
+[A.]  #1  unit-lvlnb-api.service  <none>
+Closure size: 2075 -> 2076 (25 added, 24 removed, delta +1, disk usage +6.4KiB)
+```
+
+One added systemd unit. Both systems carry the same nixpkgs revision
+(`25.11.20260630.b6018f8`), so nextcloud, immich, postgres, cdecb, honda and the
+arr stack are untouched. The only restart is nginx picking up the new vhost.
+
+Always diff before switching a box like this:
 
 ```
 cd ~/repos/HexPi/nixos-builds
+nixos-rebuild build --flake .#arachnea --build-host arachnea
+ssh arachnea nix run nixpkgs#nvd -- diff /run/current-system ./result
+```
+
+Then switch:
+
+```
 nixos-rebuild switch --flake .#arachnea --target-host arachnea \
   --build-host arachnea --use-remote-sudo
 ```
 
-`--build-host arachnea` matters: this workstation does not have arachnea's
-closure, so building locally would fetch an enormous amount for nothing.
+Rollback: `ssh arachnea 'sudo nixos-rebuild switch --rollback'`.
 
-Rollback if anything misbehaves:
+### Already staged on the box (done)
 
-```
-ssh arachnea 'sudo nixos-rebuild switch --rollback'
-```
+| | |
+|---|---|
+| `/opt/lvlnb` | API code + `.venv` with all deps, `.env` (0600, secret generated on-box) |
+| `/srv/lvlnb` | the static site build |
+| `/srv/lvlnb-data` | `data/*.json` — the API validates ids against this |
+| `/srv/lvlnb-uploads` | empty, for admin photo uploads |
 
-The nginx config is validated at *build* time by NixOS, so a syntax error fails
-the build rather than taking pa-web and dpt-plans down at switch time. The
-config was evaluated already and emits the expected vhost, headers, auth and
-firewall port.
-
-## The stats API (lvlnb-api)
-
-Declared in `nixos-builds/hosts/arachnea/guests/lvlnb.nix` (commit `18d9279`):
-FastAPI on loopback **:8112**, database `lvlnb` on the shared Postgres, with the
-static vhost proxying `^~ /api/` to it so the browser sees one origin.
-
-First install on the host, after the rebuild:
+### After the switch
 
 ```
-sudo mkdir -p /opt/lvlnb && sudo chown lvlnb:lvlnb /opt/lvlnb
-sudo -u lvlnb rsync -a ~/repos/LewisvilleLightning/api/ /opt/lvlnb/
-sudo -u lvlnb sh -c 'cd /opt/lvlnb && uv venv && uv pip install -r <(uv export --no-hashes)'
-
-# secrets — the app refuses to start without SESSION_SECRET
-sudo -u lvlnb tee /opt/lvlnb/.env >/dev/null <<EOF
-DATABASE_URL=postgresql:///lvlnb
-SESSION_SECRET=$(head -c 32 /dev/urandom | base64)
-DATA_DIR=/srv/lvlnb-data
-COOKIE_SECURE=1
-EOF
-sudo chmod 600 /opt/lvlnb/.env
-
-# the API validates ids against the data contract
-sudo mkdir -p /srv/lvlnb-data && sudo chown jl:users /srv/lvlnb-data
-rsync -a data/ arachnea:/srv/lvlnb-data/
-
-sudo systemctl enable --now lvlnb-api
-curl -s localhost:8112/health      # {"ok":true,"games":2,"players":19}
+ssh arachnea 'sudo chown -R lvlnb:lvlnb /opt/lvlnb /srv/lvlnb-uploads'
+ssh arachnea 'sudo systemctl restart lvlnb-api && systemctl is-active lvlnb-api'
+ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py bootstrap'
+curl -s localhost:8112/health   # on the box
 ```
 
-### The first admin
-
-The API requires an admin to create users, so the very first one comes from the
-box. `manage.py bootstrap` creates **jl@hexpi.ca** and refuses to run once any
-account exists:
-
-```
-cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py bootstrap
-```
-
-It prompts for a password (or mints one if there's no terminal). After that,
-everyone else is added from **/admin → Team access** in the browser — no shell.
-
-The CLI stays available as the lockout escape hatch:
-
-```
-manage.py list
-manage.py add coach@example.ca "Coach" --admin
-manage.py set-role coach@example.ca viewer
-manage.py set-password jl@hexpi.ca
-manage.py remove someone@example.ca
-```
-
-Both the CLI and the API refuse to demote or delete the **last** admin — losing
-it would mean nobody could manage the team without shell access.
+Then the two steps only JL can do: an NPM proxy-host
+`lvlnb.ca -> http://192.168.1.20:8111`, and a DNS record for lvlnb.ca.
 
 ## Publishing a content update
 

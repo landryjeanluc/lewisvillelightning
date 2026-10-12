@@ -11,6 +11,7 @@ hand a kid's game to someone else.
   python3 tools/assign_spotlight.py            # assign any unassigned games
   python3 tools/assign_spotlight.py --status   # show the rotation, assign nothing
   python3 tools/assign_spotlight.py --reassign g-2026-10-13-shediac
+  python3 tools/assign_spotlight.py --set g-2026-10-13-shediac pl-02
 """
 from __future__ import annotations
 import json, random, sys
@@ -41,6 +42,17 @@ def main():
     by_id = {p["id"]: p for p in roster["players"]}
     games = sorted((e for e in schedule["events"] if e["type"] == "game"),
                    key=lambda e: e["startsAt"])
+
+    if "--set" in args:
+        i = args.index("--set")
+        gid, pid = args[i + 1], args[i + 2]
+        if pid not in players:
+            print(f"no such player {pid}"); return
+        spot["assignments"][gid] = pid
+        p = by_id[pid]
+        save(spot)
+        print(f"  {gid}  ->  #{p['number']} {p['firstName']} {p['lastName']} (set by hand)")
+        return
 
     if "--reassign" in args:
         gid = args[args.index("--reassign") + 1]

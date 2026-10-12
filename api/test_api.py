@@ -258,6 +258,75 @@ async def main():
                                   f"got {(await sess.get('/auth/verify')).status_code}"))
 
             await c.post("/auth/login", json={"email": "admin@lvlnb.ca", "password": "hockey123"})
+
+            # ---------------- news ----------------
+            r = await c.post("/news", json={"title": "Season opener recap!", "body": "We won.",
+                                            "status": "draft"})
+            results.append(ok("admin creates a draft post", r.status_code == 201))
+            post_id, slug = r.json()["id"], r.json()["slug"]
+            results.append(ok("title is slugified", slug == "season-opener-recap", slug))
+            results.append(ok("a draft has no published_at", r.json()["published_at"] is None))
+
+            r2 = await c.post("/news", json={"title": "Season opener recap!", "body": "again"})
+            results.append(ok("duplicate title gets a distinct slug",
+                              r2.json()["slug"] == "season-opener-recap-2", r2.json()["slug"]))
+
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                pub = await anon.get("/news")
+                results.append(ok("drafts are invisible to non-admins", pub.json() == []))
+            r = await c.get("/news?include_drafts=true")
+            results.append(ok("admin can see drafts", len(r.json()) == 2, f"{len(r.json())}"))
+
+            r = await c.put(f"/news/{post_id}", json={"title": "Season opener recap",
+                                                      "body": "We won 3-2.", "status": "published"})
+            results.append(ok("publishing stamps published_at", r.json()["published_at"] is not None))
+            first_stamp = r.json()["published_at"]
+            r = await c.put(f"/news/{post_id}", json={"title": "Season opener recap",
+                                                      "body": "We won 3-2. Edited.",
+                                                      "status": "published"})
+            results.append(ok("later edits keep the original publish date",
+                              r.json()["published_at"] == first_stamp))
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                results.append(ok("published post is now visible",
+                                  len((await anon.get("/news")).json()) == 1))
+            r = await c.delete(f"/news/{r2.json()['id']}")
+            results.append(ok("admin deletes a post", r.status_code == 200))
+
+            # ---------------- player profiles ----------------
+            r = await c.put("/profiles/pl-02", json={"bio": "Loves the breakaway.",
+                                                     "position": "C", "shoots": "L", "captain": "C"})
+            results.append(ok("admin writes a player bio + details", r.status_code == 200
+                              and r.json()["position"] == "C"))
+            r = await c.put("/profiles/pl-03", json={"captain": "C"})
+            results.append(ok("a second captain is refused -> 409", r.status_code == 409,
+                              (r.json() or {}).get("detail", "")[:46]))
+            r = await c.put("/profiles/pl-03", json={"captain": "A"})
+            results.append(ok("alternates are fine", r.status_code == 200))
+            r = await c.put("/profiles/pl-99", json={"bio": "ghost"})
+            results.append(ok("unknown player -> 404", r.status_code == 404))
+            r = await c.get("/profiles")
+            results.append(ok("profiles come back keyed by player", "pl-02" in r.json()))
+
+            # ---------------- coach notes ----------------
+            gid = "g-2026-10-13-shediac"
+            r = await c.put(f"/notes/{gid}/preview", json={"body": "Watch their #9 on the rush."})
+            results.append(ok("coach writes a game preview", r.status_code == 200))
+            r = await c.put(f"/notes/{gid}/recap", json={"body": "Great backcheck all night."})
+            results.append(ok("coach writes a recap", r.status_code == 200))
+            r = await c.get(f"/notes/{gid}")
+            results.append(ok("both notes come back with the author",
+                              set(r.json()) == {"preview", "recap"}
+                              and r.json()["preview"]["author"] is not None))
+            r = await c.put(f"/notes/{gid}/preview", json={"body": "   "})
+            results.append(ok("clearing a note removes it", r.json()["cleared"] is True))
+            r = await c.get(f"/notes/{gid}")
+            results.append(ok("cleared note is gone", set(r.json()) == {"recap"}))
+            r = await c.put("/notes/not-a-game/recap", json={"body": "x"})
+            results.append(ok("notes on an unknown game -> 404", r.status_code == 404))
+
+            # ---------------- uploads ----------------
+            import io
+            from PIL import Image
             n = await pool.fetchval("SELECT count(*) FROM audit_log")
             results.append(ok("user-management actions are audited too", n >= 3, f"{n} rows"))
 

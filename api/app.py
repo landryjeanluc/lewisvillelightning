@@ -24,7 +24,8 @@ from typing import Annotated, Literal
 
 import asyncpg
 import bcrypt
-from fastapi import Cookie, Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
+                     Request, Response, UploadFile, status)
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from pydantic import BaseModel, Field, field_validator
 
@@ -584,3 +585,287 @@ async def delete_user(
             actor.id, json.dumps({"target": user_id}),
         )
     return {"ok": True}
+
+# ======================================================================= #
+#  Admin-authored content: news, player profiles, coach notes, uploads.   #
+#  Spordle owns the roster and schedule; everything here is written by a  #
+#  team admin and keyed to the contract ids.                              #
+# ======================================================================= #
+
+import re as _re
+from pathlib import Path as _Path
+
+UPLOAD_DIR = _Path(os.environ.get("UPLOAD_DIR", "/srv/lvlnb-uploads"))
+MAX_UPLOAD = 12 * 1024 * 1024          # 12 MB; phone photos land around 3-5
+ALLOWED_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+
+def slugify(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = _re.sub(r"[^a-zA-Z0-9]+", "-", s).strip("-").lower()
+    return s[:80] or "post"
+
+# ------------------------------------------------------------------- news --
+
+class NewsIn(BaseModel):
+    title: str
+    summary: str | None = None
+    body: str = ""
+    image: str | None = None
+    lang: Literal["en", "fr"] = "en"
+    status: Literal["draft", "published"] = "draft"
+
+    @field_validator("title")
+    @classmethod
+    def _t(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("a post needs a title")
+        return v
+
+@app.get("/news")
+async def list_news(
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+    user: Annotated[User | None, Depends(current_user)],
+    include_drafts: bool = False,
+):
+    # Drafts are only ever visible to an admin — a half-written recap must not
+    # appear on the team's front page.
+    admin = user is not None and user.role == "admin"
+    rows = await pool.fetch(
+        """SELECT n.id, n.slug, n.title, n.summary, n.body, n.image, n.lang, n.status,
+                  n.published_at, n.updated_at, u.display_name AS author
+             FROM news_posts n LEFT JOIN users u ON u.id = n.author_id
+            WHERE ($1 AND $2) OR n.status = 'published'
+            ORDER BY coalesce(n.published_at, n.updated_at) DESC""",
+        include_drafts, admin,
+    )
+    return [dict(r) for r in rows]
+
+@app.post("/news", status_code=status.HTTP_201_CREATED)
+async def create_news(body: NewsIn, actor: Annotated[User, Depends(require_admin)],
+                      pool: Annotated[asyncpg.Pool, Depends(db)]):
+    base = slugify(body.title)
+    async with pool.acquire() as c, c.transaction():
+        slug, n = base, 1
+        while await c.fetchval("SELECT 1 FROM news_posts WHERE slug = $1", slug):
+            n += 1
+            slug = f"{base}-{n}"
+        row = await c.fetchrow(
+            """INSERT INTO news_posts (slug, title, summary, body, image, lang, status,
+                                       published_at, author_id)
+               VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $7='published' THEN now() END, $8)
+               RETURNING id, slug, title, status, published_at""",
+            slug, body.title, body.summary, body.body, body.image, body.lang,
+            body.status, actor.id)
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'news_create',$2)",
+            actor.id, json.dumps({"slug": slug, "status": body.status}))
+    return dict(row)
+
+@app.put("/news/{post_id}")
+async def update_news(post_id: int, body: NewsIn,
+                      actor: Annotated[User, Depends(require_admin)],
+                      pool: Annotated[asyncpg.Pool, Depends(db)]):
+    async with pool.acquire() as c, c.transaction():
+        row = await c.fetchrow(
+            """UPDATE news_posts SET title=$1, summary=$2, body=$3, image=$4, lang=$5,
+                      status=$6,
+                      -- first publish stamps the date; later edits keep it
+                      published_at = CASE WHEN $6='published' AND published_at IS NULL
+                                          THEN now() ELSE published_at END,
+                      updated_at = now()
+                WHERE id=$7
+                RETURNING id, slug, title, status, published_at""",
+            body.title, body.summary, body.body, body.image, body.lang,
+            body.status, post_id)
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no such post")
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'news_update',$2)",
+            actor.id, json.dumps({"id": post_id, "status": body.status}))
+    return dict(row)
+
+@app.delete("/news/{post_id}")
+async def delete_news(post_id: int, actor: Annotated[User, Depends(require_admin)],
+                      pool: Annotated[asyncpg.Pool, Depends(db)]):
+    gone = await pool.execute("DELETE FROM news_posts WHERE id = $1", post_id)
+    if gone.endswith("0"):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such post")
+    await pool.execute(
+        "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'news_delete',$2)",
+        actor.id, json.dumps({"id": post_id}))
+    return {"ok": True}
+
+# -------------------------------------------------------- player profiles --
+
+class ProfileIn(BaseModel):
+    bio: str | None = None
+    position: Literal["C", "LW", "RW", "F", "D", "G"] | None = None
+    shoots: Literal["L", "R"] | None = None
+    captain: Literal["C", "A"] | None = None
+    nickname: str | None = None
+    favourite_player: str | None = None
+    card_art: str | None = None
+    photo: str | None = None
+
+@app.get("/profiles")
+async def list_profiles(pool: Annotated[asyncpg.Pool, Depends(db)]):
+    rows = await pool.fetch("SELECT * FROM player_profiles")
+    return {r["player_id"]: {k: v for k, v in dict(r).items()
+                             if k not in ("updated_by",)} for r in rows}
+
+@app.put("/profiles/{player_id}")
+async def put_profile(player_id: str, body: ProfileIn,
+                      actor: Annotated[User, Depends(require_admin)],
+                      pool: Annotated[asyncpg.Pool, Depends(db)]):
+    if player_id not in contract.players:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown player {player_id}")
+    # Only one captain and two alternates are legal on a hockey team.
+    if body.captain == "C":
+        other = await pool.fetchval(
+            "SELECT player_id FROM player_profiles WHERE captain='C' AND player_id <> $1",
+            player_id)
+        if other:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"{contract.players[other]['firstName']} is already captain — "
+                "change them to alternate first")
+    async with pool.acquire() as c, c.transaction():
+        row = await c.fetchrow(
+            """INSERT INTO player_profiles
+                 (player_id, bio, position, shoots, captain, nickname,
+                  favourite_player, card_art, photo, updated_by, updated_at)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())
+               ON CONFLICT (player_id) DO UPDATE SET
+                 bio=EXCLUDED.bio, position=EXCLUDED.position, shoots=EXCLUDED.shoots,
+                 captain=EXCLUDED.captain, nickname=EXCLUDED.nickname,
+                 favourite_player=EXCLUDED.favourite_player,
+                 card_art=EXCLUDED.card_art, photo=EXCLUDED.photo,
+                 updated_by=EXCLUDED.updated_by, updated_at=now()
+               RETURNING *""",
+            player_id, body.bio, body.position, body.shoots, body.captain,
+            body.nickname, body.favourite_player, body.card_art, body.photo, actor.id)
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'profile_update',$2)",
+            actor.id, json.dumps({"player_id": player_id}))
+    return {k: v for k, v in dict(row).items() if k not in ("updated_by",)}
+
+# ------------------------------------------------------------ coach notes --
+
+class NoteIn(BaseModel):
+    body: str
+
+@app.get("/notes/{game_id}")
+async def get_notes(game_id: str, pool: Annotated[asyncpg.Pool, Depends(db)]):
+    rows = await pool.fetch(
+        """SELECT n.kind, n.body, n.updated_at, u.display_name AS author
+             FROM game_notes n LEFT JOIN users u ON u.id = n.author_id
+            WHERE n.game_id = $1""", game_id)
+    return {r["kind"]: {"body": r["body"], "updated_at": r["updated_at"],
+                        "author": r["author"]} for r in rows}
+
+@app.put("/notes/{game_id}/{kind}")
+async def put_note(game_id: str, kind: Literal["preview", "recap"], body: NoteIn,
+                   actor: Annotated[User, Depends(require_admin)],
+                   pool: Annotated[asyncpg.Pool, Depends(db)]):
+    if game_id not in contract.games:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown game {game_id}")
+    text = body.body.strip()
+    async with pool.acquire() as c, c.transaction():
+        if not text:                       # clearing a note deletes it
+            await c.execute("DELETE FROM game_notes WHERE game_id=$1 AND kind=$2",
+                            game_id, kind)
+        else:
+            await c.execute(
+                """INSERT INTO game_notes (game_id, kind, body, author_id, updated_at)
+                   VALUES ($1,$2,$3,$4, now())
+                   ON CONFLICT (game_id, kind) DO UPDATE SET
+                     body=EXCLUDED.body, author_id=EXCLUDED.author_id, updated_at=now()""",
+                game_id, kind, text, actor.id)
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, game_id, payload) VALUES ($1,'note',$2,$3)",
+            actor.id, game_id, json.dumps({"kind": kind, "cleared": not text}))
+    return {"ok": True, "cleared": not text}
+
+# --------------------------------------------------------------- uploads --
+
+@app.get("/uploads")
+async def list_uploads(_: Annotated[User, Depends(require_admin)],
+                       pool: Annotated[asyncpg.Pool, Depends(db)]):
+    rows = await pool.fetch(
+        "SELECT path, kind, bytes, uploaded_at FROM uploads ORDER BY uploaded_at DESC LIMIT 200")
+    return [dict(r) for r in rows]
+
+@app.post("/uploads", status_code=status.HTTP_201_CREATED)
+async def upload(
+    actor: Annotated[User, Depends(require_admin)],
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+    file: UploadFile = File(...),
+    kind: str = Form("card_art"),
+):
+    """Accept an image, strip it, resize it, and hand back the path to use.
+
+    EXIF is discarded deliberately, not incidentally: a phone photo of a child
+    usually carries GPS coordinates and a capture timestamp, and this site
+    exists partly so that information does not travel.
+    """
+    if kind not in {"card_art", "team_photo", "news_image"}:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"unknown kind {kind}")
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            f"{file.content_type or 'that file'} is not an image we accept "
+            f"({', '.join(sorted(ALLOWED_TYPES))})")
+
+    raw = await file.read(MAX_UPLOAD + 1)
+    if len(raw) > MAX_UPLOAD:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            f"image is larger than {MAX_UPLOAD // (1024*1024)} MB")
+    if not raw:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "that file was empty")
+
+    from io import BytesIO
+    from PIL import Image, ImageOps
+
+    try:
+        img = Image.open(BytesIO(raw))
+        img.load()
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "that file is not a readable image")
+
+    # honour the EXIF rotation flag, then drop EXIF entirely
+    img = ImageOps.exif_transpose(img)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    longest = {"card_art": 1200, "team_photo": 2048, "news_image": 1600}[kind]
+    img.thumbnail((longest, longest), Image.LANCZOS)
+
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    stem = f"{kind}-{stamp}-{secrets.token_hex(4)}"
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    # A clean image with no metadata: Pillow writes only what we give it.
+    clean = Image.new(img.mode, img.size)
+    clean.putdata(list(img.getdata()))
+
+    jpg = UPLOAD_DIR / f"{stem}.jpg"
+    webp = UPLOAD_DIR / f"{stem}.webp"
+    clean.convert("RGB").save(jpg, "JPEG", quality=84, optimize=True)
+    clean.convert("RGB").save(webp, "WEBP", quality=80, method=4)
+
+    path = f"/uploads/{stem}.jpg"
+    await pool.execute(
+        """INSERT INTO uploads (path, kind, bytes, content_type, uploaded_by)
+           VALUES ($1,$2,$3,'image/jpeg',$4)""",
+        path, kind, jpg.stat().st_size, actor.id)
+    await pool.execute(
+        "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'upload',$2)",
+        actor.id, json.dumps({"path": path, "kind": kind}))
+
+    return {"path": path, "webp": f"/uploads/{stem}.webp",
+            "width": img.width, "height": img.height,
+            "bytes": jpg.stat().st_size}

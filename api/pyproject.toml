@@ -10,6 +10,8 @@ dependencies = [
   "bcrypt>=4.2",
   "itsdangerous>=2.2",
   "pydantic>=2.9",
+  "pillow>=11.0",        # upload resizing
+  "python-multipart>=0.0.12",  # file uploads
 ]
 
 [tool.uv]
