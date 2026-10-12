@@ -1,7 +1,7 @@
 {
   "team": "Lewisville Lightning",
   "division": "Competitive U13 B",
-  "opponent": "Shediac / Cap-Pelé Predators",
+  "opponent": "Shediac / Cap-Pel\u00e9 Predators",
   "game_date": "2026-10-13",
   "start_time": "17:30",
   "venue": "Kay Arena",
@@ -12,5 +12,11 @@
   },
   "generation": "Built-in image_gen tool with official logo reference images; full prompt in generation-prompt.txt",
   "upscale": "Local Atelier ct118 ComfyUI, RealESRGAN_x4plus followed by area downsampling to 3840x2160",
-  "workflow": "upscale-workflow.json"
+  "workflow": "upscale-home-workflow.json",
+  "home_team": "Lewisville Lightning",
+  "away_team": "Shediac / Cap-Pel\u00e9 Predators",
+  "layout": "Predators left; Lightning right",
+  "current_master": "predators-vs-lightning-home-master.png",
+  "current_4k": "predators-vs-lightning-home-4k.png",
+  "correction_prompt": "home-correction-prompt.txt"
 }
