@@ -9,6 +9,7 @@ createdb -h "$PGHOST" -U postgres lvlnb
 echo "postgres up"
 
 export DATABASE_URL="postgresql://postgres@/lvlnb?host=$PGHOST"
+export UPLOAD_DIR=/tmp/lvlnb-test-uploads; rm -rf "$UPLOAD_DIR"; mkdir -p "$UPLOAD_DIR"
 export SESSION_SECRET="test-secret-not-production"
 export DATA_DIR=/home/jl/repos/LewisvilleLightning/data
 export COOKIE_SECURE=0

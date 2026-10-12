@@ -1,5 +1,5 @@
 """Exercise the API end to end against a real Postgres, in-process."""
-import asyncio, os, bcrypt, asyncpg, httpx
+import asyncio, os, pathlib, bcrypt, asyncpg, httpx
 from app import app, signer
 
 async def main():
@@ -327,6 +327,68 @@ async def main():
             # ---------------- uploads ----------------
             import io
             from PIL import Image
+
+            def jpeg_with_gps() -> bytes:
+                """A JPEG carrying EXIF including GPS, like a phone photo of a child."""
+                im = Image.new("RGB", (2400, 1800), (20, 40, 90))
+                buf = io.BytesIO()
+                exif = Image.Exif()
+                exif[0x010F] = "TestPhone"                      # Make
+                exif[0x0110] = "TestCam 1"                      # Model
+                exif[0x0132] = "2026:10:13 17:30:00"            # DateTime
+                # GPS lives in its own IFD; rationals must be plain numbers.
+                gps = exif.get_ifd(0x8825)
+                gps[1] = "N"
+                gps[2] = (46.0, 5.0, 0.0)                       # GPSLatitude
+                gps[3] = "W"
+                gps[4] = (64.0, 47.0, 0.0)                      # GPSLongitude
+                im.save(buf, "JPEG", exif=exif)
+                return buf.getvalue()
+
+            src = jpeg_with_gps()
+            _fx = Image.open(io.BytesIO(src)).getexif()
+            results.append(ok("test fixture really does carry EXIF incl. GPS",
+                              bool(_fx) and bool(_fx.get_ifd(0x8825)),
+                              f"{len(_fx)} tags, gps={len(_fx.get_ifd(0x8825))}"))
+
+            files = {"file": ("photo.jpg", src, "image/jpeg")}
+            r = await c.post("/uploads", files=files, data={"kind": "card_art"})
+            results.append(ok("admin uploads an image", r.status_code == 201, f"{r.status_code} {r.text[:70]}"))
+            up = r.json()
+            results.append(ok("oversized image is scaled down to the card bound",
+                              max(up["width"], up["height"]) == 1200, f"{up['width']}x{up['height']}"))
+
+            saved = pathlib.Path(os.environ["UPLOAD_DIR"]) / pathlib.Path(up["path"]).name
+            results.append(ok("the file is actually on disk", saved.exists()))
+            stored_exif = Image.open(saved).getexif()
+            results.append(ok("EXIF (incl. GPS) is stripped from what we store",
+                              len(stored_exif) == 0 and not stored_exif.get_ifd(0x8825),
+                              f"{len(stored_exif)} tags, gps={len(stored_exif.get_ifd(0x8825))}"))
+            results.append(ok("a webp twin is written too",
+                              saved.with_suffix(".webp").exists()))
+
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                rr = await anon.post("/uploads", files={"file": ("x.jpg", src, "image/jpeg")},
+                                     data={"kind": "card_art"})
+                results.append(ok("anonymous upload -> 401", rr.status_code == 401))
+
+            r = await c.post("/uploads", files={"file": ("x.svg", b"<svg/>", "image/svg+xml")},
+                             data={"kind": "card_art"})
+            results.append(ok("svg is refused -> 415", r.status_code == 415, f"got {r.status_code}"))
+
+            r = await c.post("/uploads", files={"file": ("x.jpg", b"not an image", "image/jpeg")},
+                             data={"kind": "card_art"})
+            results.append(ok("a non-image claiming to be a jpeg -> 400", r.status_code == 400))
+
+            r = await c.post("/uploads", files={"file": ("x.jpg", src, "image/jpeg")},
+                             data={"kind": "nonsense"})
+            results.append(ok("unknown upload kind -> 400", r.status_code == 400))
+
+            # the uploaded art can then be attached to a player
+            r = await c.put("/profiles/pl-03", json={"card_art": up["path"], "captain": "A"})
+            results.append(ok("uploaded art attaches to a player",
+                              r.json()["card_art"] == up["path"]))
+
             n = await pool.fetchval("SELECT count(*) FROM audit_log")
             results.append(ok("user-management actions are audited too", n >= 3, f"{n} rows"))
 
