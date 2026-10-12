@@ -1,0 +1,247 @@
+---
+import Base from "../layouts/Base.astro";
+import { roster, games, sides } from "../lib/data";
+
+// Roster and fixtures are build-time data; only the stats themselves are live.
+const players = [...roster.players].sort((a: any, b: any) => a.number - b.number);
+const gameList = games.map((g: any) => {
+  const s = sides(g);
+  return { id: g.id, label: `${s.weAreHome ? "vs" : "at"} ${s.them.short}`, date: g.startsAt.slice(0, 10) };
+}).reverse();
+---
+<Base title="Admin">
+  <header class="page-head">
+    <span class="eyebrow">Team admin</span>
+    <h1>Scoresheet</h1>
+  </header>
+
+  <div id="gate" class="gate">
+    <form id="login" class="card login">
+      <p class="dim">Sign in with your admin account to record game stats.</p>
+      <label>Email<input type="email" name="email" autocomplete="username" required /></label>
+      <label>Password<input type="password" name="password" autocomplete="current-password" required /></label>
+      <button type="submit">Sign in</button>
+      <p id="loginerr" class="err" hidden></p>
+    </form>
+  </div>
+
+  <div id="viewer" class="card note" hidden>
+    <p>You're signed in as <strong id="viewername"></strong> with read access.
+       Only admins can record stats — ask JL to change your role.</p>
+    <button type="button" class="link" data-logout>Sign out</button>
+  </div>
+
+  <div id="editor" hidden>
+    <div class="bar card">
+      <label class="pick">Game
+        <select id="game">
+          {gameList.map((g) => <option value={g.id}>{g.date} — {g.label}</option>)}
+        </select>
+      </label>
+      <div class="score">
+        <label>Us<input id="ourScore" type="number" inputmode="numeric" min="0" /></label>
+        <label>Them<input id="theirScore" type="number" inputmode="numeric" min="0" /></label>
+      </div>
+      <span class="who dim">Signed in as <strong id="adminname"></strong> ·
+        <button type="button" class="link" data-logout>Sign out</button></span>
+    </div>
+
+    <div class="tablewrap card">
+      <table id="sheet">
+        <thead>
+          <tr><th class="l">Player</th><th>G</th><th>A</th><th>PIM</th><th>+/−</th></tr>
+        </thead>
+        <tbody>
+          {players.map((p: any) => (
+            <tr data-player={p.id}>
+              <td class="l"><span class="jn num">{p.number}</span>{p.firstName} {p.lastName}</td>
+              <td><input type="number" inputmode="numeric" min="0" data-f="g" value="0" /></td>
+              <td><input type="number" inputmode="numeric" min="0" data-f="a" value="0" /></td>
+              <td><input type="number" inputmode="numeric" min="0" data-f="pim" value="0" /></td>
+              <td><input type="number" inputmode="numeric" data-f="plus_minus" value="0" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actions">
+      <span id="status" class="dim"></span>
+      <button id="save" type="button">Save scoresheet</button>
+    </div>
+  </div>
+</Base>
+
+<script>
+  const $ = (s: string) => document.querySelector(s) as any;
+  const API = "/api";
+  let dirty = false;
+
+  const api = async (path: string, opts: any = {}) => {
+    const r = await fetch(API + path, {
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      ...opts,
+    });
+    return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
+  };
+
+  function show(which: "gate" | "viewer" | "editor", user?: any) {
+    for (const id of ["gate", "viewer", "editor"]) $("#" + id).hidden = id !== which;
+    if (user) {
+      $("#viewername").textContent = user.display_name;
+      $("#adminname").textContent = user.display_name;
+    }
+  }
+
+  async function boot() {
+    const { body: user } = await api("/auth/me");
+    if (!user) return show("gate");
+    if (user.role !== "admin") return show("viewer", user);
+    show("editor", user);
+    await loadGame();
+  }
+
+  async function loadGame() {
+    const id = $("#game").value;
+    $("#status").textContent = "Loading…";
+    const { ok, body } = await api(`/stats/game/${id}`);
+    // reset every row first so a game with no sheet doesn't inherit the last one
+    document.querySelectorAll("#sheet tbody tr").forEach((tr: any) => {
+      tr.querySelectorAll("input").forEach((i: any) => (i.value = "0"));
+    });
+    $("#ourScore").value = ""; $("#theirScore").value = "";
+    if (ok && body) {
+      if (body.result) {
+        $("#ourScore").value = body.result.our_score ?? "";
+        $("#theirScore").value = body.result.their_score ?? "";
+      }
+      for (const line of body.lines ?? []) {
+        const tr = document.querySelector(`#sheet tr[data-player="${line.player_id}"]`);
+        if (!tr) continue;
+        for (const f of ["g", "a", "pim", "plus_minus"]) {
+          (tr.querySelector(`[data-f="${f}"]`) as any).value = line[f] ?? 0;
+        }
+      }
+    }
+    dirty = false;
+    $("#status").textContent = body?.result ? "Saved sheet loaded." : "No sheet recorded for this game yet.";
+  }
+
+  async function save() {
+    const lines: any[] = [];
+    document.querySelectorAll("#sheet tbody tr").forEach((tr: any) => {
+      const n = (f: string) => Number(tr.querySelector(`[data-f="${f}"]`).value || 0);
+      const line = { player_id: tr.dataset.player, g: n("g"), a: n("a"), pim: n("pim"), plus_minus: n("plus_minus") };
+      // only send players who actually did something — keeps the sheet honest
+      if (line.g || line.a || line.pim || line.plus_minus) lines.push(line);
+    });
+    const num = (el: any) => (el.value === "" ? null : Number(el.value));
+    $("#save").disabled = true;
+    $("#status").textContent = "Saving…";
+    const { ok, status, body } = await api(`/stats/game/${$("#game").value}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        our_score: num($("#ourScore")), their_score: num($("#theirScore")),
+        status: "final", lines,
+      }),
+    });
+    $("#save").disabled = false;
+    if (!ok) {
+      $("#status").textContent = status === 401 ? "Session expired — sign in again."
+        : `Could not save (${status}). ${body?.detail ?? ""}`;
+      if (status === 401) show("gate");
+      return;
+    }
+    dirty = false;
+    $("#status").textContent = `Saved ${body.saved} player${body.saved === 1 ? "" : "s"}.`
+      + (body.warnings?.length ? ` Note: ${body.warnings.join("; ")}` : "");
+  }
+
+  $("#login").addEventListener("submit", async (e: Event) => {
+    e.preventDefault();
+    const f = new FormData(e.target as HTMLFormElement);
+    const { ok, body } = await api("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: f.get("email"), password: f.get("password") }),
+    });
+    const err = $("#loginerr");
+    if (!ok) { err.textContent = body?.detail ?? "Sign in failed."; err.hidden = false; return; }
+    err.hidden = true;
+    boot();
+  });
+
+  document.querySelectorAll("[data-logout]").forEach((b) =>
+    b.addEventListener("click", async () => { await api("/auth/logout", { method: "POST" }); show("gate"); }));
+
+  $("#game").addEventListener("change", () => {
+    if (dirty && !confirm("You have unsaved changes. Discard them?")) return;
+    loadGame();
+  });
+  $("#save").addEventListener("click", save);
+  document.addEventListener("input", (e: any) => { if (e.target.closest("#sheet, .score")) dirty = true; });
+  window.addEventListener("beforeunload", (e) => { if (dirty) e.preventDefault(); });
+
+  boot();
+</script>
+
+<style>
+  /* `.login/.note { display: grid }` is a class selector and so outranks the UA
+     stylesheet's `[hidden] { display: none }` — without this the viewer panel
+     renders on top of the sign-in form. */
+  [hidden] { display: none !important; }
+
+  .page-head { margin-bottom: var(--s-6); }
+  .page-head h1 { margin-top: var(--s-2); }
+
+  .login, .note { padding: var(--s-5); max-width: 26rem; display: grid; gap: var(--s-4); }
+  label { display: grid; gap: var(--s-2); font-size: var(--t-sm); font-weight: 700;
+          letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
+  input, select {
+    padding: var(--s-3); font-size: 1rem; font-weight: 600;
+    color: var(--text); background: var(--bg-sunken);
+    border: 1px solid var(--hairline-sv); border-radius: var(--r-md);
+  }
+  input:focus, select:focus { outline: 2px solid var(--volt-400); outline-offset: 1px; }
+  button {
+    padding: var(--s-3) var(--s-5); font-family: var(--font-ui);
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: var(--track-label);
+    text-transform: uppercase; color: #fff; cursor: pointer;
+    background: linear-gradient(180deg, var(--volt-500), var(--blue-600));
+    border: 0; border-radius: 999px;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  button.link { background: none; padding: 0; color: var(--accent-text);
+                text-transform: none; letter-spacing: 0; font-size: inherit; }
+  .err { color: var(--loss); font-size: var(--t-sm); }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--s-5);
+         padding: var(--s-4); margin-bottom: var(--s-4); }
+  .pick { flex: 1 1 16rem; }
+  .score { display: flex; gap: var(--s-3); }
+  .score input { width: 5rem; text-align: center; }
+  .who { font-size: var(--t-sm); margin-left: auto; text-transform: none; letter-spacing: 0; }
+
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  th { font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+       letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+       padding: var(--s-3); text-align: center; }
+  th.l, td.l { text-align: left; }
+  td { padding: var(--s-2) var(--s-3); border-top: 1px solid var(--hairline); }
+  td.l { font-weight: 600; white-space: nowrap; }
+  /* big tap targets — this gets filled in on a phone at the rink */
+  td input { width: 4.25rem; text-align: center; padding: var(--s-3) var(--s-2); }
+  .jn { display: inline-grid; place-items: center; width: 26px; height: 26px;
+        margin-right: var(--s-3); font-size: var(--t-xs); color: var(--volt-300);
+        background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px; }
+
+  .actions { display: flex; align-items: center; justify-content: space-between;
+             gap: var(--s-4); margin-top: var(--s-5); flex-wrap: wrap; }
+  @media (max-width: 520px) {
+    .bar { flex-direction: column; align-items: stretch; }
+    .who { margin-left: 0; }
+    .actions { flex-direction: column-reverse; align-items: stretch; }
+    .actions button { width: 100%; }
+  }
+</style>
