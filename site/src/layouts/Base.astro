@@ -74,6 +74,7 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
     <footer class="site-foot">
       <div class="wrap--wide foot-inner">
         <img src="/brand/lightning-crest.png" alt="" width="40" height="39" class="crest" />
+        {team.slogan && <p class="foot-slogan">{team.slogan}</p>}
         <p class="dim">
           {team.name} · {team.level} {team.division} · Home ice: {team.home_arena}
         </p>
@@ -147,6 +148,11 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
         border-top: 1px solid var(--hairline);
         background: var(--bg-sunken);
         padding-block: var(--s-7);
+      }
+      .foot-slogan {
+        font-family: var(--font-display); font-style: italic; font-weight: 900;
+        font-size: var(--t-md); text-transform: uppercase;
+        letter-spacing: var(--track-tight); color: var(--ice-200);
       }
       .foot-inner {
         display: flex; flex-direction: column; align-items: center; gap: var(--s-2);

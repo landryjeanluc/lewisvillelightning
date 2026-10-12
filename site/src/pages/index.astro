@@ -3,6 +3,7 @@ import Base from "../layouts/Base.astro";
 import Matchup from "../components/Matchup.astro";
 import EventRow from "../components/EventRow.astro";
 import EmptyState from "../components/EmptyState.astro";
+import TeamBanner from "../components/TeamBanner.astro";
 import { team, nextGame, nextPractice, upcoming, results, articles, sides } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
@@ -91,6 +92,8 @@ const s = g ? sides(g) : null;
       )}
     </section>
   </div>
+
+  <TeamBanner />
 </Base>
 
 <style>

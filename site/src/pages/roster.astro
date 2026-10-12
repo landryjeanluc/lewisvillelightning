@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import PlayerCard from "../components/PlayerCard.astro";
+import TeamBanner from "../components/TeamBanner.astro";
 import { roster } from "../lib/data";
 
 const players = [...roster.players].sort((a: any, b: any) => a.number - b.number);
@@ -37,6 +38,8 @@ const groups = [
       ))}
     </ul>
   </section>
+
+  <TeamBanner />
 </Base>
 
 <style>

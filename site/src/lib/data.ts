@@ -34,7 +34,15 @@ export const spotlight = parse<any>(spotlightSchema, spotlightRaw, "spotlight.js
 export const team = teamRaw as {
   name: string; division: string; level: string; home_arena: string;
   association_website: string;
+  slogan?: string; season?: string; team_photo?: string;
 };
+
+/** "One Team. One Promise. One Lightning." -> the three beats, set as three lines. */
+export const sloganParts = (): string[] =>
+  (team.slogan ?? "")
+    .split(/(?<=\.)\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
 /** Our own team id, the anchor every home/away decision hangs off. */
 export const US = "lewisville-lightning";

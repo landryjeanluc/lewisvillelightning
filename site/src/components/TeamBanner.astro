@@ -1,0 +1,66 @@
+---
+import { team, sloganParts, roster } from "../lib/data";
+const parts = sloganParts();
+---
+<section class="tb">
+  {parts.length > 0 && (
+    <p class="tb-slogan" aria-label={team.slogan}>
+      {parts.map((p, i) => (
+        <span class:list={["beat", i === parts.length - 1 && "beat--last"]} aria-hidden="true">{p}</span>
+      ))}
+    </p>
+  )}
+
+  <figure class="tb-fig">
+    <picture>
+      <source
+        type="image/webp"
+        srcset="/team/team-1000.webp 1000w, /team/team-1600.webp 1600w, /team/team-2048.webp 2048w"
+        sizes="(max-width: 1240px) 100vw, 1200px" />
+      <img
+        src="/team/team-1600.jpg"
+        srcset="/team/team-1000.jpg 1000w, /team/team-1600.jpg 1600w, /team/team-2048.jpg 2048w"
+        sizes="(max-width: 1240px) 100vw, 1200px"
+        width="2048" height="1533" loading="lazy" decoding="async"
+        alt={`The ${team.name} ${team.season ?? ""} team`.trim()} />
+    </picture>
+    <figcaption class="dim">
+      {team.name} · {team.season ?? ""} · {roster.players.length} players
+    </figcaption>
+  </figure>
+</section>
+
+<style>
+  .tb { margin-top: var(--s-8); }
+
+  .tb-slogan {
+    display: flex; flex-direction: column; align-items: center;
+    gap: .06em; margin-bottom: var(--s-6); text-align: center;
+  }
+  .beat {
+    font-family: var(--font-display); font-style: italic; font-weight: 900;
+    font-size: clamp(1.9rem, .9rem + 4.4vw, 4.25rem);
+    line-height: .94; text-transform: uppercase; letter-spacing: var(--track-tight);
+    background: linear-gradient(180deg, #fff 30%, var(--ice-300) 78%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  /* the name lands last and loudest */
+  .beat--last {
+    background: linear-gradient(180deg, var(--volt-300) 18%, var(--volt-500) 62%, var(--blue-600));
+    -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 0 34px rgb(28 143 232 / .5));
+  }
+
+  .tb-fig { margin: 0; }
+  /* shown whole and uncropped — it is nineteen kids, not a texture */
+  .tb-fig img {
+    width: 100%; height: auto;
+    border-radius: var(--r-xl);
+    border: 1px solid var(--hairline-sv);
+    box-shadow: var(--shadow-lg);
+  }
+  .tb-fig figcaption {
+    margin-top: var(--s-3); text-align: center;
+    font-size: var(--t-sm); letter-spacing: .06em; text-transform: uppercase;
+  }
+</style>
