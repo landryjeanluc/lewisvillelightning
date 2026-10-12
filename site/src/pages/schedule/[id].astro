@@ -2,6 +2,7 @@
 import Base from "../../layouts/Base.astro";
 import Matchup from "../../components/Matchup.astro";
 import Spotlight from "../../components/Spotlight.astro";
+import AddToCalendar from "../../components/AddToCalendar.astro";
 import { allEvents, sides, outcome, team, spotlightFor } from "../../lib/data";
 import { longDate, time, relativeDay, machine, isToday } from "../../lib/format";
 
@@ -37,6 +38,8 @@ const star = isGame ? spotlightFor(event.id) : undefined;
         <img src="/brand/lightning-crest.png" alt="" width="200" height="196" class="crest" />
       </div>
     )}
+
+    <div class="gd-actions"><AddToCalendar event={event} /></div>
 
     {star && (
       <div class="spotwrap">
@@ -101,6 +104,7 @@ const star = isGame ? spotlightFor(event.id) : undefined;
     text-align: center; font-weight: 700;
   }
   .banner--bad { border-color: rgb(224 86 107 / .5); color: var(--loss); }
+  .gd-actions { display: flex; justify-content: center; margin-top: var(--s-6); }
   .spotwrap {
     display: flex; justify-content: center;
     margin-top: var(--s-7); padding-top: var(--s-6);

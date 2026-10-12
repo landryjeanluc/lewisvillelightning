@@ -33,6 +33,9 @@ const rec = stats.team;
       {games.length} game{games.length === 1 ? "" : "s"} on the calendar ·
       Record {rec.w}–{rec.l}{rec.otl ? `–${rec.otl}` : ""}
     </p>
+    <a class="season-ics" href="/season.ics" download>
+      Add the whole season to your calendar
+    </a>
   </header>
 
   <section class="section">
@@ -62,6 +65,15 @@ const rec = stats.team;
 <style>
   .page-head { margin-bottom: var(--s-7); }
   .page-head h1 { margin-block: var(--s-2); }
+  .season-ics {
+    display: inline-block; margin-top: var(--s-4);
+    padding: var(--s-3) var(--s-5);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; text-decoration: none;
+    color: var(--text); background: var(--surface-2);
+    border: 1px solid var(--hairline-sv); border-radius: 999px;
+  }
+  .season-ics:hover { border-color: var(--volt-500); }
   .month + .month { margin-top: var(--s-6); }
   .month-label {
     font-size: var(--t-xs); font-family: var(--font-ui); font-weight: 700;

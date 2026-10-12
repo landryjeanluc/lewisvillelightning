@@ -4,6 +4,7 @@ import Matchup from "../components/Matchup.astro";
 import EventRow from "../components/EventRow.astro";
 import EmptyState from "../components/EmptyState.astro";
 import TeamBanner from "../components/TeamBanner.astro";
+import AddToCalendar from "../components/AddToCalendar.astro";
 import { team, nextGame, nextPractice, upcoming, results, articles, sides } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
@@ -39,7 +40,10 @@ const s = g ? sides(g) : null;
         </div>
       </div>
 
-      <a class="cta" href={`/schedule/${g.id}`}>Game details</a>
+      <div class="hero-actions">
+        <a class="cta" href={`/schedule/${g.id}`}>Game details</a>
+        <AddToCalendar event={g} />
+      </div>
     </section>
   ) : (
     <section class="hero hero--empty">
@@ -140,8 +144,13 @@ const s = g ? sides(g) : null;
     .info:nth-child(2) { border-inline: 0; border-block: 1px solid var(--hairline); padding-block: var(--s-4); }
   }
 
+  .hero-actions {
+    display: flex; align-items: center; justify-content: center;
+    gap: var(--s-5); flex-wrap: wrap; margin-top: var(--s-6);
+    position: relative; z-index: 1;
+  }
   .cta {
-    display: block; width: fit-content; margin: var(--s-6) auto 0;
+    display: block; width: fit-content;
     padding: var(--s-3) var(--s-6);
     font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
     letter-spacing: var(--track-label); text-transform: uppercase; text-decoration: none;

@@ -1,0 +1,56 @@
+---
+import { sides, team, type GameEvent } from "../lib/data";
+
+interface Props { event: any; compact?: boolean }
+const { event, compact = false } = Astro.props;
+
+const isGame = event.type === "game";
+const s = isGame ? sides(event as GameEvent) : null;
+const title = isGame
+  ? `${team.name} ${s!.weAreHome ? "vs" : "@"} ${s!.them.short}`
+  : `${team.name} practice`;
+
+// Google wants UTC basic-format stamps; same 90-minute default as the .ics.
+const utc = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+const end = event.endsAt ?? new Date(new Date(event.startsAt).getTime() + 90 * 60_000).toISOString();
+const gcal =
+  "https://calendar.google.com/calendar/render?action=TEMPLATE&" +
+  new URLSearchParams({
+    text: title,
+    dates: `${utc(event.startsAt)}/${utc(end)}`,
+    location: event.venue.name,
+    details: `https://lvlnb.ca/schedule/${event.id}`,
+  }).toString();
+---
+<div class:list={["atc", compact && "atc--compact"]}>
+  <a class="atc-btn" href={`/schedule/${event.id}.ics`} download>
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <path fill="currentColor" d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm12 7v10H5V9h14z"/>
+    </svg>
+    Add to calendar
+  </a>
+  <a class="atc-alt" href={gcal} target="_blank" rel="noopener">Google</a>
+</div>
+
+<style>
+  .atc { display: inline-flex; align-items: center; gap: var(--s-4); }
+  .atc-btn {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    padding: var(--s-3) var(--s-5);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; text-decoration: none;
+    color: var(--text); background: var(--surface-2);
+    border: 1px solid var(--hairline-sv); border-radius: 999px;
+    transition: border-color .2s var(--ease), background .2s var(--ease), transform .2s var(--ease);
+  }
+  .atc-btn:hover {
+    border-color: var(--volt-500); background: var(--surface);
+    transform: translateY(-1px);
+  }
+  .atc-alt {
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-dim); text-decoration: none;
+  }
+  .atc-alt:hover { color: var(--accent-text); }
+  .atc--compact .atc-btn { padding: var(--s-2) var(--s-4); font-size: var(--t-micro); }
+</style>
