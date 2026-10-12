@@ -3,13 +3,9 @@ import { team, sloganParts, roster } from "../lib/data";
 const parts = sloganParts();
 ---
 <section class="tb">
-  {parts.length > 0 && (
-    <p class="tb-slogan" aria-label={team.slogan}>
-      {parts.map((p, i) => (
-        <span class:list={["beat", i === parts.length - 1 && "beat--last"]} aria-hidden="true">{p}</span>
-      ))}
-    </p>
-  )}
+  {/* The team photo has the slogan printed on it, so the heading would read
+      it out twice in a row. Keep it for screen readers only. */}
+  <h2 class="visually-hidden">{team.slogan}</h2>
 
   <figure class="tb-fig">
     <picture>

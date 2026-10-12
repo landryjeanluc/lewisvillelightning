@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[2]
 NORM = ROOT / "private/spordle/223790/normalized"
 DATA = ROOT / "data"
+PHOTOS = ROOT / "assets/photos"
 TZ = ZoneInfo("America/Moncton")
 
 # Spordle's team label -> our stable team id. Unknown labels abort rather than
@@ -75,6 +76,50 @@ def load_overrides() -> dict:
         return {}
     return {k.upper(): v for k, v in json.loads(p.read_text()).get("overrides", {}).items()}
 
+# --------------------------------------------------------------- artwork ----
+
+def discover_card_art() -> dict[str, str]:
+    """Map "First Last" -> assets/photos/<file>, by filename.
+
+    JL drops finished card art into assets/photos named after the player, e.g.
+    "Olivier Landry.jpg". Matching on the name means adding the other eighteen
+    is a copy, not a config edit. Comparison ignores case and accents so
+    "Degrace.jpg" still finds Degrâce.
+    """
+    import unicodedata
+
+    def key(s: str) -> str:
+        s = unicodedata.normalize("NFKD", s)
+        s = "".join(c for c in s if not unicodedata.combining(c))
+        return " ".join(s.lower().split())
+
+    found = {}
+    if not PHOTOS.exists():
+        return found
+    for f in sorted(PHOTOS.iterdir()):
+        if f.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp"}:
+            continue
+        if f.stem.lower().startswith("team"):      # the team photo, not a player
+            continue
+        found[key(f.stem)] = str(f.relative_to(ROOT))
+    return found
+
+def discover_team_photo() -> str | None:
+    if not PHOTOS.exists():
+        return None
+    for f in sorted(PHOTOS.iterdir()):
+        if f.stem.lower().startswith("team") and f.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
+            return str(f.relative_to(ROOT))
+    return None
+
+def existing_art() -> dict[str, dict]:
+    """Whatever the current roster already records, so a sync never wipes it."""
+    f = DATA / "roster.json"
+    if not f.exists():
+        return {}
+    import json as _j
+    return {p["id"]: p for p in _j.loads(f.read_text()).get("players", [])}
+
 # ----------------------------------------------------------------- time ----
 
 def to_iso(date_str: str, time_local: str) -> str:
@@ -100,6 +145,14 @@ def team_id(label: str) -> str:
 
 def build_roster(src: dict, overrides: dict) -> dict:
     players, flagged = [], []
+    art = discover_card_art()
+    prior = existing_art()
+    import unicodedata
+
+    def key(s: str) -> str:
+        s = unicodedata.normalize("NFKD", s)
+        s = "".join(c for c in s if not unicodedata.combining(c))
+        return " ".join(s.lower().split())
     for p in src["players"]:
         raw = p["name"].strip()
         display = overrides.get(raw.upper()) or titlecase_name(raw)
@@ -107,17 +160,22 @@ def build_roster(src: dict, overrides: dict) -> dict:
         first, last = parts[0], " ".join(parts[1:]) or parts[0]
         if raw.upper() not in overrides and needs_review(raw):
             flagged.append(display)
+        pid = f"pl-{p['jersey_number']:02d}"
+        was = prior.get(pid, {})
+        # discovered art wins; otherwise keep whatever was already recorded, so
+        # re-running the sync never blanks a card someone added by hand
+        card = art.get(key(display)) or was.get("cardArt")
         players.append({
-            "id": f"pl-{p['jersey_number']:02d}",
+            "id": pid,
             "number": p["jersey_number"],
             "firstName": first,
             "lastName": last,
             "position": POSITIONS.get(p["position"], p.get("position_code", "F")),
             "shoots": None,
             "birthYear": None,
-            "photo": None,
-            "cardArt": None,
-            "captain": None,
+            "photo": was.get("photo"),
+            "cardArt": card,
+            "captain": was.get("captain"),
             "affiliate": False,
         })
     players.sort(key=lambda x: x["number"])
@@ -190,6 +248,13 @@ def main() -> None:
     sched_src = json.loads((NORM / "schedule.json").read_text())
     write(DATA / "schedule.json", build_schedule(sched_src))
 
+    with_art = sum(1 for p in roster["players"] if p["cardArt"])
+    print(f"  card art matched for {with_art}/{len(roster['players'])} players")
+    unmatched = set(discover_card_art().values()) - {p["cardArt"] for p in roster["players"] if p["cardArt"]}
+    if unmatched:
+        print("  ! art files whose filename matched no player (rename to \"First Last.jpg\"):")
+        for u in sorted(unmatched):
+            print(f"      {u}")
     print(f"\n  {len(roster['players'])} players, {len(roster['staff'])} staff, "
           f"{len(json.loads((DATA/'schedule.json').read_text())['events'])} events")
 

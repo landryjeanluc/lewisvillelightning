@@ -22,7 +22,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Olivier Landry.jpg",
       "captain": null,
       "affiliate": false
     },

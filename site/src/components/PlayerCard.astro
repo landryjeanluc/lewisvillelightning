@@ -7,11 +7,16 @@ const { player: p, href, size = "md" } = Astro.props;
 const POS: Record<string, string> = {
   C: "Centre", LW: "Left Wing", RW: "Right Wing", F: "Forward", D: "Defence", G: "Goaltender",
 };
-const photo = showPhotos() && p.photo ? "/" + p.photo.replace(/^assets\//, "") : null;
-const art = p.cardArt ? "/" + p.cardArt.replace(/^assets\//, "") : null;
+const toPublic = (s: string) => encodeURI("/" + s.replace(/^assets\//, ""));
+const photo = showPhotos() && p.photo ? toPublic(p.photo) : null;
+// Real card art is a finished card — crest, name, number, position are already
+// on it. When present it IS the card; the generated chrome would only repeat
+// what the artwork says.
+const art = p.cardArt ? toPublic(p.cardArt) : null;
+const artWebp = art ? art.replace(/\.(jpe?g|png)$/i, ".webp") : null;
 const Tag = href ? "a" : "div";
 ---
-<Tag class:list={["pcard", `pcard--${size}`, p.position === "G" && "pcard--goalie"]} href={href}>
+<Tag class:list={["pcard", `pcard--${size}`, art && "pcard--art", !art && p.position === "G" && "pcard--goalie"]} href={href}>
   <div class="foil" aria-hidden="true"></div>
 
   <header class="pc-head">
@@ -20,11 +25,14 @@ const Tag = href ? "a" : "div";
   </header>
 
   <div class="pc-art">
-    <img class="pc-watermark" src="/brand/lightning-crest.png" alt="" aria-hidden="true" />
+    {!art && <img class="pc-watermark" src="/brand/lightning-crest.png" alt="" aria-hidden="true" />}
     {art
-      ? <img class="pc-photo" src={art} alt="" />
+      ? <picture>
+          <source type="image/webp" srcset={artWebp} />
+          <img class="pc-photo" src={art} alt={`${displayName(p)} player card`} loading="lazy" decoding="async" />
+        </picture>
       : photo
-        ? <img class="pc-photo" src={photo} alt="" />
+        ? <img class="pc-photo" src={photo} alt="" loading="lazy" />
         : <span class="pc-number num" aria-hidden="true">{p.number}</span>}
     {p.captain && <span class="pc-captain" title={p.captain === "C" ? "Captain" : "Alternate captain"}>{p.captain}</span>}
   </div>
@@ -156,6 +164,19 @@ const Tag = href ? "a" : "div";
     letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim);
     margin-top: 2px;
   }
+
+  /* Finished art fills the card edge to edge; the generated header, plate and
+     inner panel would only repeat what is already printed on it. */
+  .pcard--art .pc-head,
+  .pcard--art .pc-plate { display: none; }
+  .pcard--art .pc-art {
+    margin: 0; border: 0; border-radius: calc(var(--r-lg) - 3px);
+    background: none; box-shadow: none;
+  }
+  .pcard--art .pc-art::before,
+  .pcard--art .pc-art::after { display: none; }
+  .pcard--art picture, .pcard--art .pc-photo { width: 100%; height: 100%; }
+  .pcard--art .pc-photo { object-fit: cover; }
 
   .pcard--goalie { background: linear-gradient(160deg, var(--steel-400) 0%, var(--navy-800) 28%, var(--navy-950) 62%, var(--blue-600) 100%); }
 </style>
