@@ -76,18 +76,31 @@ sudo systemctl enable --now lvlnb-api
 curl -s localhost:8112/health      # {"ok":true,"games":2,"players":19}
 ```
 
-### Creating admin accounts
+### The first admin
+
+The API requires an admin to create users, so the very first one comes from the
+box. `manage.py bootstrap` creates **jl@hexpi.ca** and refuses to run once any
+account exists:
 
 ```
-HASH=$(nix shell nixpkgs#python312Packages.bcrypt -c python3 -c \
-  "import bcrypt,sys; print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())" 'THE-PASSWORD')
-ssh arachnea "sudo -u postgres psql lvlnb -c \"INSERT INTO users (email, display_name, password_hash, role)
-  VALUES ('you@hexpi.ca','JL','$HASH','admin')\""
+cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py bootstrap
 ```
 
-Role is `admin` (can edit) or `viewer` (read only). After a Spordle sync changes
-the roster or schedule, either restart the service or `POST /api/reload` as an
-admin so the API accepts the new ids.
+It prompts for a password (or mints one if there's no terminal). After that,
+everyone else is added from **/admin → Team access** in the browser — no shell.
+
+The CLI stays available as the lockout escape hatch:
+
+```
+manage.py list
+manage.py add coach@example.ca "Coach" --admin
+manage.py set-role coach@example.ca viewer
+manage.py set-password jl@hexpi.ca
+manage.py remove someone@example.ca
+```
+
+Both the CLI and the API refuse to demote or delete the **last** admin — losing
+it would mean nobody could manage the team without shell access.
 
 ## Publishing a content update
 

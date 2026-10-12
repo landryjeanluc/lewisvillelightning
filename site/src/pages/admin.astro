@@ -32,6 +32,12 @@ const gameList = games.map((g: any) => {
   </div>
 
   <div id="editor" hidden>
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab is-on" data-tab="sheet-tab" role="tab">Scoresheet</button>
+      <button type="button" class="tab" data-tab="people-tab" role="tab">Team access</button>
+    </nav>
+
+    <section id="sheet-tab">
     <div class="bar card">
       <label class="pick">Game
         <select id="game">
@@ -69,6 +75,37 @@ const gameList = games.map((g: any) => {
       <span id="status" class="dim"></span>
       <button id="save" type="button">Save scoresheet</button>
     </div>
+    </section>
+
+    <section id="people-tab" hidden>
+      <div class="tablewrap card">
+        <table>
+          <thead>
+            <tr><th class="l">Person</th><th class="l">Email</th><th>Role</th><th>Last login</th><th></th></tr>
+          </thead>
+          <tbody id="people"></tbody>
+        </table>
+      </div>
+
+      <form id="adduser" class="card adduser">
+        <h3>Add someone</h3>
+        <div class="fields">
+          <label>Name<input name="display_name" required autocomplete="off" /></label>
+          <label>Email<input name="email" type="email" required autocomplete="off" /></label>
+          <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label>
+          <label>Role
+            <select name="role">
+              <option value="viewer">Viewer — can read</option>
+              <option value="admin">Admin — can record stats</option>
+            </select>
+          </label>
+        </div>
+        <div class="actions">
+          <span id="peoplestatus" class="dim"></span>
+          <button type="submit">Add account</button>
+        </div>
+      </form>
+    </section>
   </div>
 </Base>
 
@@ -158,6 +195,99 @@ const gameList = games.map((g: any) => {
       + (body.warnings?.length ? ` Note: ${body.warnings.join("; ")}` : "");
   }
 
+  const fmtDate = (s: string | null) =>
+    s ? new Date(s).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }) : "never";
+
+  async function loadPeople() {
+    const { ok, body } = await api("/users");
+    const tb = $("#people");
+    if (!ok) { tb.innerHTML = `<tr><td colspan="5" class="dim">Could not load accounts.</td></tr>`; return; }
+    const meId = (await api("/auth/me")).body?.id;
+    tb.innerHTML = "";
+    for (const u of body) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="l">${u.display_name}${u.id === meId ? ' <span class="pill">you</span>' : ""}</td>
+        <td class="l dim">${u.email}</td>
+        <td>
+          <select data-role="${u.id}">
+            <option value="viewer"${u.role === "viewer" ? " selected" : ""}>Viewer</option>
+            <option value="admin"${u.role === "admin" ? " selected" : ""}>Admin</option>
+          </select>
+        </td>
+        <td class="dim">${fmtDate(u.last_login_at)}</td>
+        <td class="row-actions">
+          <button type="button" class="link" data-pw="${u.id}">Reset password</button>
+          <button type="button" class="link danger" data-del="${u.id}" data-name="${u.display_name}">Remove</button>
+        </td>`;
+      tb.appendChild(tr);
+    }
+  }
+
+  const peopleSay = (m: string) => ($("#peoplestatus").textContent = m);
+
+  document.addEventListener("change", async (e: any) => {
+    const id = e.target.dataset?.role;
+    if (!id) return;
+    const { ok, status, body } = await api(`/users/${id}`, {
+      method: "PATCH", body: JSON.stringify({ role: e.target.value }),
+    });
+    // 409 is the only-admin guard: say exactly that, and put the select back.
+    peopleSay(ok ? "Role updated." : body?.detail ?? `Could not change role (${status}).`);
+    loadPeople();
+  });
+
+  document.addEventListener("click", async (e: any) => {
+    const pw = e.target.dataset?.pw;
+    const del = e.target.dataset?.del;
+    if (pw) {
+      const next = prompt("New password (at least 8 characters):");
+      if (!next) return;
+      const { ok, body } = await api(`/users/${pw}`, {
+        method: "PATCH", body: JSON.stringify({ password: next }),
+      });
+      peopleSay(ok ? "Password reset." : body?.detail ?? "Could not reset password.");
+      return;
+    }
+    if (del) {
+      if (!confirm(`Remove ${e.target.dataset.name}? Stats they entered are kept.`)) return;
+      const { ok, body } = await api(`/users/${del}`, { method: "DELETE" });
+      peopleSay(ok ? "Account removed." : body?.detail ?? "Could not remove account.");
+      loadPeople();
+    }
+  });
+
+  $("#adduser").addEventListener("submit", async (e: Event) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const f = new FormData(form);
+    const { ok, body } = await api("/users", {
+      method: "POST",
+      body: JSON.stringify({
+        display_name: f.get("display_name"), email: f.get("email"),
+        password: f.get("password"), role: f.get("role"),
+      }),
+    });
+    if (!ok) {
+      // pydantic 422 returns a list of issues; show the first message
+      const d = body?.detail;
+      peopleSay(Array.isArray(d) ? d[0]?.msg ?? "Invalid details." : d ?? "Could not add account.");
+      return;
+    }
+    form.reset();
+    peopleSay(`Added ${body.display_name}.`);
+    loadPeople();
+  });
+
+  document.querySelectorAll(".tab").forEach((b: any) =>
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((x) => x.classList.remove("is-on"));
+      b.classList.add("is-on");
+      $("#sheet-tab").hidden = b.dataset.tab !== "sheet-tab";
+      $("#people-tab").hidden = b.dataset.tab !== "people-tab";
+      if (b.dataset.tab === "people-tab") loadPeople();
+    }));
+
   $("#login").addEventListener("submit", async (e: Event) => {
     e.preventDefault();
     const f = new FormData(e.target as HTMLFormElement);
@@ -235,6 +365,37 @@ const gameList = games.map((g: any) => {
   .jn { display: inline-grid; place-items: center; width: 26px; height: 26px;
         margin-right: var(--s-3); font-size: var(--t-xs); color: var(--volt-300);
         background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px; }
+
+  .tabs { display: flex; gap: var(--s-2); margin-bottom: var(--s-4); }
+  .tab {
+    background: none; color: var(--text-dim); border: 1px solid var(--hairline);
+    border-radius: var(--r-md); padding: var(--s-2) var(--s-4);
+  }
+  .tab.is-on { color: var(--text); border-color: var(--volt-500); background: var(--surface-2); }
+
+  .adduser { padding: var(--s-5); margin-top: var(--s-4); display: grid; gap: var(--s-4); }
+  .adduser h3 { font-size: var(--t-md); }
+  .fields { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+
+  /* The people rows are built at runtime with innerHTML. Astro scopes component
+     CSS with a build-time data-astro-cid-* attribute, which runtime nodes never
+     get — so every rule that has to reach those rows must be :global(). Without
+     this the row buttons render unstyled. */
+  :global(#people td) { vertical-align: middle; padding: var(--s-2) var(--s-3);
+                        border-top: 1px solid var(--hairline); }
+  :global(#people td.l) { text-align: left; font-weight: 600; white-space: nowrap; }
+  :global(#people td.dim) { color: var(--text-dim); font-weight: 500; }
+  :global(#people select) { padding: var(--s-2); font-size: var(--t-sm); font-weight: 600;
+                            color: var(--text); background: var(--bg-sunken);
+                            border: 1px solid var(--hairline-sv); border-radius: var(--r-md); }
+  :global(#people .row-actions) { display: flex; gap: var(--s-4);
+                                  justify-content: flex-end; white-space: nowrap; }
+  :global(#people button.link) { background: none; border: 0; padding: 0; cursor: pointer;
+                                 color: var(--accent-text); font-family: var(--font-ui);
+                                 font-size: var(--t-sm); font-weight: 600;
+                                 text-transform: none; letter-spacing: 0; }
+  :global(#people button.link.danger) { color: var(--loss); }
+  :global(#people .pill) { margin-left: var(--s-2); }
 
   .actions { display: flex; align-items: center; justify-content: space-between;
              gap: var(--s-4); margin-top: var(--s-5); flex-wrap: wrap; }

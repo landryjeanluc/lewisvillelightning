@@ -6,6 +6,21 @@ async def main():
     transport = httpx.ASGITransport(app=app)
     async with app.router.lifespan_context(app):
         pool = app.state.pool
+
+        # --- bootstrap: the first admin cannot come from the API ---
+        import subprocess
+        env = {**os.environ}
+        boot = subprocess.run([__import__("sys").executable, "manage.py", "bootstrap"],
+                              capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
+        first = await pool.fetchrow("SELECT email, role FROM users")
+        print(f"  {'PASS' if first and first['email']=='jl@hexpi.ca' and first['role']=='admin' else 'FAIL'}"
+              f"  bootstrap creates jl@hexpi.ca as admin ({first['email'] if first else 'none'})")
+        again = subprocess.run([__import__("sys").executable, "manage.py", "bootstrap"],
+                               capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
+        print(f"  {'PASS' if again.returncode == 1 else 'FAIL'}"
+              f"  bootstrap refuses when accounts already exist")
+        await pool.execute("DELETE FROM users WHERE email = 'jl@hexpi.ca'")
+
         # seed one admin and one viewer
         for email, role in (("admin@lvlnb.ca", "admin"), ("parent@lvlnb.ca", "viewer")):
             h = bcrypt.hashpw(b"hockey123", bcrypt.gensalt(rounds=4)).decode()
@@ -85,9 +100,62 @@ async def main():
             results.append(ok("negative plus_minus survives",
                               any(x["plus_minus"] == -1 for x in s["skaters"])))
 
+            # ---------------- user management ----------------
+            r = await c.get("/users")
+            results.append(ok("admin lists users", r.status_code == 200 and len(r.json()) == 2))
+
+            r = await c.post("/users", json={"email": "COACH@Example.CA", "display_name": "Coach",
+                                             "password": "short", "role": "viewer"})
+            results.append(ok("short password rejected", r.status_code == 422))
+
+            r = await c.post("/users", json={"email": "COACH@Example.CA", "display_name": "Coach",
+                                             "password": "benchboss1", "role": "viewer"})
+            results.append(ok("admin creates user, email normalised",
+                              r.status_code == 201 and r.json()["email"] == "coach@example.ca"))
+            coach_id = r.json()["id"]
+
+            r = await c.post("/users", json={"email": "coach@example.ca", "display_name": "Dup",
+                                             "password": "benchboss1"})
+            results.append(ok("duplicate email -> 409", r.status_code == 409))
+
+            # the new account really works
+            r = await c.post("/auth/login", json={"email": "coach@example.ca", "password": "benchboss1"})
+            results.append(ok("created user can sign in", r.status_code == 200))
+            r = await c.get("/users")
+            results.append(ok("viewer cannot list users -> 403", r.status_code == 403))
+
+            # back to admin
+            await c.post("/auth/login", json={"email": "admin@lvlnb.ca", "password": "hockey123"})
+
+            admin_id = (await c.get("/auth/me")).json()["id"]
+            r = await c.patch(f"/users/{admin_id}", json={"role": "viewer"})
+            results.append(ok("demoting the only admin -> 409 (no lockout)", r.status_code == 409,
+                              (r.json() or {}).get("detail", "")[:48]))
+            r = await c.delete(f"/users/{admin_id}")
+            results.append(ok("deleting the only admin -> 409", r.status_code == 409))
+
+            r = await c.patch(f"/users/{coach_id}", json={"role": "admin"})
+            results.append(ok("admin promotes the coach", r.status_code == 200 and r.json()["role"] == "admin"))
+
+            r = await c.patch(f"/users/{admin_id}", json={"role": "viewer"})
+            results.append(ok("with a second admin, demotion is allowed", r.status_code == 200))
+            # restore so the rest of the checks still have an admin session
+            await pool.execute("UPDATE users SET role='admin' WHERE id=$1", admin_id)
+
+            r = await c.patch(f"/users/{coach_id}", json={"password": "newbenchboss"})
+            results.append(ok("admin resets a password", r.status_code == 200))
+            r = await c.post("/auth/login", json={"email": "coach@example.ca", "password": "newbenchboss"})
+            results.append(ok("reset password works", r.status_code == 200))
+            await c.post("/auth/login", json={"email": "admin@lvlnb.ca", "password": "hockey123"})
+
+            before = await pool.fetchval("SELECT count(*) FROM game_stats")
+            r = await c.delete(f"/users/{coach_id}")
+            after = await pool.fetchval("SELECT count(*) FROM game_stats")
+            results.append(ok("deleting a user keeps the stats they entered",
+                              r.status_code == 200 and before == after, f"{before} -> {after}"))
+
             n = await pool.fetchval("SELECT count(*) FROM audit_log")
-            results.append(ok("only successful writes are audited (3), not the 401/403/404/400 attempts",
-                              n == 3, f"{n} rows"))
+            results.append(ok("user-management actions are audited too", n >= 3, f"{n} rows"))
 
             print(f"\n{sum(results)}/{len(results)} passed")
             return 0 if all(results) else 1

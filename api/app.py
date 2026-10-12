@@ -21,7 +21,7 @@ import asyncpg
 import bcrypt
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
 from itsdangerous import BadSignature, URLSafeTimedSerializer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql:///lvlnb")
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
@@ -259,3 +259,150 @@ async def season(pool: Annotated[asyncpg.Pool, Depends(db)]):
         "skaters": sorted((enrich(r) for r in skaters),
                           key=lambda x: (-x["pts"], -x["g"], x["number"] or 99)),
     }
+
+# ------------------------------------------------------------------- users --
+
+MIN_PASSWORD = 8
+
+def hash_password(raw: str) -> str:
+    return bcrypt.hashpw(raw.encode(), bcrypt.gensalt()).decode()
+
+class NewUser(BaseModel):
+    email: str
+    display_name: str
+    password: str
+    role: Literal["admin", "viewer"] = "viewer"
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("not a valid email address")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def _password(cls, v: str) -> str:
+        if len(v) < MIN_PASSWORD:
+            raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+        return v
+
+class UserPatch(BaseModel):
+    display_name: str | None = None
+    role: Literal["admin", "viewer"] | None = None
+    password: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def _password(cls, v: str | None) -> str | None:
+        if v is not None and len(v) < MIN_PASSWORD:
+            raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+        return v
+
+async def _admin_count(c) -> int:
+    return await c.fetchval("SELECT count(*) FROM users WHERE role = 'admin'")
+
+async def _guard_last_admin(c, target_id: int, *, becoming: str | None) -> None:
+    """Refuse any change that would leave the team with no admin.
+
+    Losing the last admin means nobody can add one back without shell access to
+    the box, so this is a hard stop rather than a warning.
+    """
+    row = await c.fetchrow("SELECT role FROM users WHERE id = $1", target_id)
+    if row is None or row["role"] != "admin":
+        return
+    if becoming == "admin":
+        return
+    if await _admin_count(c) <= 1:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "this is the only admin — promote someone else first, "
+            "otherwise nobody could manage the team",
+        )
+
+@app.get("/users")
+async def list_users(
+    _: Annotated[User, Depends(require_admin)],
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+):
+    rows = await pool.fetch(
+        "SELECT id, email, display_name, role, created_at, last_login_at"
+        " FROM users ORDER BY role, lower(display_name)"
+    )
+    return [dict(r) for r in rows]
+
+@app.post("/users", status_code=status.HTTP_201_CREATED)
+async def create_user(
+    body: NewUser,
+    actor: Annotated[User, Depends(require_admin)],
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+):
+    async with pool.acquire() as c, c.transaction():
+        exists = await c.fetchval("SELECT 1 FROM users WHERE lower(email) = $1", body.email)
+        if exists:
+            raise HTTPException(status.HTTP_409_CONFLICT, "that email already has an account")
+        row = await c.fetchrow(
+            "INSERT INTO users (email, display_name, password_hash, role)"
+            " VALUES ($1,$2,$3,$4) RETURNING id, email, display_name, role",
+            body.email, body.display_name.strip(), hash_password(body.password), body.role,
+        )
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'create_user',$2)",
+            actor.id, json.dumps({"email": body.email, "role": body.role}),
+        )
+    return dict(row)
+
+@app.patch("/users/{user_id}")
+async def update_user(
+    user_id: int,
+    body: UserPatch,
+    actor: Annotated[User, Depends(require_admin)],
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+):
+    async with pool.acquire() as c, c.transaction():
+        if body.role is not None:
+            await _guard_last_admin(c, user_id, becoming=body.role)
+        sets, args = [], []
+        for col, val in (("display_name", body.display_name and body.display_name.strip()),
+                         ("role", body.role)):
+            if val is not None:
+                args.append(val); sets.append(f"{col} = ${len(args)}")
+        if body.password is not None:
+            args.append(hash_password(body.password)); sets.append(f"password_hash = ${len(args)}")
+        if not sets:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "nothing to change")
+        args.append(user_id)
+        row = await c.fetchrow(
+            f"UPDATE users SET {', '.join(sets)} WHERE id = ${len(args)}"
+            " RETURNING id, email, display_name, role", *args)
+        if row is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no such user")
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'update_user',$2)",
+            actor.id,
+            json.dumps({"target": user_id, "role": body.role,
+                        "password_changed": body.password is not None}),
+        )
+    return dict(row)
+
+@app.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    actor: Annotated[User, Depends(require_admin)],
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+):
+    async with pool.acquire() as c, c.transaction():
+        await _guard_last_admin(c, user_id, becoming=None)
+        # Keep their audit trail and the stats they entered; null the author.
+        await c.execute("UPDATE audit_log  SET user_id    = NULL WHERE user_id    = $1", user_id)
+        await c.execute("UPDATE game_stats SET updated_by = NULL WHERE updated_by = $1", user_id)
+        await c.execute("UPDATE game_results SET updated_by = NULL WHERE updated_by = $1", user_id)
+        gone = await c.execute("DELETE FROM users WHERE id = $1", user_id)
+        if gone.endswith("0"):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no such user")
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'delete_user',$2)",
+            actor.id, json.dumps({"target": user_id}),
+        )
+    return {"ok": True}
