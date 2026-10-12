@@ -1,0 +1,72 @@
+---
+/**
+ * Occasional lightning across the hero. Two bolts on different cycles so the
+ * pattern does not read as a loop, each a short multi-flash the way real
+ * lightning stutters rather than a single clean fade.
+ */
+---
+<div class="lx" aria-hidden="true">
+  <div class="lx-flash"></div>
+  <svg class="lx-bolt lx-bolt--a" viewBox="0 0 120 400" preserveAspectRatio="xMidYMin meet">
+    <path d="M74 0 L40 168 L63 174 L28 262 L52 268 L18 400 L64 250 L40 243 L72 150 L50 144 Z" />
+  </svg>
+  <svg class="lx-bolt lx-bolt--b" viewBox="0 0 120 400" preserveAspectRatio="xMidYMin meet">
+    <path d="M58 0 L86 150 L62 158 L94 232 L70 240 L100 400 L62 236 L86 228 L54 146 L78 138 Z" />
+  </svg>
+</div>
+
+<style>
+  .lx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+
+  /* the room lighting up, not the bolt itself */
+  .lx-flash {
+    position: absolute; inset: 0;
+    background: radial-gradient(70% 50% at 50% 0%, rgb(190 225 255 / .55), transparent 70%);
+    opacity: 0;
+    animation: lx-flash 11s steps(1) infinite;
+  }
+  @keyframes lx-flash {
+    0%, 3.0%   { opacity: 0; }
+    3.2%       { opacity: .5; }
+    3.6%       { opacity: .06; }
+    4.0%       { opacity: .62; }
+    4.6%       { opacity: 0; }
+    38%        { opacity: 0; }
+    38.3%      { opacity: .34; }
+    38.9%      { opacity: 0; }
+    100%       { opacity: 0; }
+  }
+
+  .lx-bolt {
+    position: absolute; top: -8%; height: 86%;
+    fill: #F2F8FF;
+    filter: drop-shadow(0 0 5px rgb(220 240 255 / 1))
+            drop-shadow(0 0 16px rgb(120 195 255 / .95))
+            drop-shadow(0 0 48px rgb(28 143 232 / .7));
+    opacity: 0;
+  }
+  .lx-bolt--a { left: 8%;  width: 92px; animation: lx-a 11s steps(1) infinite; }
+  .lx-bolt--b { right: 7%; width: 76px; transform: scaleX(-1); animation: lx-b 11s steps(1) infinite; }
+
+  @keyframes lx-a {
+    0%, 3.0%   { opacity: 0; }
+    3.2%       { opacity: 1; }
+    3.55%      { opacity: 0; }
+    3.9%       { opacity: .9; }
+    4.4%       { opacity: 0; }
+    100%       { opacity: 0; }
+  }
+  @keyframes lx-b {
+    0%, 38%    { opacity: 0; }
+    38.3%      { opacity: .85; }
+    38.7%      { opacity: 0; }
+    100%       { opacity: 0; }
+  }
+
+  @media (max-width: 640px) { .lx-bolt { height: 62%; } }
+
+  /* Flashing imagery is a genuine accessibility problem, not a taste one. */
+  @media (prefers-reduced-motion: reduce) {
+    .lx-flash, .lx-bolt { animation: none; opacity: 0; }
+  }
+</style>

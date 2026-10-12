@@ -12,6 +12,11 @@ html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
   }
 }
 img, svg, video { display: block; max-width: 100%; height: auto; }
+
+/* The UA's `[hidden] { display: none }` is a bare attribute selector, so ANY
+   class rule that sets display beats it and the "hidden" element shows anyway.
+   This has caused three separate bugs in this codebase; make hidden mean hidden. */
+[hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ------------------------------------------------------------------- base */

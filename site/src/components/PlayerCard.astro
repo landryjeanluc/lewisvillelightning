@@ -17,6 +17,8 @@ const artWebp = art ? art.replace(/\.(jpe?g|png)$/i, ".webp") : null;
 const Tag = href ? "a" : "div";
 ---
 <Tag class:list={["pcard", `pcard--${size}`, art && "pcard--art", !art && p.position === "G" && "pcard--goalie"]} href={href}>
+  <div class="holo" aria-hidden="true"></div>
+  <div class="glare" aria-hidden="true"></div>
   <div class="foil" aria-hidden="true"></div>
 
   <header class="pc-head">
@@ -47,6 +49,10 @@ const Tag = href ? "a" : "div";
 <style>
   .pcard {
     --cw: 230px;
+    /* pointer position, 0-100, written by cardfx.ts */
+    --mx: 50; --my: 50;
+    --rx: 0deg; --ry: 0deg;
+    transform-style: preserve-3d;
     position: relative;
     display: flex; flex-direction: column;
     width: var(--cw); aspect-ratio: 2.5 / 3.5;
@@ -57,7 +63,60 @@ const Tag = href ? "a" : "div";
     background:
       linear-gradient(160deg, var(--blue-400) 0%, var(--navy-800) 26%, var(--navy-950) 60%, var(--navy-700) 100%);
     box-shadow: var(--shadow-md);
-    transition: transform .28s var(--ease-out-back), box-shadow .28s var(--ease);
+    transition: transform .4s var(--ease-out-back), box-shadow .4s var(--ease);
+  }
+  /* 3D tilt driven by the pointer, or by the phone's gyroscope */
+  .pcard.is-tilting {
+    transition: transform .08s linear, box-shadow .3s var(--ease);
+    transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.05);
+    box-shadow: var(--shadow-lg), 0 0 60px -12px rgb(28 143 232 / .75);
+  }
+
+  /* The trading-card holo: a rainbow sheen that slides as the card turns.
+     color-dodge is what makes it read as foil rather than a coloured overlay. */
+  .holo {
+    position: absolute; inset: 0; z-index: 4; pointer-events: none;
+    border-radius: inherit; opacity: 0;
+    /* A narrow travelling band, not a wash: real foil catches the light in a
+       stripe and the artwork has to stay readable through it. */
+    background:
+      linear-gradient(112deg,
+        transparent 41%,
+        rgb(255 90 200 / .20) 46%,
+        rgb(120 220 255 / .30) 49.5%,
+        rgb(150 255 180 / .26) 52%,
+        rgb(255 230 130 / .22) 55%,
+        transparent 60%);
+    background-size: 280% 280%;
+    background-position: calc(var(--mx) * 1%) calc(var(--my) * 1%);
+    mix-blend-mode: color-dodge;
+    transition: opacity .35s var(--ease);
+  }
+  .pcard.is-tilting .holo { opacity: .85; }
+
+  /* a soft specular highlight that tracks the pointer */
+  .glare {
+    position: absolute; inset: 0; z-index: 5; pointer-events: none;
+    border-radius: inherit; opacity: 0;
+    background: radial-gradient(26% 26% at calc(var(--mx) * 1%) calc(var(--my) * 1%),
+      rgb(255 255 255 / .38), transparent 72%);
+    mix-blend-mode: overlay;
+    transition: opacity .35s var(--ease);
+  }
+  .pcard.is-tilting .glare { opacity: .9; }
+
+  /* lift the contents off the surface so the tilt has depth */
+  .pcard.is-tilting .pc-number { transform: translateZ(38px); }
+  .pcard.is-tilting .pc-plate  { transform: translateZ(22px); }
+  .pcard.is-tilting .pc-head   { transform: translateZ(18px); }
+  .pc-number, .pc-plate, .pc-head { transition: transform .25s var(--ease); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pcard.is-tilting { transform: none; }
+    .pcard.is-tilting .holo, .pcard.is-tilting .glare { opacity: 0; }
+    .pcard.is-tilting .pc-number,
+    .pcard.is-tilting .pc-plate,
+    .pcard.is-tilting .pc-head { transform: none; }
   }
   .pcard--sm { --cw: 170px; }
   .pcard--lg { --cw: 320px; }

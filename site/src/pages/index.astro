@@ -5,7 +5,10 @@ import EventRow from "../components/EventRow.astro";
 import EmptyState from "../components/EmptyState.astro";
 import TeamBanner from "../components/TeamBanner.astro";
 import AddToCalendar from "../components/AddToCalendar.astro";
-import { team, nextGame, nextPractice, upcoming, results, articles, sides } from "../lib/data";
+import Countdown from "../components/Countdown.astro";
+import Lightning from "../components/Lightning.astro";
+import PlayerCard from "../components/PlayerCard.astro";
+import { team, nextGame, nextPractice, upcoming, results, articles, sides, spotlightFor, spotlightProgress } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
 const g = nextGame();
@@ -14,16 +17,21 @@ const up = upcoming().filter((e: any) => e.id !== g?.id);
 const recent = results();
 const latest = articles.slice(0, 3);
 const s = g ? sides(g) : null;
+const star = g ? spotlightFor(g.id) : undefined;
+const rot = spotlightProgress();
 ---
 <Base wide>
   {g ? (
     <section class="hero">
+      <Lightning />
       <div class="hero-top">
         <span class="eyebrow">{team.level} {team.division} · {g.gameType === "regular" ? "Regular season" : g.gameType === "exhibition" ? "Exhibition" : g.gameType}</span>
         <h1 class="display--italic hero-title">{relativeDay(g.startsAt) === "Today" ? "Game Day" : "Next Game"}</h1>
       </div>
 
       <Matchup game={g} />
+
+      <div class="hero-cd"><Countdown iso={g.startsAt} /></div>
 
       <div class="hero-info">
         <div class="info">
@@ -49,6 +57,25 @@ const s = g ? sides(g) : null;
     <section class="hero hero--empty">
       <h1>No games scheduled</h1>
       <p class="muted">The schedule will fill in once the season data syncs.</p>
+    </section>
+  )}
+
+  {star && (
+    <section class="spot-hero">
+      <div class="sh-card"><PlayerCard player={star} size="lg" /></div>
+      <div class="sh-text">
+        <span class="eyebrow">Player spotlight</span>
+        <h2 class="sh-name">{star.firstName}<br /><span class="sh-last">{star.lastName}</span></h2>
+        <p class="sh-meta">
+          <span class="sh-num num">#{star.number}</span>
+          {star.position === "G" ? "Goaltender" : star.position === "D" ? "Defence" : "Forward"}
+        </p>
+        <p class="muted sh-blurb">
+          On the banner for {s!.weAreHome ? "the game against" : "the game at"} {s!.them.short}.
+          Every player gets a turn before anyone repeats — {rot.featured.length} of {rot.featured.length + rot.remaining} so far this season.
+        </p>
+        <a class="sh-link" href={`/players/${star.id}`}>See {star.firstName}'s page →</a>
+      </div>
     </section>
   )}
 
@@ -98,6 +125,7 @@ const s = g ? sides(g) : null;
   </div>
 
   <TeamBanner />
+  <script>import "../scripts/cardfx";</script>
 </Base>
 
 <style>
@@ -118,7 +146,7 @@ const s = g ? sides(g) : null;
     background: linear-gradient(180deg, transparent, rgb(173 191 215 / .07));
     mask-image: linear-gradient(180deg, transparent, #000 70%);
   }
-  .hero-top { text-align: center; margin-bottom: var(--s-5); }
+  .hero-top { text-align: center; margin-bottom: var(--s-5); position: relative; z-index: 1; }
   .hero-title {
     font-size: var(--t-hero);
     background: linear-gradient(180deg, #fff 32%, var(--ice-300) 78%, var(--steel-400));
@@ -144,6 +172,7 @@ const s = g ? sides(g) : null;
     .info:nth-child(2) { border-inline: 0; border-block: 1px solid var(--hairline); padding-block: var(--s-4); }
   }
 
+  .hero-cd { margin-top: var(--s-6); position: relative; z-index: 1; }
   .hero-actions {
     display: flex; align-items: center; justify-content: center;
     gap: var(--s-5); flex-wrap: wrap; margin-top: var(--s-6);
@@ -163,6 +192,46 @@ const s = g ? sides(g) : null;
   .cta:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 60px -6px rgb(28 143 232 / .8); }
 
   .hero--empty { text-align: center; }
+
+  .spot-hero {
+    display: grid; grid-template-columns: auto 1fr; align-items: center;
+    gap: var(--s-8); margin-top: var(--s-8);
+    padding: var(--s-7) var(--s-6);
+    border: 1px solid var(--hairline); border-radius: var(--r-xl);
+    background:
+      radial-gradient(90% 120% at 12% 50%, rgb(28 143 232 / .14), transparent 62%),
+      linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
+    overflow: hidden;
+  }
+  .sh-card { filter: drop-shadow(0 18px 50px rgb(0 0 0 / .65)); }
+  .sh-name {
+    font-size: clamp(2.6rem, 1.2rem + 5.4vw, 5.5rem); line-height: .88;
+    margin-block: var(--s-3) var(--s-4);
+    background: linear-gradient(180deg, #fff 28%, var(--ice-300) 82%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .sh-last {
+    background: linear-gradient(180deg, var(--volt-300) 15%, var(--volt-500) 70%, var(--blue-600));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 30px rgb(28 143 232 / .45));
+  }
+  .sh-meta {
+    display: flex; align-items: center; gap: var(--s-3);
+    font-family: var(--font-ui); font-weight: 700; letter-spacing: var(--track-label);
+    text-transform: uppercase; color: var(--text-dim); font-size: var(--t-sm);
+  }
+  .sh-num { color: var(--volt-300); font-size: var(--t-md); }
+  .sh-blurb { margin-top: var(--s-4); max-width: 46ch; }
+  .sh-link {
+    display: inline-block; margin-top: var(--s-5);
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-text); text-decoration: none;
+  }
+  @media (max-width: 760px) {
+    .spot-hero { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: var(--s-6); }
+    .sh-meta { justify-content: center; }
+    .sh-blurb { margin-inline: auto; }
+  }
 
   .cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-7); align-items: start; }
   @media (max-width: 900px) { .cols { grid-template-columns: 1fr; gap: 0; } }

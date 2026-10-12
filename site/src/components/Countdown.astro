@@ -1,0 +1,102 @@
+---
+interface Props { iso: string; label?: string }
+const { iso, label = "Puck drops in" } = Astro.props;
+---
+<div class="cd" data-when={iso} hidden>
+  <span class="cd-label eyebrow">{label}</span>
+  <div class="cd-units">
+    <div class="cd-u"><span class="cd-n num" data-d>0</span><span class="cd-k">Days</span></div>
+    <span class="cd-sep" aria-hidden="true">:</span>
+    <div class="cd-u"><span class="cd-n num" data-h>00</span><span class="cd-k">Hrs</span></div>
+    <span class="cd-sep" aria-hidden="true">:</span>
+    <div class="cd-u"><span class="cd-n num" data-m>00</span><span class="cd-k">Min</span></div>
+    <span class="cd-sep" aria-hidden="true">:</span>
+    <div class="cd-u"><span class="cd-n num" data-s>00</span><span class="cd-k">Sec</span></div>
+  </div>
+  <p class="cd-live" hidden><span class="dot"></span>Game on</p>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>(".cd").forEach((cd) => {
+    const when = new Date(cd.dataset.when!).getTime();
+    const units = cd.querySelector(".cd-units") as HTMLElement;
+    const live = cd.querySelector(".cd-live") as HTMLElement;
+    const lab = cd.querySelector(".cd-label") as HTMLElement;
+    const el = (k: string) => cd.querySelector(`[data-${k}]`) as HTMLElement;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    let last = "";
+
+    const tick = () => {
+      const ms = when - Date.now();
+      if (ms <= 0) {
+        // a game runs about 90 minutes; after that stop claiming it is live
+        const liveNow = ms > -90 * 60_000;
+        units.hidden = true; lab.hidden = true;
+        live.hidden = !liveNow;
+        if (!liveNow) cd.hidden = true;
+        return;
+      }
+      cd.hidden = false;
+      units.hidden = false; lab.hidden = false; live.hidden = true;
+      const s = Math.floor(ms / 1000);
+      const d = Math.floor(s / 86400);
+      const stamp = `${d}${pad(Math.floor(s / 3600) % 24)}${pad(Math.floor(s / 60) % 60)}${pad(s % 60)}`;
+      if (stamp === last) return;                 // nothing changed, skip the writes
+      last = stamp;
+      el("d").textContent = String(d);
+      el("h").textContent = pad(Math.floor(s / 3600) % 24);
+      el("m").textContent = pad(Math.floor(s / 60) % 60);
+      el("s").textContent = pad(s % 60);
+      // inside the final hour it stops being a diary entry and starts being urgent
+      cd.classList.toggle("is-soon", ms < 60 * 60_000);
+    };
+    tick();
+    setInterval(tick, 1000);
+  });
+</script>
+
+<style>
+  .cd { display: flex; flex-direction: column; align-items: center; gap: var(--s-3); }
+  .cd-units { display: flex; align-items: flex-start; gap: var(--s-2); }
+  .cd-u { display: flex; flex-direction: column; align-items: center; min-width: 3.4rem; }
+  .cd-n {
+    font-family: var(--font-display); font-style: italic; font-weight: 900;
+    font-size: clamp(2rem, 1rem + 3.4vw, 3.4rem); line-height: 1;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #fff 30%, var(--ice-300) 80%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .cd-k {
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+    margin-top: var(--s-1);
+  }
+  .cd-sep {
+    font-family: var(--font-display); font-weight: 900;
+    font-size: clamp(1.4rem, .8rem + 2vw, 2.4rem); line-height: 1.1;
+    color: var(--steel-500);
+  }
+  /* final hour: the numbers go electric and pulse */
+  .cd.is-soon .cd-n {
+    background: linear-gradient(180deg, var(--volt-300), var(--volt-500));
+    -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 0 22px rgb(28 143 232 / .85));
+    animation: cd-pulse 1s steps(1) infinite;
+  }
+  @keyframes cd-pulse { 50% { filter: drop-shadow(0 0 34px rgb(111 192 255 / 1)); } }
+
+  .cd-live {
+    display: flex; align-items: center; gap: var(--s-2);
+    font-family: var(--font-display); font-style: italic; font-weight: 900;
+    font-size: var(--t-lg); text-transform: uppercase; color: var(--live);
+  }
+  .dot {
+    width: .6em; height: .6em; border-radius: 50%; background: var(--live);
+    box-shadow: 0 0 14px var(--live); animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cd.is-soon .cd-n, .dot { animation: none; }
+  }
+</style>
