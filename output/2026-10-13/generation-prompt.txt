@@ -1,0 +1,19 @@
+Use case: ads-marketing
+Asset type: polished landscape 16:9 hockey game poster/banner, 1920x1080 or higher native resolution, to be locally upscaled to 3840x2160.
+Create an exceptional professional sports game-night promotional graphic for Lewisville Lightning competitive U13 B minor hockey versus Shediac / Cap-Pelé Predators. Premium sports broadcast art direction, bold beautifully typeset, powerful and clean.
+Input image 1: official Lewisville banner used ONLY as supporting reference for the exact Lightning crest in its centre. Do not reproduce its players or layout.
+Input image 2: supporting insert, exact official Shediac/Cap-Pelé Predators crest.
+Preserve the identifying designs, colours, proportions and lettering of both supplied crests faithfully. Lightning crest left, Predators crest right, large matching visual weights, floating over low icy mist. Sharp central VS with a thin jagged lightning fissure separating teams. Background cinematic dark indoor hockey arena, overhead light beams, deep navy and electric blue lightning, restrained burgundy/red glow on opponent side, highly realistic scratched ice across bottom, atmospheric ice particles. Crests and typography remain extremely clean and legible, not obscured by effects. No players, no invented sponsors or additional logos.
+Composition: carefully balanced wide horizontal layout with generous safe margins. Huge condensed italic white headline GAME DAY across upper centre; small spaced U13 B • COMPETITIVE HOCKEY over it. Large crests in central band, clear team labels directly below each crest, small VS between. Bottom information zone uses refined rules and crisp modern sports typography, with 5:30 PM particularly prominent. Strong hierarchy, minimal clutter, premium designed finish.
+Exact text:
+"U13 B • COMPETITIVE HOCKEY"
+"GAME DAY"
+"LEWISVILLE"
+"LIGHTNING"
+"VS"
+"SHEDIAC / CAP-PELÉ"
+"PREDATORS"
+"TUESDAY, OCTOBER 13, 2026"
+"5:30 PM"
+"KAY ARENA"
+No other copy. All date, venue, time and names must be spelled exactly. Do not add home/away labels, admission or league affiliation claims. Make it exciting, proud, and suitable for youth hockey.

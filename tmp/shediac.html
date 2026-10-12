@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<!-- canvas_00 -->
+<html>
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="author" content="TeamLinkt" />
+
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+			<!-- Favicon -->
+		<link rel="icon" type="image/png" href="https://cdn-app.teamlinkt.com/media/association_data/31174/favicon-32x32.png" sizes="32x32">
+	
+	<title>Shediac/Cap-Pelé Minor Hockey Association : Powered by TeamLinkt</title>
+
+	<meta property="og:type" content="website" />
+	<meta property="og:locale" content="en_US" />
+	<!-- <meta property="fb:app_id" content="" /> -->
+	<meta property="article:publisher" content="TeamLinkt" />
+	<meta property="article:author" content="TeamLinkt" />
+
+	<meta property="og:title" content="Shediac/Cap-Pelé Minor Hockey Association - Home" />
+	<meta name="twitter:title" content="Shediac/Cap-Pelé Minor Hockey Association - Home" />
+
+	<meta property="og:url" content="http://shcamha.com/shcamha/" />
+	<meta property="twitter:url" content="http://shcamha.com/shcamha/" />
+	<meta property="twitter:domain" content="shcamha.com" />
+	<meta property="og:description" content="Powered by TeamLinkt" />
+	<meta name="twitter:description" content="Powered by TeamLinkt" />
+
+	<meta property="og:image" content="https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007" />
+	<meta property="og:image:url" content="https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007" />
+	<meta property="og:image:secure_url" content="https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007" />
+	<meta name="twitter:image" content="https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007" />
+
+	<meta name="twitter:card" content="summary_large_image" />
+
+	<!-- <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,400i,700|Poppins:300,400,500,600,700|PT+Serif:400,400i&display=swap" rel="stylesheet" type="text/css" /> -->
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Oswald:200,300,regular,500,600,700|Commissioner:100,200,300,regular,500,600,700,800,900|Open+Sans:300,regular,500,600,700,800,300italic,italic,500italic,600italic,700italic,800italic&subset=latin,latin-ext&display=swap" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/bootstrap.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/style.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/swiper.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/dark.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/font-icons.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/animate.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/magnific-popup.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/css/custom.css" type="text/css" />
+	<link rel="stylesheet" href="https://cdn-league-prod-static.teamlinkt.com/shared/font-awesome-4.7.0/css/font-awesome.min.css" type="text/css" />
+
+	<!--Slick Slider-->
+	<link href="https://cdn-league-prod-static.teamlinkt.com/themes/default/css/slick.css" rel="stylesheet" />
+	<link href="https://cdn-league-prod-static.teamlinkt.com/themes/default/css/slick-theme.css" rel="stylesheet" />
+
+	<!-- Datatables -->
+
+	<link href="https://cdn.datatables.net/1.11.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+
+	<!-- Fancybox -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+
+	<!-- DL Menu CSS -->
+	<link href="/theme/default/js/dl-menu/component.css" rel="stylesheet">
+
+	<!-- Responsive CSS -->
+	<link href="/theme/default/css/responsive.css" rel="stylesheet">
+
+	<script src="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/js/jquery.js"></script>
+	<script src="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/js/bootstrap.bundle.min.js"></script>
+	<script src="https://cdn-league-prod-static.teamlinkt.com/themes/default/js/jquery-cookie.js"></script>
+
+	<style>
+		:root {
+			--template-name: "league_canvas_00";
+			--primary-color: #F2C14E;
+			--secondary-color: #FF0000;
+			--primary-contrast-color: #000000;
+			--page-background: #F5F5F5;
+			--header-background: #FFFFFF;
+			--header-text-color: #000000;
+			--header-background-url: url("");
+			--header-background-video-url: url("");
+			--header-overlay-url: url("");
+			--footer-background: #FFFFFF;
+			--footer-text-color: #000000;
+			--button-primary-background: #F1C04B;
+			--button-primary-contrast: #000000;
+			--site-contrast-color: #000000;
+			--logo-url: url("https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007");
+			--page-background-url: url("");
+		}
+
+		/* START OF UPGRADED STYLES */
+		html {
+			font-family: 'Commissioner', Helvetica, Arial, Lucida, sans-serif !important;
+			font-weight: 500;
+		}
+
+		body {
+			font-family: 'Commissioner', Helvetica, Arial, Lucida, sans-serif !important;
+			font-weight: 500;
+		}
+
+		span,
+		p,
+		div,
+		a,
+		label,
+		table,
+		th,
+		td,
+		em,
+		strong,
+		b {
+			font-family: 'Commissioner', Helvetica, Arial, Lucida, sans-serif !important;
+			/* font-weight: 500; */
+		}
+
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6 {
+			font-family: 'Oswald', Helvetica, Arial, Lucida, sans-serif !important;
+			font-weight: bold !important;
+			text-transform: uppercase !important;
+			text-decoration: none !important;
+		}
+
+		h1 *,
+		h2 *,
+		h3 *,
+		h4 *,
+		h5 *,
+		h6 * {
+			font-family: 'Oswald', Helvetica, Arial, Lucida, sans-serif !important;
+			font-weight: bold !important;
+			text-transform: uppercase !important;
+			text-decoration: none !important;
+		}
+
+		.menu-link {
+			font-family: 'Oswald', Helvetica, Arial, Lucida, sans-serif !important;
+			font-size: 16px;
+			font-weight: 500 !important;
+			text-transform: uppercase !important;
+			text-decoration: none !important;
+		}
+
+		.sub-menu-container .menu-item>.menu-link {
+			color: #444;
+			font-size: 0.85rem !important;
+		}
+
+		label {
+			display: inline-block;
+			font-weight: 600;
+			font-size: 14px !important;
+			letter-spacing: normal !important;
+			font-family: 'Commissioner', Helvetica, Arial, Lucida, sans-serif !important;
+			text-transform: uppercase;
+			color: #212529;
+			cursor: initial !important;
+		}
+
+		.table td,
+		.table th {
+			background-color: white;
+			/* white-space: nowrap; */
+		}
+
+		table td {
+			/* font-weight: 400; */
+		}
+
+		.form-control,
+		.btn,
+		.form-select,
+		.card {
+			border-radius: 9.75px !important;
+			font-weight: 500;
+		}
+
+		table.dataTable>thead .sorting:before,
+		table.dataTable>thead .sorting:after,
+		table.dataTable>thead .sorting_desc:before,
+		table.dataTable>thead .sorting_asc:after {
+			content: "" !important;
+		}
+
+		table.dataTable>thead .sorting_asc:before,
+		table.dataTable>thead .sorting_desc:after {
+			right: 0em !important;
+		}
+
+
+		.table {
+			width: 100% !important;
+		}
+
+		table a[href]:not([href=""]):not(.btn) {
+			color: #121212;
+		}
+
+		a:not(.btn):hover {
+			color: #2454ff !important;
+		}
+
+		.table-striped>tbody>tr:nth-child(odd)>td,
+		.table-striped>tbody>tr:nth-child(odd)>th,
+		.table-striped>tbody>tr:nth-child(odd) {
+			background-color: white !important;
+		}
+
+		/* END OF UPGRADED STYLES */
+
+		p {
+			margin-bottom: 1rem !important;
+		}
+
+		a {
+			color: #F2C14E;
+		}
+
+		#wrapper {
+			background-color: #F5F5F5;
+		}
+
+		section div.container {
+			padding-top: 1px;
+			background-color: #FFFFFF;
+			word-wrap: break-word;
+		}
+
+		#body-section {
+			background-image: url();
+			background-repeat: no-repeat;
+			background-position: top;
+			background-attachment: fixed;
+			background-size: cover;
+		}
+
+		.menu-link {
+			font-weight: 500;
+			padding-left: 0.5em;
+			padding-right: 0.5em;
+		}
+
+		.footer-logo {
+			margin-bottom: 0px !important;
+		}
+
+		#footer .footer-widgets-wrap {
+			padding: 20px !important;
+		}
+
+		.menu-item:hover>.menu-link,
+		.menu-item.current>.menu-link {
+			color: #444;
+			text-decoration: underline 3px #F2C14E !important;
+			text-underline-offset: 10px !important;
+		}
+
+		li.menu-item.current.sub-menu>ul>li.menu-item.current>a {
+			color: #000000;
+			background-color: #F2C14E;
+		}
+
+		.btn-link,
+		.page-link,
+		.page-link:hover,
+		.page-link:focus {
+			background-color: #F1C04B;
+			color: #000000;
+		}
+
+		.btn.btn-primary,
+		.btn.btn-outline-primary.active,
+		.btn.btn-outline-primary:hover {
+			background-color: #F1C04B;
+			border-color: #F1C04B;
+			color: #000000;
+			box-shadow: none;
+		}
+
+		.btn.btn-outline-primary {
+			border-color: #F1C04B;
+			color: black;
+		}
+
+
+		.page-item.active .page-link,
+		.page-link:hover,
+		.page-link:focus {
+			color: #000000 !important;
+			background-color: #F2C14E !important;
+			border-color: #000000 !important;
+		}
+
+		.fa.fa-2 {
+			font-size: 2em;
+		}
+
+		.fa.fa-3 {
+			font-size: 3em;
+		}
+
+		.fa.fa-4 {
+			font-size: 4em;
+		}
+
+		.fa.fa-5 {
+			font-size: 5em;
+		}
+
+		.fbox-icon i,
+		.fbox-icon img {
+			background-color: #F2C14E;
+			color: #000000		}
+
+		#gotoTop:hover {
+			background-color: #F2C14E !important;
+			color: #000000 !important;
+		}
+
+		.form-control {
+			appearance: auto;
+			-webkit-appearance: auto;
+		}
+
+		/* show the down arrow on a dropdown */
+		.entry-title h2 a:hover,
+		.entry-title .h2 a:hover,
+		.entry-title h3 a:hover,
+		.entry-title .h3 a:hover,
+		.entry-title h4 a:hover,
+		.entry-title .h4 a:hover {
+			color: #F2C14E;
+		}
+
+		::selection {
+			background-color: #F2C14E;
+			color: #000000;
+			text-shadow: none;
+		}
+
+		::-moz-selection {
+			background-color: #F2C14E;
+			color: #000000;
+			text-shadow: none;
+		}
+
+		::-webkit-selection {
+			background-color: #F2C14E;
+			color: #000000;
+			text-shadow: none;
+		}
+
+		#footer {
+			background-color: #F2C14E !important;
+		}
+
+		#footer>.container {
+			background-color: #F2C14E !important;
+			color: #000000 !important;
+		}
+
+		.footer-big-contacts>a,
+		.footer-big-contacts>h1,
+		.footer-big-contacts>h2,
+		.footer-big-contacts>h3 {
+			color: #000000 !important;
+		}
+
+		.img_center {
+			max-width: 100%;
+			height: 300px;
+			display: block;
+			margin: auto;
+		}
+
+		ol,
+		ul {
+			list-style-position: inside !important;
+			padding: 8px;
+		}
+
+		ul>ul {
+			padding: 0px 8px !important;
+		}
+
+		.editor_btn {
+			margin: auto;
+			width: auto;
+		}
+
+		.template_container {
+			padding: 20px;
+		}
+
+		.template_container_lg {
+			padding: 80px 20px;
+		}
+
+		#copyrights {
+			padding: 10px 0 !important;
+		}
+
+		.innner_banner {
+			display: flex;
+			height: 350px;
+			background-size: cover;
+			background-repeat: no-repeat;
+			background-position: center;
+		}
+
+		.innner_banner .container {
+			width: 100%;
+			max-width: 100%;
+			padding: 0;
+			margin: auto 0;
+		}
+
+		.innner_banner h3,
+		.banner_caption h3 {
+			background-color: initial !important;
+			padding: 0 !important;
+			margin: 0;
+		}
+
+		.banner_caption h1,
+		.banner_caption h3 {
+			margin: 0;
+		}
+
+		.inner_pages .innner_banner {
+			padding: 97px 0 97px;
+		}
+
+		.innner_banner:before {
+			opacity: 0;
+			background-color: #F5F5F5;
+		}
+
+		.innner_banner h3 {
+			background-color: #00000060 !important;
+			padding: 20px 0;
+			color: #fff !important;
+		}
+
+		.main_banner .thumb {
+			background: #F5F5F5;
+		}
+
+		.main_banner .thumb img {
+			opacity: 1;
+		}
+
+		.banner_caption h1 {
+			color: #ffffff !important;
+		}
+
+		.banner_caption {
+			background-color: #00000065 !important;
+			padding: 20px 0 20px 0 !important;
+
+		}
+
+		.banner_caption span {
+			float: left;
+			width: 100%;
+			font-size: 24px;
+			font-weight: bold;
+			margin: 0 0 6 px 0;
+			line-height: normal;
+			text-transform: uppercase;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		.logo-canvas {
+			padding: 28px 50px 28px 0px;
+			position: relative;
+			float: left;
+			width: auto;
+		}
+
+		#header {
+			border-bottom: none;
+		}
+
+		#header .logo-canvas:before {
+			background-color: #FFFFFF;
+			top: 0;
+			right: 0;
+			bottom: 0;
+			content: "";
+			width: 1000%;
+			position: absolute;
+			-webkit-transform: skew(-30deg);
+			-moz-transform: skew(-30deg);
+			-ms-transform: skew(-30deg);
+			-o-transform: skew(-30deg);
+			transform: skew(-30deg);
+		}
+
+		.container .row {
+			padding-bottom: 0px !important;
+		}
+
+		#teamlinkt_links_div {
+			margin-bottom: 0px !important;
+		}
+
+
+		.kf_top_bar {
+			float: left;
+			width: 100%;
+			background-color: black;
+			color: white;
+		}
+
+		.kf_social2 {
+			float: right;
+			width: auto;
+			margin: 0;
+			padding: 0;
+		}
+
+		.kf_social2 li {
+			float: left;
+			width: auto;
+			list-style: none;
+		}
+
+		.kf_top_bar .kf_social2 li a {
+			font-size: 15px;
+			color: #fff;
+			border: none;
+			height: 60px;
+			line-height: 60px;
+			text-align: center;
+			float: left;
+			width: 34px;
+		}
+
+		.kf_right_dec {
+			float: right;
+		}
+
+		.kf_right_dec ul li:first-child {
+			border: none;
+		}
+
+		.kf_right_dec>ul li {
+			float: left;
+			width: auto;
+			padding: 0 15px;
+			border-left: 1px solid #787878;
+			list-style: none;
+		}
+
+		.kf_right_dec ul {
+			float: left;
+			width: auto;
+			padding: 24px 0 23px;
+			margin: 0;
+		}
+
+		.kf_ticker-wrap {
+			float: left;
+			width: 100%;
+			overflow: hidden;
+			position: relative;
+			background: #232323;
+		}
+
+		.kf_ticker {
+			float: left;
+			width: 100%;
+			position: relative;
+		}
+
+		/* .twitter_ticker .kf_ticker_slider {
+			width: 90%;
+			padding: 26px 0 29px 30px;
+		} */
+
+		.rss,
+		.lable_1,
+		.btn_icon,
+		.input-btn,
+		.copy_right,
+		.btn-1,
+		.btn_3:hover,
+		.text_2 span,
+		.kf_h5:before,
+		.kf_map:before,
+		.twitter_ticker,
+		.filter_btn:hover,
+		.kode_search:hover,
+		.kf_tags li a:hover,
+		.kf_404_text .btn-1,
+		.widget_instagram a,
+		.widget_ul li:hover,
+		.kf_hd1 span::before,
+		.list_meta li:before,
+		.kf_contct_thumb:hover,
+		.kf_social3 li a:hover,
+		.kf_social2 li a:hover,
+		.kf_top_bar .kode_search,
+		.kode-gallery figcaption a,
+		.roster .slick-arrow:hover,
+		.kf_overview_nav .active a,
+		.kode_navigation li:hover>a,
+		.team_comparison_wrap2 button,
+		.kf_contact_meta li:hover span,
+		.kf_roster_dec:hover .text>span,
+		.featured_slider .slick-arrow:hover,
+		.kode-pagination .page-numbers:hover,
+		.kode-pagination .page-numbers.current,
+		.radio_dec input:checked+.radio-value,
+		.input_label input[type="button"]:hover,
+		.kf_ticket2_wrap ul li:hover .ticket_date,
+		.radio_style3 input:checked+.radio-value,
+		.kf_progress1 .progressbars.progress_single,
+		.kf_rangeslider .ui-slider .ui-slider-range,
+		.kf_progress_wrap .kf_progress .progress-bar,
+		.kode_header_2 .kode_navigation li ul li a:hover,
+		.kf_ticket2_wrap ul li:hover .ticket_button button {
+			background-color: #F2C14E;
+		}
+
+		.kf_top_bar .kode_search {
+			padding: 0;
+			color: #fff;
+			width: 60px;
+			height: 60px;
+			line-height: 60px;
+			text-align: center;
+			margin-right: 17px;
+			margin-left: 60px;
+			-webkit-transform: skew(-30deg);
+			-moz-transform: skew(-30deg);
+			-ms-transform: skew(-30deg);
+			-o-transform: skew(-30deg);
+			transform: skew(-30deg);
+		}
+
+		.kode_search {
+			float: right;
+			font-size: 20px;
+			cursor: pointer;
+		}
+
+		.kf_right_dec ul li span,
+		.kf_right_dec ul li a {
+			float: left;
+			width: 100%;
+			color: #c2c2c2;
+			font-size: 13px;
+			line-height: 12px;
+			font-weight: normal;
+			text-transform: uppercase;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		.kf_right_dec ul li a i {
+			margin-right: 15px;
+		}
+
+		.kf_ticker_slider {
+			width: 85%;
+			float: right;
+			overflow: hidden;
+			position: relative;
+			padding: 13px 0 17px 25px;
+		}
+
+		.kode_footer_2 {
+			float: left;
+			width: 100%;
+			position: relative;
+			padding: 60px 0 30px;
+			background-color: #232323;
+		}
+
+		.slick-slider {
+			margin: 0;
+			padding: 0;
+		}
+
+		.kode_footer_2 .go-up {
+			top: 0;
+			left: 0;
+			right: 0;
+			width: 70px;
+			height: 37px;
+			margin: 0 auto;
+			position: absolute;
+			text-align: center;
+		}
+
+		.go-up {
+			color: #fff;
+			float: right;
+			font-size: 14px;
+			cursor: pointer;
+			font-weight: bold;
+			line-height: normal;
+			text-transform: uppercase;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		.kode_footer_2 .go-up:before {
+			position: absolute;
+			left: 0;
+			right: 0;
+			top: 0;
+			bottom: 0;
+			content: "";
+			border-top: 37px solid #000;
+			border-bottom: 0px solid transparent !important;
+			border-right: 35px solid transparent !important;
+			border-left: 35px solid transparent !important;
+			border-color: #F2C14E;
+		}
+
+		.kode_footer_2 .go-up i {
+			position: relative;
+			margin: 0;
+			font-size: 33px;
+			top: -6px;
+		}
+
+		.copy_right3 {
+			float: left;
+			width: 100%;
+			padding: 29px 0 30px;
+			text-align: center;
+			border-top: 1px solid #585858;
+			background-color: #232323;
+		}
+
+		.copy_right3 p {
+			margin: 0 0 22px;
+			float: left;
+			width: 100%;
+			color: #adadad;
+			font-size: 16px;
+			font-weight: bold;
+			line-height: 16px;
+		}
+
+		.copy_right3 p a,
+		.kf_right_dec ul li a {
+			color: white;
+		}
+
+		.copy_right3 p a:hover,
+		.kf_right_dec ul li a:hover {
+			color: #F2C14E;
+		}
+
+		.kf_social3 {
+			display: inline-block;
+			width: auto;
+			margin-bottom: -5px;
+		}
+
+		.kf_social3 li {
+			float: left;
+			width: auto;
+			margin-right: 15px;
+			list-style: none;
+		}
+
+		.kf_social3 li:last-child {
+			margin: 0;
+		}
+
+		.kf_social3 li a {
+			float: left;
+			width: 35px;
+			height: 35px;
+			color: #acacac;
+			font-size: 16px;
+			line-height: 33px;
+			border-radius: 100%;
+			text-align: center;
+			border: 1px solid #acacac;
+		}
+
+		.desktop-only {
+			display: block;
+		}
+
+		.dl-menuwrapper {
+			display: none;
+			float: right;
+			position: absolute;
+			right: 0;
+			top: 50%;
+			margin: -20px 0 0 0;
+			z-index: 999999;
+		}
+
+		.dl-menuwrapper button {
+			border: none;
+			width: 40px;
+			height: 40px;
+			text-indent: -900em;
+			overflow: hidden;
+			position: relative;
+			cursor: pointer;
+			outline: none;
+			background: #333;
+			padding: 0 px;
+			border-radius: 0;
+		}
+
+		.dl-menuwrapper .dl-menu {
+			right: 0;
+			background-color: #000;
+		}
+
+		.dl-menu.dl-menuopen a {
+			color: white !important;
+		}
+
+		.dl-menuwrapper .dl-menu {
+			margin: 0;
+			position: absolute;
+			width: 230px;
+			opacity: 0;
+			pointer-events: none;
+			-webkit-backface-visibility: hidden;
+			-moz-backface-visibility: hidden;
+			backface-visibility: hidden;
+		}
+
+		.dl-menuwrapper ul {
+			padding: 0;
+			list-style: none;
+			-webkit-transform-style: preserve-3d;
+			-moz-transform-style: preserve-3d;
+			transform-style: preserve-3d;
+		}
+
+		.dl-menuwrapper .dl-menu li {
+			float: left;
+			width: 100%;
+			padding: 0;
+		}
+
+		.kode_navigation li {
+			margin: 0;
+			padding: 0;
+			float: left;
+			width: auto;
+			position: relative;
+		}
+
+		.dl-menuwrapper li {
+			position: relative;
+			list-style: none;
+			text-align: left;
+		}
+
+		.dl-menuwrapper .dl-menu li a {
+			padding: 10px 15px !important;
+			color: #fff;
+			font-weight: bold;
+			text-transform: uppercase;
+		}
+
+		.kode_navigation li a {
+			float: left;
+			width: 100%;
+			color: #2a313d;
+			font-size: 14px;
+			font-weight: bold;
+			line-height: normal;
+			padding: 40px 15px 41px;
+			text-transform: uppercase;
+			font-family: 'Open Sans', sans-serif;
+		}
+
+		.dl-menuwrapper li a {
+			display: block;
+			position: relative;
+			list-style: none;
+			padding: 10px 20px;
+			font-size: 16px;
+			line-height: 20px;
+			font-weight: 300;
+			color: #fff;
+			outline: none;
+		}
+
+		.dl-back {
+			padding-left: 35px !important;
+		}
+
+		#kode-responsive-navigation.dl-menuwrapper li > a:after {
+			display: none !important;
+		}
+
+		.sub-menu-trigger.icon-chevron-right {
+			top: 3.5px !important;
+		}
+
+		@media (max-width: 767px) {
+			.kf_top_bar .kf_right_dec {
+				display: none;
+			}
+
+			#assoc_name_div {
+				line-height: 35px;
+			}
+		}
+
+		@media (min-width: 768px) {
+			#assoc_name_div {
+				line-height: 60px;
+			}
+		}
+
+		@media (max-width: 991px) {
+			.dl-menuwrapper {
+				display: block;
+			}
+
+			.img_center {
+				max-height: 150px !important;
+			}
+
+			.display-4 {
+				font-size: calc(1.475rem + 2.7vw) !important;
+			}
+
+			#teamlinkt_links_div,
+			.desktop-only {
+				display: none;
+			}
+
+			.menu-item>.menu-link {
+				color: #000000 !important;
+				max-width: calc(100% - 64px);
+			}
+		}
+
+		@media (min-width: 992px) {
+
+			.sub-menu-container,
+			.mega-menu-content {
+				border-top: 2px solid #F2C14E;
+			}
+
+			.sub-menu-container .menu-item:hover>.menu-link {
+				text-decoration: underline 2px black !important;
+				text-underline-offset: 5px !important;
+				background-color: white !important;
+				color: black !important;
+			}
+		}
+
+		.vertical-middle {
+			z-index: 0;
+		}
+
+
+		.sub-menu:hover .sub-menu-container {
+			visibility: visible;
+		}
+
+		#footer h3,
+		#footer a {
+			color: #000000;
+			margin-bottom: 0px;
+		}
+
+		figure.image-style-side {
+			float: right;
+			margin-left: var(--ck-image-style-spacing);
+			max-width: 50%;
+		}
+
+		figure.image {
+			clear: both;
+			display: table;
+			margin: .9em auto;
+			min-width: 50px;
+			text-align: center;
+		}
+
+		.image-inline {
+			align-items: flex-start;
+			display: inline-flex;
+			max-width: 100%;
+		}
+
+		#primary-menu-trigger svg path {
+			stroke: #000000FF;
+		}
+
+		.download_button::before {
+			font-family: 'FontAwesome';
+			content: "\f019";
+			display: inline-block;
+			padding-right: 7px;
+		}
+
+		.adjust-left {
+			left: -100% !important;
+		}
+
+		.adjust-right {
+			right: -100% !important;
+		}
+	</style>
+	
+	
+
+
+			<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3589489409148698" crossorigin="anonymous"></script>
+	</head>
+
+<body class="stretched">
+
+	
+
+
+
+	<div id="fb-root"></div>
+	<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v12.0" nonce="xXQ52F3t"></script>
+
+	
+	<!-- Document Wrapper
+	============================================= -->
+	<div id="wrapper" class="clearfix">
+		<div class="kf_top_bar">
+			<div class="container">
+				<div id="assoc_name_div" class="pull-left" style="font-size: 14px;">
+					<span>Shediac/Cap-Pelé Minor Hockey Association</span>
+				</div>
+				<div class="me-1 me-sm-3 pull-right d-flex align-items-center" style="line-height: 60px;">
+											<i class="ms-0 ms-sm-3 me-1 me-sm-3 d-none d-md-inline" style="font-size: 14px;">Follow us on</i>
+																<a target="_blank" href="https://www.facebook.com/p/ShediacCap-Pelé-Minor-Hockey-Association-100064507159787/" class="social-icon si-small si-colored si-rounded si-facebook"><i class="icon-facebook"></i><i class="icon-facebook"></i></a>
+																														
+				</div>
+				<div class="kf_right_dec">
+					<div class="kode_search"></div>
+				</div>
+			</div>
+		</div>
+		<header id="header" class="header-size-sm" style="width: 100%; position: relative; float: left;">
+			<div class="container">
+				<div style="display: flex; float: left; width: 100%; position: relative;">
+					<div class="logo-canvas">
+						<a href="/shcamha">
+															<img style="max-height: 100px; max-width: 200px; position: relative;" src="https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007" alt="Shediac/Cap-Pelé Minor Hockey Association" />
+													</a>
+					</div>
+					<nav class="primary-menu w-100" data-trigger-speed="250" style="margin: auto; padding-left: 50px; max-width: calc(100% - 15%);">
+						<ul class="menu-container" style="display: none;">
+							<li class="menu-item current"><a href="/shcamha/Home" class="menu-link">Home</a></li><li class="menu-item "><a href="/shcamha/Schedules" class="menu-link">Schedules</a></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Clinics</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/FallSkills" class="menu-link">Fall Skills</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Season Information</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/20262027SeasonRegistration" class="menu-link">2026-2027 Season Registration</a></li><li class="menu-item "><a href="/shcamha/2026TryoutsRegistration" class="menu-link">2026 Tryouts Registration</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Tournaments</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/AcadienWinterClassicRecreational" class="menu-link">Acadien Winter Classic (Recreational)</a></li><li class="menu-item "><a href="/shcamha/ClaudeGallantMemorialCompetitive" class="menu-link">Claude Gallant Memorial (Competitive)</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Resources</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/CoachesandVolunteers" class="menu-link">Coaches and Volunteers</a></li><li class="menu-item "><a href="/shcamha/Parents" class="menu-link">Parents</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">About Us</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/Rinks" class="menu-link">Rinks</a></li><li class="menu-item "><a href="/shcamha/CodeofConduct" class="menu-link">Code of Conduct</a></li><li class="menu-item "><a href="/shcamha/Constitution" class="menu-link">Constitution</a></li><li class="menu-item "><a href="/shcamha/ContactUs" class="menu-link">Contact Us</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li>							<li class="menu-item sub-menu more-btn" id="MoreMenuItem" style="display: none;">
+								<a class="menu-link">More</a>
+								<ul class="sub-menu-container ps-2 p-lg-0" id="MoreMenuItemList">
+								</ul>
+							</li>
+						</ul>
+						<!--DL Menu Start-->
+						<div id="kode-responsive-navigation" class="dl-menuwrapper">
+							<button class="dl-trigger">Open Menu</button>
+							<ul class="dl-menu">
+								<li class="menu-item current"><a href="/shcamha/Home" class="menu-link">Home</a></li><li class="menu-item "><a href="/shcamha/Schedules" class="menu-link">Schedules</a></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Clinics</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/FallSkills" class="menu-link">Fall Skills</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Season Information</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/20262027SeasonRegistration" class="menu-link">2026-2027 Season Registration</a></li><li class="menu-item "><a href="/shcamha/2026TryoutsRegistration" class="menu-link">2026 Tryouts Registration</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Tournaments</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/AcadienWinterClassicRecreational" class="menu-link">Acadien Winter Classic (Recreational)</a></li><li class="menu-item "><a href="/shcamha/ClaudeGallantMemorialCompetitive" class="menu-link">Claude Gallant Memorial (Competitive)</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">Resources</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/CoachesandVolunteers" class="menu-link">Coaches and Volunteers</a></li><li class="menu-item "><a href="/shcamha/Parents" class="menu-link">Parents</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li><li class="menu-item sub-menu "><a href="#" class="menu-link">About Us</a><ul class="sub-menu-container ps-2 p-lg-0"><li class="menu-item "><a href="/shcamha/Rinks" class="menu-link">Rinks</a></li><li class="menu-item "><a href="/shcamha/CodeofConduct" class="menu-link">Code of Conduct</a></li><li class="menu-item "><a href="/shcamha/Constitution" class="menu-link">Constitution</a></li><li class="menu-item "><a href="/shcamha/ContactUs" class="menu-link">Contact Us</a></li></ul><button class="sub-menu-trigger icon-chevron-right"></button></li>							</ul>
+						</div>
+						<!--DL Menu END-->
+					</nav>
+				</div>
+			</div>
+			<div class="header-wrap-clone" style="height: 60.6px;"></div>
+		</header>
+
+
+		<div style="clear:both;"></div>
+
+					<div class="" style="padding: 100px 0; min-height: 300px; background-image:url('https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/page_background_image.png?v=1785802895'); background-size: cover; background-position: center;">
+
+				
+					<div class="">
+						<div class="banner_caption text-center">
+							<h1 style="color: #FFFFFF; text-transform: uppercase;"> </h1>
+													</div>
+					</div>
+
+				
+			</div>
+		
+
+
+
+		<style>
+    #bottom_content_row .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    #bottom_content_row [class^="col-"] {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    
+	.image-left {
+		display: flex;
+		justify-content: flex-start;
+	}
+
+	.image-center {
+		display: flex;
+		justify-content: center;
+	}
+
+	.image-right {
+		display: flex;
+		justify-content: flex-end;
+	}
+
+	li > p {
+		display: inline;
+		margin: 0;
+		padding: 0;
+	}
+</style>
+<section id="body-section">
+    <div class="container mt-3 mb-5" style="box-shadow: 0 0px 10px rgba(0, 0, 0, 0.2); border-radius: 10px;">
+        <div class="row pt-3">
+            <div class="col-12">
+                <div><div class="row">
+					<div class="col-12">
+						<div></div>
+					</div>
+				</div></div>            </div>
+        </div>
+        <div class="row">
+            <div class='col-md-8 mb-3'>
+                <div><div class="row">
+					<div class="col-12">
+						<div><style>
+	.photos-addon {
+		padding: 0px 0px;
+	}
+	
+	.photos-addon .slick-prev, .photos-addon .slick-next {
+		top: calc(50% - 36px);
+		transform: translateX(0);
+		width: 50px;
+		height: 50px;
+		opacity: 0.5;
+		border-radius: 50% !important;
+	}
+
+
+	.photos-addon .slick-prev:before, .photos-addon .slick-next:before {
+		font-size: 40px;
+		line-height: 50px;
+		color: gray !important;
+	}
+	
+	.photos-addon .slick-prev {
+		left: 10px;
+	}
+	
+	.photos-addon .slick-next {
+		right: 10px;
+	}
+	
+	.photos-addon .photo_container{
+		padding-left: 1px;
+		padding-right: 1px;
+	}
+	
+	.photos-addon img{
+		max-height: 250px;
+		height: 250px;
+	}
+
+	.photos_more_link_container {
+		padding-left: 32px;
+	}
+</style>
+
+<div class="row mb-0">
+	<div class="col-12">
+		<div class="fancy-title title-bottom-border mb-0">
+			<h5 style="color: #000000; background-color: #F2C14E; padding: 12px 5px 5px 15px; border-color: #F2C14E; border-radius: 10px 10px 0 0; color: #000000 !important;">
+				Photos			    <a style="color: #000000; text-transform: capitalize; opacity: 0.9; font-weight: 300; padding-right: 10px; float:right;"  href="/leagues/AllAlbums/31174">View More</a>
+			</h5>
+		</div>
+	</div>
+</div>
+
+<div class="row mb-3">
+	<div class="col-12">
+
+			<div class="text-center">
+			<div style="display: inline-block;">
+				<a caption="TL_photo_1790814631.jpg" data-fancybox="preview" target="_blank" href="https://cdn-app.teamlinkt.com/media/association_data/31174/photo_album/158534/1585341790814631pOWzodcgKh/TL_photo_1790814631.jpg" >
+					<img src= 'https://cdn-app.teamlinkt.com/media/association_data/31174/photo_album/158534/1585341790814631pOWzodcgKh/TL_photo_1790814631.jpg'/>
+				</a>
+			</div>
+		</div>
+	
+	</div>
+</div>
+
+<script>
+	$(document).ready(function(){		
+
+		$('.photos-addon').slick({
+			arrows: true,
+			autoplay: true,
+			infinite: true,
+			centerPadding: '1px',
+			swipeToSlide: true,
+			pauseOnHover: true,
+			variableWidth: true,
+			centerMode: true,
+  			mobileFirst: true,
+			autoplaySpeed: 5000,
+			responsive: [
+				{centerMode: true},
+			],
+		});
+	});
+</script></div>
+					</div>
+				</div></div>            </div>
+
+                            <div class="col-md-4 col-sm-12 mb-3">
+                    <div><div class="row">
+					<div class="col-12">
+						<div><div class="fb-page mb-3" data-href="https://www.facebook.com/p/ShediacCap-Pelé-Minor-Hockey-Association-100064507159787" data-tabs="timeline" data-width="500px" data-height="500px" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true">
+	<blockquote cite="https://www.facebook.com/p/ShediacCap-Pelé-Minor-Hockey-Association-100064507159787" class="fb-xfbml-parse-ignore">
+		<a href="https://www.facebook.com/p/ShediacCap-Pelé-Minor-Hockey-Association-100064507159787"></a>
+	</blockquote>
+</div></div>
+					</div>
+				</div></div>                </div>
+                    </div>
+        <div class="row">
+            <div class="col-12">
+                <div><div class="row">
+					<div class="col-12">
+						<div></div>
+					</div>
+				</div></div>            </div>
+        </div>
+    </div>
+    <!-- Comment out for now until we figure out how to do full screen stuff properly -->
+    <!-- <div id="bottom_content_row">
+        <div class="col-12">
+        </div>
+    </div> -->
+</section>
+		<style type="text/css">
+			#adsbygoogle_container {
+				display: none;
+			}
+
+			@media screen and (max-width: 500px) {
+				#adsbygoogle_container {
+					display: block;
+				}
+			}
+		</style>
+
+		
+		<i id="gotoTop" class="icon-angle-up"></i>
+
+		<!--ticker Wrap Start-->
+		<div class="kf_ticker-wrap twitter_ticker">
+			<div class="container">
+				<div class="kf_ticker">
+
+					<div class="kf_ticker_slider">
+						<ul class="ticker">
+
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--ticker Wrap End-->
+		<style>
+	#footer .container {
+		color: white;
+	}
+
+	#footer .row div,
+	#footer h1,
+	#footer h2,
+	#footer h3,
+	#footer h4,
+	#footer h5,
+	#footer h6,
+	#footer a,
+	#footer p,
+	#footer div,
+	#footer span {
+		color: #000000;
+	}
+
+	#footer .teamlinkt_footer {
+		color: white;
+	}
+
+	#footer a {
+		color: #000000 !important;
+	}
+
+	#footer a:hover {
+		color: #000000 !important;
+		text-decoration: underline !important;
+
+	}
+</style>
+<footer id="footer" data-scrollto-settings='{"offset":140,"speed":1250,"easing":"easeOutQuad"}' style="background-color: #F2C14E; border-top: 10px solid #F2C14E !important;">
+	<div class="py-4 px-4">
+		<div class="container" style="border-bottom: 10px solid #000000; padding-bottom: 30px;">
+			<div class="row clearfix">
+				<div class="col-12 col-sm-6 col-lg-3 my-auto mb-3 text-center text-sm-start">
+					<div class="widget clearfix">
+						<img style="max-height: 150px;" src="https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007" alt="Image" class="">
+					</div>
+				</div>
+									<div class="col-12 col-sm-6 col-lg-3 my-auto">
+						<div class="row mb-3">
+							<h2 class="mb-3 pb-3 m-auto mx-sm-0" style="border-bottom: 5px solid #000000; width: auto;">Follow Us</h2>
+							<div class="d-flex align-contents-center ps-0">
+								<div class="text-center m-auto mx-sm-0">
+																			<a target="_blank" href="https://www.facebook.com/p/ShediacCap-Pelé-Minor-Hockey-Association-100064507159787/" class="social-icon si-small si-colored si-rounded si-facebook"> <i class="icon-facebook"></i> <i class="icon-facebook"></i> </a>
+																																																														</div>
+							</div>
+						</div>
+					</div>
+				
+				<div class="col-12 col-sm-6 col-lg-3 my-auto">
+					<div class="row mb-3">
+						<h2 class="mb-3 pb-3 m-auto mx-sm-0" style="border-bottom: 5px solid #000000; width: auto;">Location</h2>
+													<div class="mb-1 text-center text-sm-start ps-0" style="font-size: 14px;">84 Festival St </div>
+							<div class="text-center text-sm-start ps-0" style="font-size: 14px;">Shediac, New Brunswick</div>
+											</div>
+				</div>
+				<div class="col-12 col-sm-6 col-lg-3 my-auto">
+					<div class="row mb-0 mb-sm-3">
+						<h2 class="mb-3 pb-3 m-auto mx-sm-0" style="border-bottom: 5px solid #000000; width: auto;">Contact Us</h2>
+
+						<div class="mb-1 text-center text-sm-start ps-0" style="font-size: 14px;">
+													</div>
+						<div class="text-center text-sm-start ps-0" style="font-size: 14px;">
+							<a href="/shcamha/ContactUs?page_type=contact" style="text-decoration: underline !important;">Email Us</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Copyrights ============================================= -->
+		<div class="container p-0 mt-3">
+			<div class="d-flex teamlinkt_footer text-center text-sm-start flex-column flex-sm-row">
+				<div class="mb-3 mb-sm-0" style="font-size: 14px;">
+					<i class="fa fa-copyright"></i>
+					Shediac/Cap-Pelé Minor Hockey Association 2026				</div>
+				<div class="d-flex m-auto me-sm-0">
+					<div class="d-flex align-items-center me-1" style="font-size: 11px;">Powered By</div>
+					<a href="https://teamlinkt.com/league-software/?utm_source=footer&utm_medium=referral&utm_campaign=customer" target="_blank">
+						<img src="https://cdn-app-static.teamlinkt.com/marketing/logos/combination_blue_w300_h63.png" style="max-width: 150px;" />
+					</a>
+				</div>
+			</div>
+			<div class="text-center text-sm-end">
+				<a href="https://app.teamlinkt.com" class="text-decoration-underline" style="font-size: 14px;" target="_blank">Login</a>
+			</div>
+		</div>
+	</div>
+</footer>		<script>
+	var submitted_teamlinkt_sponsor_asset_views = false;
+
+	$(document).ready(function() {
+		//check if there are no sponsor addons
+		if ($('.sponsors_addon').length == 0) {
+			submitTeamlinktSponsorAssetViews(); // try to submit any views that may have been missed
+		}
+	});
+
+
+	function submitTeamlinktSponsorAssetViews() {
+		let asset_views = JSON.parse(localStorage.getItem('teamlinkt_sponsor_asset_views') ?? '{}');
+		let teamlinkt_sponsor_asset_ids = Object.keys(asset_views);
+
+		if (submitted_teamlinkt_sponsor_asset_views || teamlinkt_sponsor_asset_ids.length == 0 || getUnsubmittedTeamlinktSponsorAssetViewsCount() < 3) {
+			return;
+		}
+
+		$.ajax({
+			url: 'https://leagues.teamlinkt.com/Leagues/recordTeamlinktSponsorAssetViews/31174',
+			type: 'POST',
+			data: {
+				teamlinkt_sponsor_asset_ids: teamlinkt_sponsor_asset_ids,
+				asset_views: asset_views
+			},
+			success: function(data) {
+				if (typeof data == 'string') {
+					data = JSON.parse(data);
+				}
+				if (data['code'] == 200) {
+					localStorage.setItem('teamlinkt_sponsor_asset_views', '{}');
+					submitted_teamlinkt_sponsor_asset_views = true;
+				}
+			}
+		}).always(function() {
+		});
+	}
+
+	function getUnsubmittedTeamlinktSponsorAssetViewsCount() {
+		let asset_views = JSON.parse(localStorage.getItem('teamlinkt_sponsor_asset_views') ?? '{}');
+		let teamlinkt_sponsor_asset_ids = Object.keys(asset_views);
+
+		let total_views = 0;
+		for (let i = 0; i < teamlinkt_sponsor_asset_ids.length; i++) {
+			let teamlinkt_sponsor_asset_id = teamlinkt_sponsor_asset_ids[i];
+			let dates = Object.keys(asset_views[teamlinkt_sponsor_asset_id]);
+			for (let j = 0; j < dates.length; j++) {
+				let date = dates[j];
+				total_views += asset_views[teamlinkt_sponsor_asset_id][date];
+			}
+		}
+
+		return total_views;
+	}
+</script>
+		<script src="https://cdn.datatables.net/1.11.4/js/jquery.dataTables.min.js"></script>
+		<script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
+		<script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
+		<script src="https://cdn.datatables.net/1.11.4/js/dataTables.bootstrap5.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.37/moment-timezone.min.js"></script>
+		<script src="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/js/plugins.min.js"></script>
+		<script src="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/js/functions.js"></script>
+		<script src="https://cdn-league-prod-static.teamlinkt.com/themes/default/js/slick.min.js"></script>
+
+		<!--Dl Menu Script-->
+		<script src="/theme/default/js/dl-menu/modernizr.custom.js"></script>
+		<script src="/theme/default/js/dl-menu/jquery.dlmenu.js"></script>
+
+		<script src="/theme/default/js/custom.js"></script>
+		<script src="https://cdn-league-prod-static.teamlinkt.com/themes/default/js/jquery-cookie.js"></script>
+
+		<script src="https://cdn-league-prod-static.teamlinkt.com/themes/canvas01/js/holder.js"></script>
+
+		<script src='https://js.hcaptcha.com/1/api.js' async defer></script>
+
+		<script>
+			var t = `Shediac/Cap-Pelé Minor Hockey Association`;
+			var font_size = 12;
+			if (t.length < 10) {
+				font_size = 24;
+			} else if (t.length < 30) {
+				font_size = 20;
+			} else if (t.length < 50) {
+				font_size = 16;
+			}
+			Holder.addTheme("user", {
+				bg: "#FFFFFF",
+				fg: "#000000",
+				size: font_size,
+				fontweight: "normal"
+			});
+		</script>
+
+
+		<script>
+			var checkOverflowTimer = null;
+			var isResizingMenuItems = false;
+			const IS_PREVIEW = parseInt(0);
+
+			//We do not want to scroll the page if an a tag has the href of #
+			//This is for our nav items for non-linked pages
+			var links = document.querySelectorAll('a[href="#"]');
+
+			links.forEach(function(link) {
+				link.addEventListener('click', function(event) {
+					event.preventDefault();
+				});
+			});
+
+			$(document).ready(function() {
+				if (IS_PREVIEW) {
+					$("nav ul .menu-link").each(function(i, ele) {
+						$(ele).attr('href', $(ele).attr('href') + '?preview');
+					});
+				}
+				// $("table").not(".events-marquee-event-content").not(".dataTable").not("#tbl_standings").not("#stats_table").not(".table-borderless").addClass("table table-bordered");
+				$("table td").addClass("align-middle");
+				$("table td p").addClass("mb-3");
+
+				$(window).resize(function() {
+					clearTimeout(checkOverflowTimer);
+					checkOverflowTimer = setTimeout(hideOverflowMenuItems, 100);
+				});
+				checkOverflowTimer = hideOverflowMenuItems();
+				// $(".menu-container").show();
+
+				document.querySelectorAll('.menu-item').forEach(function(menuItem) {
+					//remove adjust-left and adjust-right classes
+					$(".sub-menu-container").removeClass('adjust-left');
+					$(".sub-menu-container").removeClass('adjust-right');
+
+					menuItem.addEventListener('mouseenter', function() {
+						const submenu = menuItem.querySelector('.sub-menu-container');
+
+						// Check if submenu exists
+						if (submenu) {
+							//make it invisible
+							submenu.style.visibility = 'hidden';
+							// Get the bounding rectangle of the submenu
+							const rect = submenu.getBoundingClientRect();
+
+							// Check if the right side of the submenu overflows off the screen
+							if (rect.right > document.documentElement.clientWidth) {
+								// If overflow, adjust the position
+								submenu.classList.add('adjust-left');
+								//make it visible
+								submenu.style.visibility = 'visible';
+							}
+							// Check if the left side of the submenu overflows off the screen
+							else if (rect.left > document.documentElement.clientWidth) {
+								// If overflow, adjust the position
+								submenu.classList.add('adjust-right');
+								//make it visible
+								submenu.style.visibility = 'visible';
+							} else {
+								//make it visible
+								submenu.style.visibility = 'visible';
+							}
+						}
+					});
+				});
+			});
+
+			function hideOverflowMenuItems() {
+				if (isResizingMenuItems) {
+					return false;
+				}
+				isResizingMenuItems = true;
+
+				// If the mobile menu is showing, don't use the More item
+				if (window.matchMedia('(max-width: 991px)').matches) {
+					$("#MoreMenuItemList>li").each(function(i, e) {
+						$e = $(e);
+						$e.detach().insertBefore("#MoreMenuItem");
+					});
+					$("#MoreMenuItem").hide();
+					isResizingMenuItems = false;
+					return true;
+				}
+
+				let availableWidth = $(".menu-container").width();
+				let menuItemWidths = [];
+
+				$("#MoreMenuItem").show();
+				let moreMenuItemWidth = $("#MoreMenuItem").width();
+				$("#MoreMenuItem").hide();
+
+				// make all menu items visible
+				$("#MoreMenuItemList>li").each(function(i, e) {
+					$e = $(e);
+					$e.detach().insertBefore("#MoreMenuItem");
+				});
+
+				// any items that are wider than the available space should be moved to the More item
+				let shouldMoveToMoreButton = false;
+				$(".menu-container>li.menu-item").not(".more-btn").each(function(i, e) {
+					$e = $(e);
+					if (!shouldMoveToMoreButton) {
+						let menuItemsWidth = menuItemWidths.reduce((previousValue, currentValue) => previousValue + currentValue, 0) + $e.width();
+
+						if (menuItemsWidth > availableWidth) {
+							shouldMoveToMoreButton = true;
+						}
+					}
+
+					// move menu items to the More menu
+					if (shouldMoveToMoreButton) $e.detach().appendTo("#MoreMenuItemList");
+					else menuItemWidths.push($e.width());
+				});
+
+				if ($("#MoreMenuItemList>li").length > 0) $("#MoreMenuItem").show();
+				else $("#MoreMenuItem").hide();
+
+				// update the height of the clone, which isn't absolutely positioned
+				// $(".header-wrap-clone").height($(".header-wrap-clone").siblings("#header-wrap").height());
+				isResizingMenuItems = false;
+				return true;
+			}
+		</script>
+		<script>
+(function () {
+	const teamlinkt_emi = new URLSearchParams(window.location.search).has("teamlinkt_emi");
+	const params = new URLSearchParams({
+		position: "right",
+		teamlinkt_emi,
+		association_id: 31174,
+	});
+	const s = document.createElement("script");
+	s.src = `https://app.teamlinkt.com/emi-embed?${params}`;
+	s.async = true;
+	document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "team": "Lewisville Lightning",
+  "division": "Competitive U13 B",
+  "opponent": "Shediac / Cap-Pelé Predators",
+  "game_date": "2026-10-13",
+  "start_time": "17:30",
+  "venue": "Kay Arena",
+  "schedule_source": "User-provided matchup, time and venue; tomorrow resolved from session date 2026-10-12.",
+  "logo_sources": {
+    "lewisville": "https://www.lewisvillelightning.ca/wp-content/uploads/sites/1379/2022/02/Header@2x.png",
+    "predators": "https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007"
+  },
+  "generation": "Built-in image_gen tool with official logo reference images; full prompt in generation-prompt.txt",
+  "upscale": "Local Atelier ct118 ComfyUI, RealESRGAN_x4plus followed by area downsampling to 3840x2160",
+  "workflow": "upscale-workflow.json"
+}

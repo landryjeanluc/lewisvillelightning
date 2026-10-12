@@ -1,0 +1,7 @@
+{
+  "1": {"class_type": "LoadImage", "inputs": {"image": "lightning-2026-10-13-master.png"}},
+  "2": {"class_type": "UpscaleModelLoader", "inputs": {"model_name": "RealESRGAN_x4plus.pth"}},
+  "3": {"class_type": "ImageUpscaleWithModel", "inputs": {"upscale_model": ["2", 0], "image": ["1", 0]}},
+  "4": {"class_type": "ImageScale", "inputs": {"image": ["3", 0], "upscale_method": "area", "width": 3840, "height": 2160, "crop": "disabled"}},
+  "5": {"class_type": "SaveImage", "inputs": {"images": ["4", 0], "filename_prefix": "lewisville/lightning-vs-predators-2026-10-13-4k"}}
+}
