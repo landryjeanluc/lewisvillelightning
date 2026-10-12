@@ -46,6 +46,49 @@ the build rather than taking pa-web and dpt-plans down at switch time. The
 config was evaluated already and emits the expected vhost, headers, auth and
 firewall port.
 
+## The stats API (lvlnb-api)
+
+Declared in `nixos-builds/hosts/arachnea/guests/lvlnb.nix` (commit `18d9279`):
+FastAPI on loopback **:8112**, database `lvlnb` on the shared Postgres, with the
+static vhost proxying `^~ /api/` to it so the browser sees one origin.
+
+First install on the host, after the rebuild:
+
+```
+sudo mkdir -p /opt/lvlnb && sudo chown lvlnb:lvlnb /opt/lvlnb
+sudo -u lvlnb rsync -a ~/repos/LewisvilleLightning/api/ /opt/lvlnb/
+sudo -u lvlnb sh -c 'cd /opt/lvlnb && uv venv && uv pip install -r <(uv export --no-hashes)'
+
+# secrets — the app refuses to start without SESSION_SECRET
+sudo -u lvlnb tee /opt/lvlnb/.env >/dev/null <<EOF
+DATABASE_URL=postgresql:///lvlnb
+SESSION_SECRET=$(head -c 32 /dev/urandom | base64)
+DATA_DIR=/srv/lvlnb-data
+COOKIE_SECURE=1
+EOF
+sudo chmod 600 /opt/lvlnb/.env
+
+# the API validates ids against the data contract
+sudo mkdir -p /srv/lvlnb-data && sudo chown jl:users /srv/lvlnb-data
+rsync -a data/ arachnea:/srv/lvlnb-data/
+
+sudo systemctl enable --now lvlnb-api
+curl -s localhost:8112/health      # {"ok":true,"games":2,"players":19}
+```
+
+### Creating admin accounts
+
+```
+HASH=$(nix shell nixpkgs#python312Packages.bcrypt -c python3 -c \
+  "import bcrypt,sys; print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())" 'THE-PASSWORD')
+ssh arachnea "sudo -u postgres psql lvlnb -c \"INSERT INTO users (email, display_name, password_hash, role)
+  VALUES ('you@hexpi.ca','JL','$HASH','admin')\""
+```
+
+Role is `admin` (can edit) or `viewer` (read only). After a Spordle sync changes
+the roster or schedule, either restart the service or `POST /api/reload` as an
+admin so the API accepts the new ids.
+
 ## Publishing a content update
 
 Content changes need no rebuild — only an rsync:
@@ -53,6 +96,7 @@ Content changes need no rebuild — only an rsync:
 ```
 cd site && npm run build
 rsync -a --delete dist/ arachnea:/srv/lvlnb/
+rsync -a data/ arachnea:/srv/lvlnb-data/     # if the contract changed
 ```
 
 ## Changing the team password
