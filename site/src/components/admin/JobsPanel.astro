@@ -23,7 +23,7 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     </select>
   </label>
 
-  <div class="tablewrap card">
+  <div class="tablewrap card" tabindex="0" role="region" aria-label="Game job assignments">
     <table>
       <thead>
         <tr><th class="l">Job</th><th class="l">Family on the hook</th><th class="l">Taken by</th></tr>
@@ -195,10 +195,10 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
 
 <style>
   .jp h3 { font-size: var(--t-lg); }
-  .jp-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
+  .jp-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-4); }
   .jp-note { font-size: var(--t-sm); margin-block: var(--s-2) var(--s-5); max-width: 62ch; }
-  .jp-pick { display: block; max-width: 24rem; margin-bottom: var(--s-4); }
-  .jp-actions { display: flex; align-items: center; justify-content: space-between;
+  .jp-pick { display: grid; max-width: 24rem; margin-bottom: var(--s-4); }
+  .jp-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
                 gap: var(--s-4); margin-top: var(--s-4); }
   :global(#jp-rows td) { padding: var(--s-3); border-top: 1px solid var(--hairline); vertical-align: middle; }
   :global(#jp-rows td.l) { text-align: left; }
@@ -206,6 +206,9 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     color: var(--text); background: var(--bg-sunken);
     border: 1px solid var(--hairline-sv); border-radius: var(--r-md); min-width: 14rem; }
   :global(.jp-desc) { font-size: var(--t-xs); }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: var(--s-3); text-align: left; font-size: var(--t-xs); color: var(--text-dim); }
+
   /* the reusable list — occasional work, so it stays folded away */
   .jp-list { margin-top: var(--s-6); border-top: 1px solid var(--hairline); padding-top: var(--s-4); }
   .jp-list summary { cursor: pointer; font-family: var(--font-ui); font-weight: 700;

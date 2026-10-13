@@ -89,10 +89,10 @@ const list = games.map((g: any) => {
 <style>
   .cn h3 { font-size: var(--t-lg); }
   .cn-note { font-size: var(--t-sm); margin-block: var(--s-2) var(--s-5); max-width: 60ch; }
-  .cn-pick { display: block; max-width: 24rem; margin-bottom: var(--s-5); }
-  .cn-cols { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+  .cn-pick { display: grid; max-width: 24rem; margin-bottom: var(--s-5); }
+  .cn-cols { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
   .cn-box { padding: var(--s-4); display: grid; gap: var(--s-3); }
-  .cn-box header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+  .cn-box header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
   .cn-box h4 { font-family: var(--font-display); font-style: italic; font-weight: 900;
                font-size: var(--t-md); text-transform: uppercase; }
   .cn-box header span { font-size: var(--t-xs); }
@@ -101,5 +101,5 @@ const list = games.map((g: any) => {
     color: var(--text); background: var(--bg-sunken);
     border: 1px solid var(--hairline-sv); border-radius: var(--r-md); resize: vertical;
   }
-  .cn-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+  .cn-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); }
 </style>

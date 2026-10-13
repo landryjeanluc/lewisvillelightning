@@ -57,7 +57,7 @@ const showScore = game.status === "final" || game.status === "in_progress";
     --u: clamp(0.62rem, 0.2rem + 1.5vw, 1.1rem);
     z-index: 1;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: calc(var(--u) * 1.5);
     position: relative;
@@ -85,7 +85,7 @@ const showScore = game.status === "final" || game.status === "in_progress";
   }
   .matchup--compact .side :global(.tc) { --crest-size: calc(var(--u) * 7); }
 
-  .label { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1; }
+  .label { min-width: 0; max-width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1; }
   .town {
     font-family: var(--font-ui);
     font-size: calc(var(--u) * 1.15);
@@ -121,5 +121,11 @@ const showScore = game.status === "final" || game.status === "in_progress";
   @media (max-width: 520px) {
     .matchup { gap: calc(var(--u) * .6); }
     .side :global(.tc) { --crest-size: calc(var(--u) * 11); }
+  }
+  @media (max-width: 400px) {
+    .matchup--hero { --u: .55rem; }
+    .nick { font-size: calc(var(--u) * 2.6); }
+    .town { letter-spacing: .08em; }
+    .vs { min-width: calc(var(--u) * 2.8); }
   }
 </style>

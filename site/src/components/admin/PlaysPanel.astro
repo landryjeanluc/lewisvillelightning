@@ -172,7 +172,7 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
     display: flex; flex-wrap: wrap; gap: var(--s-4);
     align-items: flex-end; justify-content: space-between; margin-bottom: var(--s-5);
   }
-  .pe-pick { min-width: 14rem; }
+  .pe-pick { min-width: 0; width: min(100%, 20rem); }
 
   .pe-grid {
     display: grid; gap: var(--s-4);
@@ -230,7 +230,7 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
   .pe-dur input { width: 100%; }
 
   .pe-save {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
     gap: var(--s-3); margin-top: var(--s-2);
   }
   .pe-save span { font-size: var(--t-xs); }
@@ -239,7 +239,7 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
 
   /* Built at runtime with innerHTML, so Astro's scoping never reaches them. */
   :global(.pe-chip) {
-    min-width: 2.2rem; padding: var(--s-2); cursor: pointer;
+    min-width: 44px; padding: var(--s-2); cursor: pointer;
     background: var(--surface); color: var(--text-dim);
     border: 1px solid var(--hairline); border-radius: var(--r-md);
     font-family: var(--font-ui); font-weight: 700;
@@ -262,4 +262,9 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
     font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600; color: var(--accent-text);
   }
   :global(.pe-inspector button.link.danger) { color: var(--loss); }
+  .pe-grid > *, .pe-head > * { min-width: 0; max-width: 100%; }
+  @media (max-width: 600px) {
+    .pe-stepedit .grow { flex-basis: 100%; }
+    .pe-dur { min-width: 0; width: 100%; }
+  }
 </style>

@@ -174,10 +174,18 @@
     color: var(--text); background: var(--bg-sunken);
     border: 1px solid var(--hairline-sv); border-radius: var(--r-md); resize: vertical;
   }
-  .np-img { display: flex; align-items: center; gap: var(--s-3); }
+  .np-img { display: flex; flex-wrap: wrap; min-width: 0; align-items: center; gap: var(--s-3); }
   .np-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
-  .np-btns { display: flex; gap: var(--s-3); }
+  .np-btns { display: flex; flex-wrap: wrap; gap: var(--s-3); }
   .np-form button.ghost {
     background: none; border: 1px solid var(--hairline-sv); color: var(--text);
+  }
+  @media (max-width: 600px) {
+    .np-form { padding: var(--s-4); }
+    :global(.np-item) { flex-wrap: wrap; }
+    :global(.np-title) { flex: 1; min-width: 0; }
+    :global(.np-row-actions) { margin-left: auto; }
+    .np-btns { width: 100%; }
+    .np-btns button { flex: 1 1 auto; }
   }
 </style>

@@ -47,4 +47,7 @@ const html = renderMarkdown(a.body);
     border-left: 3px solid var(--volt-500); color: var(--text-muted);
   }
   .tags { display: flex; gap: var(--s-2); flex-wrap: wrap; list-style: none; padding: 0; margin-top: var(--s-6); }
+  .body :global(pre) { max-width: 100%; overflow-x: auto; padding: var(--s-3); background: var(--bg-raised); }
+  .body :global(table) { display: block; max-width: 100%; overflow-x: auto; }
+
 </style>

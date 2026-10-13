@@ -13,9 +13,11 @@
   width: 100%;
   height: auto;
   margin-inline: auto;            /* a capped board stays centred in its frame */
-  touch-action: none;             /* the editor owns dragging, not the scroller */
+  touch-action: pan-y pinch-zoom; /* viewers can scroll the page across the rink */
   user-select: none;
 }
+
+#pe-stage .pl-svg { touch-action: none; } /* only the editor owns dragging */
 
 /* --- the ice ------------------------------------------------------------- */
 .rk-boards      { fill: none; stroke: #0B1D54; stroke-width: 1.6; }

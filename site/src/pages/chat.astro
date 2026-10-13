@@ -14,11 +14,14 @@ import "../styles/chat.css";
     <aside class="chat-sidebar" aria-label="Conversations">
       <div class="chat-sidebar-head"><h2>Conversations</h2><p id="chat-identity" class="dim"></p></div>
       <div id="chat-rooms" class="chat-rooms"></div>
+      <details class="chat-start">
+      <summary>New conversation</summary>
       <form id="chat-new" class="chat-new">
         <label for="chat-member">Message a teammate or parent</label>
         <select id="chat-member" required><option value="">Choose a team member</option></select>
         <button type="submit" class="ghost">Start conversation</button>
       </form>
+      </details>
     </aside>
     <section class="chat-thread" aria-labelledby="chat-title">
       <header class="chat-thread-head">
@@ -36,7 +39,7 @@ import "../styles/chat.css";
       <form id="chat-compose" class="chat-compose">
         <label for="chat-body">Your message</label>
         <textarea id="chat-body" rows="3" maxlength="2000" required placeholder="Write to the team…" aria-describedby="chat-hint"></textarea>
-        <div class="chat-compose-bottom"><p id="chat-hint" class="dim">Keep it kind. Enter to send · Shift + Enter for a new line.</p><button id="chat-send" type="submit" disabled>Send message</button></div>
+        <div class="chat-compose-bottom"><p id="chat-hint" class="dim">Keep it kind. <span class="chat-keyboard-hint">Enter to send · Shift + Enter for a new line.</span><span class="chat-touch-hint">Tap Send message when you’re ready.</span></p><button id="chat-send" type="submit" disabled>Send message</button></div>
       </form>
     </section>
   </div>

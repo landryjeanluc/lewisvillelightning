@@ -179,7 +179,7 @@ function paintControls(s: { step: number; progress: number; playing: boolean; st
 function scrubTo(fraction: number) {
   const d = currentDiagram;
   if (!d || !stage) return;
-  let target = fraction * (totalDuration(d) || 1);
+  let target = Math.max(0, Math.min(1, fraction)) * (totalDuration(d) || 1);
   for (let i = 0; i < d.steps.length; i++) {
     if (target <= d.steps[i].duration || i === d.steps.length - 1) {
       stage.pause();
@@ -201,6 +201,17 @@ function wire() {
     const el = $("#pl-scrub");
     const r = el.getBoundingClientRect();
     scrubTo(((e as PointerEvent).clientX - r.left) / r.width);
+  });
+
+  $("#pl-scrub").addEventListener("keydown", (e) => {
+    const fraction = Number($("#pl-scrub").getAttribute("aria-valuenow")) / 100;
+    const keys: Record<string, number> = {
+      ArrowRight: fraction + .05, ArrowUp: fraction + .05,
+      ArrowLeft: fraction - .05, ArrowDown: fraction - .05, Home: 0, End: 1,
+    };
+    if (e.key in keys) {
+      e.preventDefault(); e.stopPropagation(); scrubTo(keys[e.key]);
+    }
   });
 
   document.addEventListener("keydown", (e) => {

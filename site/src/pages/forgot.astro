@@ -6,7 +6,7 @@ import Auth from "../layouts/Auth.astro";
     <p class="dim" style="font-size:var(--t-sm)">
       Enter your email and we'll send you a link to choose a new password.
     </p>
-    <label>Email<input name="email" type="email" required autocomplete="username" autofocus /></label>
+    <label>Email<input name="email" type="email" required autocomplete="username" /></label>
     <button type="submit">Send reset link</button>
     <p id="msg" class="auth-msg" hidden></p>
     <a class="auth-link" href="/login">Back to sign in</a>

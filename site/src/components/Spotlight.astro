@@ -46,4 +46,8 @@ const POS: Record<string, string> = {
     padding: 1px 6px; border: 1px solid var(--hairline-sv); border-radius: 3px;
     font-size: var(--t-micro); color: var(--ice-200);
   }
+  @media (max-width: 600px) {
+    .spot { flex-direction: column; max-width: 100%; text-align: center; }
+    .spot-meta { justify-content: center; }
+  }
 </style>

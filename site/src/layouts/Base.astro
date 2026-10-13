@@ -17,6 +17,7 @@ const nav = [
   { href: "/roster",   label: "Roster" },
   { href: "/stats",    label: "Stats" },
   { href: "/plays",    label: "Plays" },
+  { href: "/goals",    label: "Goals" },
   { href: "/news",     label: "News" },
   { href: "/chat",     label: "Chat" },
 ];
@@ -59,13 +60,17 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
           </span>
         </a>
 
-        <nav aria-label="Primary">
+        <button class="menu-toggle ghost" type="button" aria-expanded="false" aria-controls="primary-nav" hidden>Menu <span aria-hidden="true">☰</span></button>
+        <nav id="primary-nav" aria-label="Primary">
           <ul class="nav">
             {nav.map((n) => (
               <li>
                 <a href={n.href} aria-current={isActive(n.href) ? "page" : undefined}>{n.label}</a>
               </li>
             ))}
+            <li id="admin-nav-item" hidden>
+              <a href="/admin" aria-current={isActive("/admin") ? "page" : undefined}>Admin</a>
+            </li>
           </ul>
         </nav>
       </div>
@@ -104,7 +109,7 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
       .skip:focus { left: 0; }
 
       .site-head {
-        position: sticky; top: 0; z-index: 50;
+        position: sticky; top: 0; z-index: 50; padding-top: env(safe-area-inset-top);
         background: color-mix(in srgb, var(--bg) 82%, transparent);
         backdrop-filter: blur(14px) saturate(140%);
         border-bottom: 1px solid var(--hairline);
@@ -113,7 +118,7 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
         display: flex; align-items: center; justify-content: space-between;
         gap: var(--s-5); padding-block: var(--s-3); flex-wrap: wrap;
       }
-      .brand { display: flex; align-items: center; gap: var(--s-3); text-decoration: none; }
+      .brand { display: flex; align-items: center; gap: var(--s-3); text-decoration: none; min-width: 0; }
       .brand img { width: 52px; height: auto; }
       .brand-text { display: flex; flex-direction: column; line-height: 1; }
       .brand-name {
@@ -125,9 +130,10 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
         text-transform: uppercase; color: var(--text-dim); margin-top: 3px;
       }
 
+      .menu-toggle { display: none; }
       .nav { display: flex; gap: var(--s-5); list-style: none; padding: 0; }
       .nav a {
-        position: relative; display: block; padding-block: var(--s-2);
+        position: relative; display: flex; align-items: center; min-height: 44px; padding-block: var(--s-2);
         font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
         letter-spacing: .1em; text-transform: uppercase; text-decoration: none;
         color: var(--text-muted); transition: color .18s var(--ease);
@@ -138,13 +144,19 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
         content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
         background: var(--volt-500); box-shadow: var(--glow-volt);
       }
-      @media (max-width: 560px) {
-        .head-inner { justify-content: center; }
-        .nav { gap: clamp(.65rem, 3vw, var(--s-4)); }
-      }
-      @media (max-width: 360px) {
-        .nav { gap: var(--s-3); }
-        .nav a { font-size: var(--t-xs); }
+      @media (max-width: 900px) {
+        .head-inner { gap: var(--s-2); }
+        .brand { flex: 1; }
+        .brand img { width: 40px; flex: none; }
+        .brand-name { font-size: clamp(1.05rem, 3.6vw, 1.5rem); }
+        .menu-toggle { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-2) var(--s-3); letter-spacing: .06em; }
+        #primary-nav { flex-basis: 100%; max-height: calc(100dvh - 80px - env(safe-area-inset-top)); overflow-y: auto; }
+        .site-head[data-menu-ready] #primary-nav { display: none; }
+        .site-head[data-menu-ready].is-open #primary-nav { display: block; }
+        .nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-1) var(--s-3); padding-block: var(--s-2); }
+        .nav a { padding-inline: var(--s-3); border-radius: var(--r-md); }
+        .nav a[aria-current="page"] { background: var(--surface-2); }
+        .nav a[aria-current="page"]::after { left: var(--s-3); right: var(--s-3); }
       }
 
       .fixture-banner {
@@ -158,11 +170,12 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
       .fixture-banner strong { color: var(--loss); }
 
       main { padding-block: var(--s-7) var(--s-9); }
+      @media (max-width: 600px) { main { padding-block: var(--s-5) var(--s-7); } }
 
       .site-foot {
         border-top: 1px solid var(--hairline);
         background: var(--bg-sunken);
-        padding-block: var(--s-7);
+        padding-block: var(--s-7) max(var(--s-7), env(safe-area-inset-bottom));
       }
       .foot-slogan {
         font-family: var(--font-display); font-style: italic; font-weight: 900;
@@ -174,5 +187,39 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
         text-align: center; font-size: var(--t-sm);
       }
     </style>
+    <script>
+      const head = document.querySelector<HTMLElement>(".site-head")!;
+      const toggle = head.querySelector<HTMLButtonElement>(".menu-toggle")!;
+      const mobile = matchMedia("(max-width: 900px)");
+      const adminNav = head.querySelector<HTMLElement>("#admin-nav-item")!;
+      let authRequest = 0;
+      async function refreshAdminLink() {
+        const request = ++authRequest;
+        adminNav.hidden = true;
+        try {
+          const response = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
+          const user = response.ok ? await response.json() : null;
+          if (request === authRequest) adminNav.hidden = user?.role !== "admin";
+        } catch { /* Keep the link hidden when the session cannot be checked. */ }
+      }
+      document.addEventListener("auth:changed", refreshAdminLink);
+      window.addEventListener("pageshow", refreshAdminLink);
+      const setOpen = (open: boolean) => {
+        head.classList.toggle("is-open", open);
+        toggle.setAttribute("aria-expanded", String(open));
+      };
+      head.dataset.menuReady = "";
+      toggle.hidden = false;
+      toggle.addEventListener("click", () => setOpen(toggle.getAttribute("aria-expanded") !== "true"));
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && head.classList.contains("is-open")) {
+          setOpen(false); toggle.focus();
+        }
+      });
+      document.addEventListener("click", (event) => {
+        if (!head.contains(event.target as Node)) setOpen(false);
+      });
+      mobile.addEventListener("change", () => setOpen(false));
+    </script>
   </body>
 </html>

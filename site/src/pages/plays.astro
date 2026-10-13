@@ -56,7 +56,7 @@ const gameLabels = Object.fromEntries(games.map((g: any) => {
       <button type="button" class="ctl" id="pl-prev" aria-label="Previous step">◀◀</button>
       <button type="button" class="ctl ctl--go" id="pl-play">▶ Play</button>
       <button type="button" class="ctl" id="pl-next" aria-label="Next step">▶▶</button>
-      <div class="scrub" id="pl-scrub" role="progressbar" aria-label="Play progress"
+      <div class="scrub" id="pl-scrub" role="slider" tabindex="0" aria-label="Play progress"
            aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
         <div class="scrub-fill" id="pl-scrub-fill"></div>
       </div>
@@ -97,7 +97,7 @@ const gameLabels = Object.fromEntries(games.map((g: any) => {
   }
 
   .filters { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-5); }
-  .grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 
   .back {
     display: inline-block; margin-bottom: var(--s-5);
@@ -123,8 +123,9 @@ const gameLabels = Object.fromEntries(games.map((g: any) => {
   .ctl:hover { border-color: var(--volt-500); }
   .ctl--go { min-width: 7rem; background: var(--volt-500); border-color: var(--volt-500); color: #fff; }
   .scrub {
-    flex: 1 1 10rem; height: 6px; border-radius: 3px;
-    background: var(--surface-2); overflow: hidden; cursor: pointer;
+    flex: 1 1 10rem; height: 44px; border-block: 19px solid transparent; border-radius: 3px;
+    background: var(--surface-2); background-clip: padding-box;
+    touch-action: pan-y pinch-zoom; overflow: hidden; cursor: pointer;
   }
   .scrub-fill { height: 100%; width: 0%; background: var(--volt-500); box-shadow: var(--glow-volt); }
   .count { font-size: var(--t-sm); white-space: nowrap; }

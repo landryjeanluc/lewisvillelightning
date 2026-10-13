@@ -8,19 +8,23 @@ import AddToCalendar from "../components/AddToCalendar.astro";
 import Countdown from "../components/Countdown.astro";
 import Lightning from "../components/Lightning.astro";
 import PlayerCard from "../components/PlayerCard.astro";
-import { team, nextGame, nextPractice, upcoming, results, articles, sides, spotlightFor, spotlightProgress } from "../lib/data";
+import HomeGoals from "../components/HomeGoals.astro";
+import NewsFeed from "../components/NewsFeed.astro";
+import InstallApp from "../components/InstallApp.astro";
+import { team, nextGame, nextPractice, upcoming, results, sides, spotlightFor, spotlightProgress } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
 const g = nextGame();
 const p = nextPractice();
 const up = upcoming().filter((e: any) => e.id !== g?.id);
 const recent = results();
-const latest = articles.slice(0, 3);
 const s = g ? sides(g) : null;
 const star = g ? spotlightFor(g.id) : undefined;
 const rot = spotlightProgress();
 ---
 <Base wide>
+  <HomeGoals />
+
   {g ? (
     <section class="hero">
       <Lightning />
@@ -60,6 +64,8 @@ const rot = spotlightProgress();
     </section>
   )}
 
+  <InstallApp />
+
   <TeamShowcase />
 
   {star && (
@@ -80,6 +86,12 @@ const rot = spotlightProgress();
       </div>
     </section>
   )}
+
+  <section class="section home-news" aria-labelledby="home-news-title">
+    <div class="rule-head"><h2 id="home-news-title">Latest news</h2></div>
+    <NewsFeed limit={3} />
+    <a class="more" href="/news">All news →</a>
+  </section>
 
   <div class="cols">
     <section class="section">
@@ -108,21 +120,7 @@ const rot = spotlightProgress();
               note="The season is just getting underway — the first games on the calendar are exhibition. Results will appear here as they are played." />}
       </div>
 
-      {latest.length > 0 && (
-        <>
-          <div class="rule-head" style="margin-top: var(--s-7)"><h2>Latest news</h2></div>
-          <div class="list" style="--flow: var(--s-3)">
-            {latest.map((a: any) => (
-              <a class="news card card--link" href={`/news/${a.slug}`}>
-                <span class="eyebrow">{shortDate(a.publishedAt)}</span>
-                <h3 class="news-title">{a.title}</h3>
-                {a.summary && <p class="dim">{a.summary}</p>}
-              </a>
-            ))}
-          </div>
-          <a class="more" href="/news">All news →</a>
-        </>
-      )}
+
     </section>
   </div>
 
@@ -246,12 +244,17 @@ const rot = spotlightProgress();
     font-family: var(--font-display); font-weight: 900; font-style: italic;
     font-size: var(--t-lg); text-transform: uppercase; margin-top: var(--s-1);
   }
-  .news { display: block; padding: var(--s-4); text-decoration: none; }
-  .news-title { font-size: var(--t-md); margin-block: var(--s-2); }
+  .home-news { margin-top: var(--s-5); }
   .more {
     display: inline-block; margin-top: var(--s-4);
     font-size: var(--t-sm); font-weight: 700; letter-spacing: .08em;
     text-transform: uppercase; color: var(--accent-text); text-decoration: none;
   }
   .more:hover { color: var(--volt-300); }
+  @media (max-width: 600px) {
+    .hero { padding: var(--s-5) var(--s-3) var(--s-6); }
+    .hero-actions { gap: var(--s-3); }
+    .spot-hero { padding: var(--s-5) var(--s-4); margin-top: var(--s-6); }
+    .sh-text { min-width: 0; }
+  }
 </style>

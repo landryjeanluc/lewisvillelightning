@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ reset */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 6rem; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after {
@@ -30,7 +30,7 @@ body {
   font-weight: 500;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  overflow-wrap: anywhere;
 }
 
 /* The arena: two cold light pools and a faint vignette, fixed behind content. */
@@ -90,18 +90,20 @@ a:hover { text-decoration-color: var(--volt-400); }
    is exactly how the roster panel ended up with raw browser widgets. Element
    selectors lose to any class, so .cta / .atc-btn keep their own looks. */
 input, select, textarea {
+  min-width: 0; max-width: 100%;
   padding: var(--s-3);
   font: inherit; font-size: 1rem; font-weight: 600;
   color: var(--text); background: var(--bg-sunken);
   border: 1px solid var(--hairline-sv); border-radius: var(--r-md);
 }
-textarea { font-size: .95rem; font-weight: 500; line-height: 1.5; resize: vertical; }
+textarea { font-size: 1rem; font-weight: 500; line-height: 1.5; resize: vertical; }
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--volt-400); outline-offset: 1px;
 }
 input::placeholder, textarea::placeholder { color: var(--steel-500); }
 
 button {
+  min-height: 44px; min-width: 44px; touch-action: manipulation;
   padding: var(--s-3) var(--s-5); cursor: pointer;
   font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
   letter-spacing: var(--track-label); text-transform: uppercase;
@@ -121,16 +123,29 @@ button.link {
 button.link.danger { color: var(--loss); }
 
 label {
+  min-width: 0;
   display: grid; gap: var(--s-2);
   font-family: var(--font-ui); font-size: var(--t-xs); font-weight: 700;
   letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
 }
 
 /* ----------------------------------------------------------------- layout */
-.wrap { width: min(100% - 2.5rem, var(--wrap)); margin-inline: auto; }
-.wrap--wide { width: min(100% - 2.5rem, var(--wrap-wide)); margin-inline: auto; }
+.wrap, .wrap--wide {
+  --gutter: clamp(1rem, 3vw, 1.25rem);
+  width: min(100% - 2 * max(var(--gutter), env(safe-area-inset-left), env(safe-area-inset-right)), var(--wrap));
+  margin-inline: auto; min-width: 0;
+}
+.wrap--wide { --wrap: var(--wrap-wide); }
 .stack > * + * { margin-top: var(--flow, var(--s-4)); }
 .section { padding-block: var(--s-6) var(--s-5); }
+
+/* Shared by static pages and admin panels (whose scoped styles cannot reach
+   one another). Wide data stays inside an explicitly scrollable region. */
+.tablewrap { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+@media (max-width: 760px), (pointer: coarse) {
+  input, select, textarea { font-size: max(1rem, 16px) !important; }
+  :where(.back, .more, .sh-link, .auth-link) { min-height: 44px; padding-block: .65rem; }
+}
 
 /* A section heading with the hairline rule that runs off to the right. */
 .rule-head {

@@ -110,6 +110,14 @@ const href = `/schedule/${event.id}`;
   @media (max-width: 640px) {
     .row { grid-template-columns: auto 1fr; }
     .when { display: none; }
-    .venue { max-width: 14rem; }
+    .venue { flex-basis: 100%; white-space: normal; }
+  }
+  @media (max-width: 440px) {
+    .row { gap: var(--s-3); padding: var(--s-3); align-items: start; }
+    .chip { width: 44px; }
+    .teams { gap: var(--s-1) var(--s-2); }
+    .team { min-width: 0; max-width: 100%; }
+    .team :global(.tc) { flex-shrink: 0; }
+    .line2 { gap: var(--s-1) var(--s-3); }
   }
 </style>

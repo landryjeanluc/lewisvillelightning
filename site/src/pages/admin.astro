@@ -66,7 +66,7 @@ const gameList = games.map((g: any) => {
         <button type="button" class="link" data-logout>Sign out</button></span>
     </div>
 
-    <div class="tablewrap card">
+    <div class="tablewrap card" tabindex="0" role="region" aria-label="Scrollable data table">
       <table id="sheet">
         <thead>
           <tr><th class="l">Player</th><th>G</th><th>A</th><th>PIM</th><th>+/−</th></tr>
@@ -148,6 +148,7 @@ const gameList = games.map((g: any) => {
 
   function show(which: "gate" | "viewer" | "editor", user?: any) {
     for (const id of ["gate", "viewer", "editor"]) $("#" + id).hidden = id !== which;
+    document.dispatchEvent(new CustomEvent("auth:changed"));
     if (user) {
       $("#viewername").textContent = user.display_name;
       $("#adminname").textContent = user.display_name;
@@ -372,7 +373,7 @@ const gameList = games.map((g: any) => {
         margin-right: var(--s-3); font-size: var(--t-xs); color: var(--volt-300);
         background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 5px; }
 
-  .tabs { display: flex; gap: var(--s-2); margin-bottom: var(--s-4); }
+  .tabs { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-4); }
   .tab {
     background: none; color: var(--text-dim); border: 1px solid var(--hairline);
     border-radius: var(--r-md); padding: var(--s-2) var(--s-4);
@@ -381,7 +382,7 @@ const gameList = games.map((g: any) => {
 
   .adduser { padding: var(--s-5); margin-top: var(--s-4); display: grid; gap: var(--s-4); }
   .adduser h3 { font-size: var(--t-md); }
-  .fields { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+  .fields { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
 
   /* The people rows are built at runtime with innerHTML. Astro scopes component
      CSS with a build-time data-astro-cid-* attribute, which runtime nodes never
@@ -407,8 +408,19 @@ const gameList = games.map((g: any) => {
              gap: var(--s-4); margin-top: var(--s-5); flex-wrap: wrap; }
   @media (max-width: 520px) {
     .bar { flex-direction: column; align-items: stretch; }
+    .pick { flex-basis: auto; }
     .who { margin-left: 0; }
     .actions { flex-direction: column-reverse; align-items: stretch; }
     .actions button { width: 100%; }
+  }
+  @media (max-width: 600px) {
+    .tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tab { padding-inline: var(--s-2); letter-spacing: .06em; }
+    #sheet th:first-child, #sheet td:first-child {
+      position: sticky; left: 0; z-index: 1; background: var(--bg-raised);
+      min-width: 8rem; max-width: 9rem; white-space: normal;
+    }
+    #sheet td { padding-inline: var(--s-2); }
+    .adduser { padding: var(--s-4); }
   }
 </style>

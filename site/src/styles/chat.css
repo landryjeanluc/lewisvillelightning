@@ -5,12 +5,12 @@
 .chat-sidebar-head, .chat-new { padding: 1.4rem; }
 .chat-sidebar h2 { font-size: 1.5rem; margin-bottom: .6rem; }
 .chat-rooms { display: grid; gap: .35rem; padding: 0 .6rem; max-height: 420px; overflow-y: auto; }
-.chat-room { display: grid; gap: .35rem; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: var(--r-md); padding: .9rem; text-transform: none; letter-spacing: 0; }
+.chat-room { min-width: 0; display: grid; gap: .35rem; width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: var(--r-md); padding: .9rem; text-transform: none; letter-spacing: 0; }
 .chat-room[aria-current="true"] { background: rgb(28 143 232 / .13); border-color: rgb(28 143 232 / .4); }
 .chat-room-title { display: flex; justify-content: space-between; align-items: center; gap: .5rem; font-size: 1.05rem; }
-.chat-room-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-room-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-preview { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-dim); font-weight: 500; }
-.chat-unread { padding: .05rem .45rem; border-radius: 999px; background: var(--volt-500); font-size: .75rem; }
+.chat-unread { flex-shrink: 0; padding: .05rem .45rem; border-radius: 999px; background: var(--volt-500); font-size: .75rem; }
 .chat-new { display: grid; gap: .75rem; border-top: 1px solid var(--hairline); margin-top: 1.2rem; }
 .chat-new select { width: 100%; min-width: 0; }
 .chat-new label { letter-spacing: .05em; }
@@ -55,3 +55,22 @@
   .chat-compose { padding: 1rem; }
   .chat-compose-bottom { align-items: end; }
 }
+
+.chat-touch-hint { display: none; }
+@media (pointer: coarse) {
+  .chat-keyboard-hint { display: none; }
+  .chat-touch-hint { display: inline; }
+}
+@media (max-width: 480px) {
+  .chat-new { grid-template-columns: minmax(0, 1fr); }
+  .chat-new button { font-size: var(--t-xs); }
+  .chat-compose-bottom { flex-direction: column; align-items: stretch; gap: .6rem; }
+  .chat-compose { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .chat-compose-bottom button { width: 100%; }
+  .chat-message { min-width: 0; }
+}
+
+.chat-start { border-top: 1px solid var(--hairline); margin-top: .8rem; }
+.chat-start summary { min-height: 44px; padding: .75rem 1rem; cursor: pointer; color: var(--accent-text); font-weight: 600; }
+.chat-start .chat-new { margin-top: 0; border-top: 0; }
+.chat-start summary:focus-visible { outline: 2px solid var(--volt-400); outline-offset: -3px; }

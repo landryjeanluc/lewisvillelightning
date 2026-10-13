@@ -56,7 +56,7 @@ const s = g ? sides(g) : null;
   {skaters.length > 0 && (
     <section class="section">
       <div class="rule-head"><h2>Skaters</h2></div>
-      <div class="tablewrap">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="Player statistics — scroll for more columns">
         <table>
           <thead>
             <tr><th class="l">Player</th><th>Pos</th><th>GP</th><th>G</th><th>A</th><th>PTS</th><th>PIM</th></tr>
@@ -79,7 +79,7 @@ const s = g ? sides(g) : null;
   {goalies.length > 0 && (
     <section class="section">
       <div class="rule-head"><h2>Goaltenders</h2></div>
-      <div class="tablewrap">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="Player statistics — scroll for more columns">
         <table>
           <thead>
             <tr><th class="l">Player</th><th>GP</th><th>W</th><th>L</th><th>SV%</th><th>GAA</th><th>SO</th></tr>
@@ -136,4 +136,9 @@ const s = g ? sides(g) : null;
   .first-up strong { font-family: var(--font-display); font-style: italic; text-transform: uppercase; }
   .roster-link a { color: var(--accent-text); font-weight: 700; font-size: var(--t-sm);
                    letter-spacing: .06em; text-transform: uppercase; text-decoration: none; }
+  @media (max-width: 600px) {
+    .record { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    th:first-child, td:first-child { position: sticky; left: 0; z-index: 1; background: var(--bg-raised); max-width: 10rem; }
+    td.l a { min-height: 44px; gap: var(--s-2); }
+  }
 </style>
