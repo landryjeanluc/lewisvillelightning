@@ -102,7 +102,7 @@ class User(BaseModel):
     id: int
     email: str
     display_name: str
-    role: Literal["admin", "viewer"]
+    role: Literal["admin", "parent", "viewer"]
 
 async def current_user(
     pool: Annotated[asyncpg.Pool, Depends(db)],
@@ -448,14 +448,24 @@ class NewUser(BaseModel):
     email: str
     display_name: str
     password: str
-    role: Literal["admin", "viewer"] = "viewer"
+    role: Literal["admin", "parent", "viewer"] = "viewer"
+    player_id: str | None = None
+    relationship: str | None = None
 
     @field_validator("email")
     @classmethod
     def _email(cls, v: str) -> str:
+        """Accept an email OR a plain handle.
+
+        Seeded family logins look like "mom.olivier-landry" — JL has no parent
+        email list, and demanding one would block handing out accounts at all.
+        """
         v = v.strip().lower()
-        if "@" not in v or "." not in v.split("@")[-1]:
-            raise ValueError("not a valid email address")
+        if "@" in v:
+            if "." not in v.split("@")[-1]:
+                raise ValueError("not a valid email address")
+        elif not __import__("re").fullmatch(r"[a-z0-9][a-z0-9._-]{2,63}", v):
+            raise ValueError("handle must be 3-64 chars: letters, digits, dot, dash, underscore")
         return v
 
     @field_validator("password")
@@ -467,7 +477,9 @@ class NewUser(BaseModel):
 
 class UserPatch(BaseModel):
     display_name: str | None = None
-    role: Literal["admin", "viewer"] | None = None
+    role: Literal["admin", "parent", "viewer"] | None = None
+    player_id: str | None = None
+    relationship: str | None = None
     password: str | None = None
 
     @field_validator("password")
@@ -869,3 +881,196 @@ async def upload(
     return {"path": path, "webp": f"/uploads/{stem}.webp",
             "width": img.width, "height": img.height,
             "bytes": jpg.stat().st_size}
+
+# ---------------------------------------------- self-service password change --
+
+class ChangePwBody(BaseModel):
+    current: str
+    new: str
+
+    @field_validator("new")
+    @classmethod
+    def _pw(cls, v: str) -> str:
+        if len(v) < MIN_PASSWORD:
+            raise ValueError(f"password must be at least {MIN_PASSWORD} characters")
+        return v
+
+@app.post("/auth/change-password")
+async def change_password(
+    body: ChangePwBody,
+    user: Annotated[User | None, Depends(current_user)],
+    response: Response,
+    pool: Annotated[asyncpg.Pool, Depends(db)],
+):
+    """Anyone signed in can change their own password.
+
+    Families are handed a generated password on a printed sheet, so they need a
+    way to replace it that does not involve asking an admin.
+    """
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "sign in to continue")
+    row = await pool.fetchrow(
+        "SELECT password_hash FROM users WHERE id = $1", user.id)
+    if not bcrypt.checkpw(body.current.encode(), row["password_hash"].encode()):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "that is not your current password")
+    if body.current == body.new:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "the new password is the same as the old one")
+
+    async with pool.acquire() as c, c.transaction():
+        # Bumping the epoch signs out every other device — the point of a change.
+        new_epoch = await c.fetchval(
+            "UPDATE users SET password_hash=$1, session_epoch=session_epoch+1"
+            " WHERE id=$2 RETURNING session_epoch",
+            hash_password(body.new), user.id)
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'password_change','{}')",
+            user.id)
+    # ...but not this one: re-issue the cookie at the new epoch.
+    response.set_cookie(
+        COOKIE_NAME, signer.dumps([user.id, new_epoch]),
+        max_age=SESSION_MAX_AGE, httponly=True, samesite="lax",
+        secure=COOKIE_SECURE, path="/")
+    return {"ok": True}
+
+# ------------------------------------------------------------- game jobs --
+# Jobs belong to a FAMILY, not a person: the parents decide between themselves
+# who actually turns up, then one of them claims it so the team can see.
+
+DEFAULT_JOBS = [
+    ("50/50 tickets",  "Sell 50/50 tickets in the stands", 10),
+    ("Scoresheet",     "Keep the official scoresheet",      20),
+    ("Timekeeper",     "Run the clock",                     30),
+    ("Penalty box",    "Penalty box door",                  40),
+    ("Jerseys",        "Collect and wash the jerseys",      50),
+    ("Snacks",         "Post-game snacks",                  60),
+]
+
+class JobTypeIn(BaseModel):
+    name: str
+    description: str | None = None
+    sort: int = 100
+    active: bool = True
+
+class JobAssign(BaseModel):
+    job_type_id: int
+    player_id: str | None = None      # the family on the hook; null clears it
+    note: str | None = None
+
+@app.get("/jobs/types")
+async def list_job_types(pool: Annotated[asyncpg.Pool, Depends(db)]):
+    rows = await pool.fetch(
+        "SELECT id, name, description, sort, active FROM job_types ORDER BY sort, name")
+    return [dict(r) for r in rows]
+
+@app.post("/jobs/types", status_code=status.HTTP_201_CREATED)
+async def create_job_type(body: JobTypeIn, actor: Annotated[User, Depends(require_admin)],
+                          pool: Annotated[asyncpg.Pool, Depends(db)]):
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "a job needs a name")
+    if await pool.fetchval("SELECT 1 FROM job_types WHERE lower(name)=lower($1)", name):
+        raise HTTPException(status.HTTP_409_CONFLICT, f"there is already a job called {name}")
+    row = await pool.fetchrow(
+        "INSERT INTO job_types (name, description, sort, active) VALUES ($1,$2,$3,$4)"
+        " RETURNING id, name, description, sort, active",
+        name, body.description, body.sort, body.active)
+    return dict(row)
+
+@app.delete("/jobs/types/{type_id}")
+async def delete_job_type(type_id: int, actor: Annotated[User, Depends(require_admin)],
+                          pool: Annotated[asyncpg.Pool, Depends(db)]):
+    gone = await pool.execute("DELETE FROM job_types WHERE id=$1", type_id)
+    if gone.endswith("0"):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such job")
+    return {"ok": True}
+
+@app.post("/jobs/seed-defaults")
+async def seed_default_jobs(actor: Annotated[User, Depends(require_admin)],
+                            pool: Annotated[asyncpg.Pool, Depends(db)]):
+    made = 0
+    for name, desc, sort in DEFAULT_JOBS:
+        r = await pool.execute(
+            "INSERT INTO job_types (name, description, sort) VALUES ($1,$2,$3)"
+            " ON CONFLICT (name) DO NOTHING", name, desc, sort)
+        made += 0 if r.endswith("0") else 1
+    return {"added": made}
+
+@app.get("/jobs/{game_id}")
+async def game_jobs(game_id: str, pool: Annotated[asyncpg.Pool, Depends(db)]):
+    """Every job for this game, with who is on the hook and who has claimed it."""
+    if game_id not in contract.games:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown game {game_id}")
+    rows = await pool.fetch(
+        """SELECT t.id AS job_type_id, t.name, t.description, t.sort,
+                  j.player_id, j.note, j.updated_at,
+                  u.display_name AS claimed_by, u.id AS claimed_by_id
+             FROM job_types t
+             LEFT JOIN game_jobs j ON j.job_type_id = t.id AND j.game_id = $1
+             LEFT JOIN users u     ON u.id = j.claimed_by
+            WHERE t.active
+            ORDER BY t.sort, t.name""", game_id)
+    out = []
+    for r in rows:
+        d = dict(r)
+        p = contract.players.get(d["player_id"]) if d["player_id"] else None
+        # name the family, since that is who the job belongs to
+        d["family"] = f"{p['firstName']} {p['lastName']}" if p else None
+        d["family_number"] = p["number"] if p else None
+        out.append(d)
+    return out
+
+@app.put("/jobs/{game_id}")
+async def set_game_jobs(game_id: str, assignments: list[JobAssign],
+                        actor: Annotated[User, Depends(require_admin)],
+                        pool: Annotated[asyncpg.Pool, Depends(db)]):
+    if game_id not in contract.games:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown game {game_id}")
+    bad = [a.player_id for a in assignments if a.player_id and a.player_id not in contract.players]
+    if bad:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"unknown player ids: {bad}")
+    async with pool.acquire() as c, c.transaction():
+        for a in assignments:
+            if a.player_id is None and a.note is None:
+                await c.execute("DELETE FROM game_jobs WHERE game_id=$1 AND job_type_id=$2",
+                                game_id, a.job_type_id)
+                continue
+            await c.execute(
+                """INSERT INTO game_jobs (game_id, job_type_id, player_id, note, updated_by, updated_at)
+                   VALUES ($1,$2,$3,$4,$5, now())
+                   ON CONFLICT (game_id, job_type_id) DO UPDATE SET
+                     player_id = EXCLUDED.player_id,
+                     note      = EXCLUDED.note,
+                     -- reassigning to a different family drops the old claim
+                     claimed_by = CASE WHEN game_jobs.player_id IS DISTINCT FROM EXCLUDED.player_id
+                                       THEN NULL ELSE game_jobs.claimed_by END,
+                     updated_by = EXCLUDED.updated_by, updated_at = now()""",
+                game_id, a.job_type_id, a.player_id, a.note, actor.id)
+        await c.execute(
+            "INSERT INTO audit_log (user_id, action, game_id, payload) VALUES ($1,'jobs',$2,$3)",
+            actor.id, game_id, json.dumps({"count": len(assignments)}))
+    return {"ok": True, "saved": len(assignments)}
+
+@app.post("/jobs/{game_id}/{job_type_id}/claim")
+async def claim_job(game_id: str, job_type_id: int,
+                    user: Annotated[User | None, Depends(current_user)],
+                    pool: Annotated[asyncpg.Pool, Depends(db)],
+                    release: bool = False):
+    """A parent takes (or hands back) a job assigned to their own family."""
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "sign in to continue")
+    row = await pool.fetchrow(
+        "SELECT player_id, claimed_by FROM game_jobs WHERE game_id=$1 AND job_type_id=$2",
+        game_id, job_type_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "that job is not assigned for this game")
+
+    me = await pool.fetchrow("SELECT player_id, role FROM users WHERE id=$1", user.id)
+    # Admins can sort out anyone's job; a parent only their own family's.
+    if me["role"] != "admin" and me["player_id"] != row["player_id"]:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "that job belongs to another family — you can only take your own")
+    await pool.execute(
+        "UPDATE game_jobs SET claimed_by=$1, updated_at=now() WHERE game_id=$2 AND job_type_id=$3",
+        None if release else user.id, game_id, job_type_id)
+    return {"ok": True, "claimed": not release}

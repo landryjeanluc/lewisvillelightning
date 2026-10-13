@@ -389,6 +389,79 @@ async def main():
             results.append(ok("uploaded art attaches to a player",
                               r.json()["card_art"] == up["path"]))
 
+            # ---------------- families, game jobs, password change ----------------
+            # two families, each with a parent login
+            fam = {}
+            for pid, who in (("pl-02", "landry"), ("pl-03", "goguen")):
+                h = bcrypt.hashpw(b"familypass1", bcrypt.gensalt(rounds=4)).decode()
+                uid = await pool.fetchval(
+                    "INSERT INTO users (email, display_name, password_hash, role, player_id,"
+                    " relationship) VALUES ($1,$2,$3,'parent',$4,'Mom') RETURNING id",
+                    f"mom.{who}", f"Mom to {who}", h, pid)
+                fam[pid] = (f"mom.{who}", uid)
+            results.append(ok("parent accounts can be created with a handle, not an email",
+                              len(fam) == 2))
+
+            r = await c.post("/jobs/seed-defaults")
+            results.append(ok("default job list seeds", r.status_code == 200 and r.json()["added"] == 6,
+                              str(r.json())))
+            types = (await c.get("/jobs/types")).json()
+            tid = {t_["name"]: t_["id"] for t_ in types}
+            r = await c.post("/jobs/types", json={"name": "50/50 tickets"})
+            results.append(ok("duplicate job name -> 409", r.status_code == 409))
+
+            gid = "g-2026-10-13-shediac"
+            r = await c.put(f"/jobs/{gid}", json=[
+                {"job_type_id": tid["50/50 tickets"], "player_id": "pl-02"},
+                {"job_type_id": tid["Scoresheet"],    "player_id": "pl-03"},
+                {"job_type_id": tid["Timekeeper"],    "player_id": None},
+            ])
+            results.append(ok("admin assigns jobs to families", r.status_code == 200))
+            r = await c.put(f"/jobs/{gid}", json=[{"job_type_id": tid["Jerseys"], "player_id": "pl-99"}])
+            results.append(ok("assigning to an unknown player -> 400", r.status_code == 400))
+
+            jobs = (await c.get(f"/jobs/{gid}")).json()
+            byname = {j["name"]: j for j in jobs}
+            results.append(ok("job list names the family on the hook",
+                              byname["50/50 tickets"]["family"].startswith("Olivier"),
+                              str(byname["50/50 tickets"]["family"])))
+            results.append(ok("unassigned jobs still listed", byname["Timekeeper"]["player_id"] is None))
+
+            # the Landry parent
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as mom:
+                await mom.post("/auth/login", json={"email": "mom.landry", "password": "familypass1"})
+                r = await mom.post(f"/jobs/{gid}/{tid['50/50 tickets']}/claim")
+                results.append(ok("a parent claims their own family's job", r.status_code == 200))
+                r = await mom.post(f"/jobs/{gid}/{tid['Scoresheet']}/claim")
+                results.append(ok("a parent CANNOT claim another family's job -> 403",
+                                  r.status_code == 403, (r.json() or {}).get("detail","")[:42]))
+                # jobs are the parent's own business, but editing them is not
+                r = await mom.put(f"/jobs/{gid}", json=[])
+                results.append(ok("a parent cannot assign jobs -> 403", r.status_code == 403))
+
+                # self-service password change
+                r = await mom.post("/auth/change-password",
+                                   json={"current": "wrong", "new": "brandnewpass1"})
+                results.append(ok("wrong current password -> 403", r.status_code == 403))
+                r = await mom.post("/auth/change-password",
+                                   json={"current": "familypass1", "new": "familypass1"})
+                results.append(ok("reusing the same password -> 400", r.status_code == 400))
+                r = await mom.post("/auth/change-password",
+                                   json={"current": "familypass1", "new": "brandnewpass1"})
+                results.append(ok("parent changes their own password", r.status_code == 200))
+                results.append(ok("their session survives the change",
+                                  (await mom.get("/auth/verify")).status_code == 204))
+
+            jobs = {j["name"]: j for j in (await c.get(f"/jobs/{gid}")).json()}
+            results.append(ok("the claim shows who took it",
+                              jobs["50/50 tickets"]["claimed_by"] is not None,
+                              str(jobs["50/50 tickets"]["claimed_by"])))
+            # reassigning to a different family must not keep the old claim
+            await c.put(f"/jobs/{gid}", json=[{"job_type_id": tid["50/50 tickets"], "player_id": "pl-03"}])
+            jobs = {j["name"]: j for j in (await c.get(f"/jobs/{gid}")).json()}
+            results.append(ok("reassigning to another family drops the stale claim",
+                              jobs["50/50 tickets"]["claimed_by"] is None))
+
             n = await pool.fetchval("SELECT count(*) FROM audit_log")
             results.append(ok("user-management actions are audited too", n >= 3, f"{n} rows"))
 

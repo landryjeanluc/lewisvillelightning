@@ -131,6 +131,10 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
         .head-inner { justify-content: center; }
         .nav { gap: var(--s-4); }
       }
+      @media (max-width: 360px) {
+        .nav { gap: var(--s-3); }
+        .nav a { font-size: var(--t-xs); }
+      }
 
       .fixture-banner {
         background: rgb(224 86 107 / .1);

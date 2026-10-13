@@ -3,7 +3,7 @@ import Base from "../layouts/Base.astro";
 import Matchup from "../components/Matchup.astro";
 import EventRow from "../components/EventRow.astro";
 import EmptyState from "../components/EmptyState.astro";
-import TeamBanner from "../components/TeamBanner.astro";
+import TeamShowcase from "../components/TeamShowcase.astro";
 import AddToCalendar from "../components/AddToCalendar.astro";
 import Countdown from "../components/Countdown.astro";
 import Lightning from "../components/Lightning.astro";
@@ -21,6 +21,8 @@ const star = g ? spotlightFor(g.id) : undefined;
 const rot = spotlightProgress();
 ---
 <Base wide>
+  <TeamShowcase />
+
   {g ? (
     <section class="hero">
       <Lightning />
@@ -124,7 +126,6 @@ const rot = spotlightProgress();
     </section>
   </div>
 
-  <TeamBanner />
   <script>import "../scripts/cardfx";</script>
 </Base>
 
@@ -228,7 +229,9 @@ const rot = spotlightProgress();
     text-transform: uppercase; color: var(--accent-text); text-decoration: none;
   }
   @media (max-width: 760px) {
-    .spot-hero { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: var(--s-6); }
+    .spot-hero { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; gap: var(--s-6); }
+    .sh-card { max-width: 100%; }
+    .sh-card :global(.pcard) { max-width: 100%; }
     .sh-meta { justify-content: center; }
     .sh-blurb { margin-inline: auto; }
   }

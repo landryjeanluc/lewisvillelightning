@@ -11,18 +11,71 @@ hatch for the day someone locks themselves out.
   python manage.py list
   python manage.py set-role coach@example.ca admin
   python manage.py set-password jl@hexpi.ca
+  python manage.py seed-families            # Mom + Dad logins for every player
+  python manage.py add-guardian pl-02 "Grandma" 
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
 import getpass
+import json
 import os
 import secrets
 import sys
+from pathlib import Path
 
 import asyncpg
 import bcrypt
+
+ROOT = Path(__file__).resolve().parents[1]
+# Handouts carry plaintext passwords, so they go under private/, which is
+# gitignored. They must never reach the repo.
+HANDOUT_DIR = ROOT / "private/family-logins"
+WORDS = ["bolt", "ice", "rink", "puck", "slapshot", "crease", "zamboni",
+         "overtime", "faceoff", "blueline", "hattrick", "backcheck"]
+
+def readable_password() -> str:
+    return f"{secrets.choice(WORDS)}-{secrets.choice(WORDS)}-{secrets.randbelow(90) + 10}"
+
+def slugify(s: str) -> str:
+    import re, unicodedata
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+def load_roster() -> list[dict]:
+    return json.loads((ROOT / "data/roster.json").read_text())["players"]
+
+def write_handout(player: dict, logins: list[tuple[str, str, str]]) -> Path:
+    """One file per family — never one list with everyone's credentials on it."""
+    HANDOUT_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{player['firstName']} {player['lastName']}"
+    f = HANDOUT_DIR / f"{slugify(name)}.md"
+    rows = "\n".join(f"| {rel} | `{handle}` | `{pw}` |" for rel, handle, pw in logins)
+    f.write_text(f"""# Lewisville Lightning — sign-in for {name}'s family
+
+The team site is **https://lvlnb.ca** — schedule, roster, player cards, stats
+and game-day info. It is private: nothing is visible without signing in.
+
+Each of you gets your own login, so you can see who has taken which game job.
+
+| Who | Sign in with | Password |
+|---|---|---|
+{rows}
+
+**Please change your password** after the first sign-in, from the account menu.
+
+Need another login for the family — a step-parent, a grandparent who does the
+driving? Ask JL and he will add one; there is no limit.
+
+## Game jobs
+
+Jobs (50/50, scoresheet, timekeeper, jerseys) are assigned to **{player['firstName']}'s
+family**, not to one parent. Whoever is free that night claims it on the game
+page so the rest of the team can see it is covered.
+""", encoding="utf-8")
+    return f
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql:///lvlnb")
 FIRST_ADMIN_EMAIL = "jl@hexpi.ca"
@@ -70,6 +123,15 @@ async def main() -> int:
 
     d = sub.add_parser("remove", help="delete an account")
     d.add_argument("email")
+
+    sf = sub.add_parser("seed-families", help="create Mom + Dad logins for every player")
+    sf.add_argument("--relationships", default="Mom,Dad",
+                    help="comma separated, default Mom,Dad")
+    sf.add_argument("--force", action="store_true",
+                    help="re-issue passwords for families that already exist")
+
+    ag = sub.add_parser("add-guardian", help="add another login to one player's family")
+    ag.add_argument("player_id"); ag.add_argument("relationship")
 
     args = ap.parse_args()
     conn = await asyncpg.connect(DATABASE_URL)
@@ -136,6 +198,68 @@ async def main() -> int:
             await conn.execute("UPDATE users SET password_hash=$1 WHERE lower(email)=$2",
                                hash_password(pw), email)
             print(f"  password reset for {email}")
+            return 0
+
+        if args.cmd == "seed-families":
+            rels = [r.strip() for r in args.relationships.split(",") if r.strip()]
+            made = skipped = 0
+            for p in sorted(load_roster(), key=lambda x: x["number"]):
+                full = f"{p['firstName']} {p['lastName']}"
+                base = slugify(full)
+                logins = []
+                for rel in rels:
+                    handle = f"{slugify(rel)}.{base}"
+                    existing = await conn.fetchval(
+                        "SELECT id FROM users WHERE lower(email) = $1", handle)
+                    if existing and not args.force:
+                        skipped += 1
+                        continue
+                    pw = readable_password()
+                    if existing:
+                        await conn.execute(
+                            "UPDATE users SET password_hash=$1, session_epoch=session_epoch+1"
+                            " WHERE id=$2", hash_password(pw), existing)
+                    else:
+                        await conn.execute(
+                            "INSERT INTO users (email, display_name, password_hash, role,"
+                            " player_id, relationship) VALUES ($1,$2,$3,'parent',$4,$5)",
+                            handle, f"{rel} to {p['firstName']}", hash_password(pw),
+                            p["id"], rel)
+                    logins.append((rel, handle, pw))
+                    made += 1
+                if logins:
+                    out = write_handout(p, logins)
+                    print(f"  {full:<24} {', '.join(l[1] for l in logins)}")
+            print(f"\n  {made} login(s) created, {skipped} already existed "
+                  f"(use --force to re-issue).")
+            if made:
+                print(f"  Handouts: {HANDOUT_DIR.relative_to(ROOT)}/  "
+                      f"— one per family, gitignored, each contains a plaintext password.")
+            return 0
+
+        if args.cmd == "add-guardian":
+            roster = {p["id"]: p for p in load_roster()}
+            p = roster.get(args.player_id)
+            if p is None:
+                print(f"no player {args.player_id}"); return 1
+            full = f"{p['firstName']} {p['lastName']}"
+            handle = f"{slugify(args.relationship)}.{slugify(full)}"
+            if await conn.fetchval("SELECT 1 FROM users WHERE lower(email)=$1", handle):
+                print(f"{handle} already exists"); return 1
+            pw = readable_password()
+            await conn.execute(
+                "INSERT INTO users (email, display_name, password_hash, role,"
+                " player_id, relationship) VALUES ($1,$2,$3,'parent',$4,$5)",
+                handle, f"{args.relationship} to {p['firstName']}", hash_password(pw),
+                p["id"], args.relationship)
+            # rewrite the family handout with every login they now have
+            rows = await conn.fetch(
+                "SELECT relationship, email FROM users WHERE player_id=$1 ORDER BY id",
+                p["id"])
+            print(f"  added {handle} ({args.relationship} to {p['firstName']})")
+            print(f"  password: {pw}")
+            print(f"  family now has {len(rows)} login(s); handout not rewritten "
+                  f"(it would need every password, which is not stored)")
             return 0
 
         if args.cmd == "remove":

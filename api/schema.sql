@@ -133,3 +133,79 @@ CREATE TABLE IF NOT EXISTS uploads (
   uploaded_by  BIGINT REFERENCES users(id),
   uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ------------------------------------------------- families and game jobs --
+-- A login can belong to a player's family. Several per player is normal and
+-- expected: two parents, a step-parent, a grandparent who does the driving.
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS player_id    TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS relationship TEXT;   -- Mom, Dad, Guardian…
+CREATE INDEX IF NOT EXISTS users_player_idx ON users (player_id);
+
+-- role gains 'parent'; the old two-value constraint has to go first
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN ('admin', 'parent', 'viewer'));
+
+-- The reusable list of jobs: 50/50, scoresheet, timekeeper, jerseys…
+CREATE TABLE IF NOT EXISTS job_types (
+  id          BIGSERIAL PRIMARY KEY,
+  name        TEXT NOT NULL UNIQUE,
+  description TEXT,
+  sort        INT NOT NULL DEFAULT 100,
+  active      BOOLEAN NOT NULL DEFAULT true
+);
+
+-- A job for one game, assigned to a FAMILY rather than a person: whoever is
+-- actually free that night sorts it out between themselves, then claims it so
+-- the rest of the team can see who turned up.
+CREATE TABLE IF NOT EXISTS game_jobs (
+  id          BIGSERIAL PRIMARY KEY,
+  game_id     TEXT NOT NULL,
+  job_type_id BIGINT NOT NULL REFERENCES job_types(id) ON DELETE CASCADE,
+  player_id   TEXT,                                  -- the family on the hook
+  claimed_by  BIGINT REFERENCES users(id),           -- which of them took it
+  note        TEXT,
+  updated_by  BIGINT REFERENCES users(id),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (game_id, job_type_id)
+);
+CREATE INDEX IF NOT EXISTS game_jobs_game_idx ON game_jobs (game_id);
+
+-- ------------------------------------------------------------- team chat --
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id BIGSERIAL PRIMARY KEY,
+  kind TEXT NOT NULL CHECK (kind IN ('team', 'direct')),
+  user_low BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  user_high BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  CHECK ((kind = 'team' AND user_low IS NULL AND user_high IS NULL)
+      OR (kind = 'direct' AND user_low IS NOT NULL AND user_high IS NOT NULL AND user_low < user_high)),
+  UNIQUE (user_low, user_high)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS chat_one_team_idx ON chat_conversations (kind) WHERE kind = 'team';
+INSERT INTO chat_conversations (kind) VALUES ('team') ON CONFLICT DO NOTHING;
+
+-- A revision stream includes removals, so connected clients see moderation too.
+CREATE SEQUENCE IF NOT EXISTS chat_revision_seq;
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id BIGSERIAL PRIMARY KEY,
+  conversation_id BIGINT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  sender_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  client_id UUID NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  revision BIGINT NOT NULL DEFAULT nextval('chat_revision_seq'),
+  CHECK ((deleted_at IS NULL AND char_length(trim(body)) BETWEEN 1 AND 2000)
+      OR (deleted_at IS NOT NULL AND body = '')),
+  UNIQUE (sender_id, client_id)
+);
+CREATE INDEX IF NOT EXISTS chat_history_idx ON chat_messages (conversation_id, id DESC);
+CREATE INDEX IF NOT EXISTS chat_changes_idx ON chat_messages (conversation_id, revision);
+CREATE INDEX IF NOT EXISTS chat_rate_idx ON chat_messages (sender_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS chat_reads (
+  conversation_id BIGINT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_id BIGINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (conversation_id, user_id)
+);

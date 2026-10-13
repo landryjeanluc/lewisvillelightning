@@ -31,6 +31,23 @@ echo "==> publishing to $HOST"
 rsync -a --delete site/dist/ "$HOST:/srv/lvlnb/"
 rsync -a           data/      "$HOST:/srv/lvlnb-data/"
 
+# The API runs from its own checkout in /opt/lvlnb. Publishing only the site
+# meant backend changes never reached production — they sat in git looking
+# deployed. Exclude the venv and the captures, which belong to the host.
+echo "==> publishing the API"
+# --delete with host-only state in the destination is how /opt/lvlnb/.env got
+# wiped once, taking the API down: the secrets file is deliberately not in the
+# repo, so rsync saw it as removed. Everything the host owns is excluded.
+# -rlptD rather than -a: /opt/lvlnb is owned by the lvlnb service user and we
+# connect as jl, so preserving owner/group just fails on every file. Ownership
+# is set explicitly afterwards.
+rsync -rlptD --delete \
+      --exclude '.venv' --exclude '__pycache__' --exclude 'private' \
+      --exclude '.env' --exclude '*.log' \
+      api/ "$HOST:/opt/lvlnb/"
+# /opt/lvlnb stays owned by jl so deploys work; lvlnb only reads the code.
+# Only .env is the service user's, and it is excluded above.
+
 # The API validates game and player ids against the contract it read at start,
 # so a schedule or roster change needs it to re-read. /reload needs an admin
 # session; a restart is the version that works from a script.

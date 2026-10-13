@@ -1,0 +1,267 @@
+---
+import { team, roster, displayName, showPhotos, type Player } from "../lib/data";
+
+const players = roster.players as Player[];
+const positions: Record<string, string> = {
+  F: "Forward", D: "Defence", G: "Goaltender", C: "Centre", LW: "Left wing", RW: "Right wing",
+};
+const photoUrl = (player: Player) => {
+  const source = player.cardArt || player.photo;
+  return showPhotos() && source ? encodeURI("/" + source.replace(/^assets\//, "")) : null;
+};
+const nameParts = (player: Player) => {
+  const name = displayName(player);
+  const split = name.indexOf(" ");
+  return split === -1 ? ["", name] : [name.slice(0, split), name.slice(split + 1)];
+};
+---
+
+<section class="thunder" aria-labelledby="thunder-title" data-showcase>
+  <div class="arena-fx" aria-hidden="true">
+    <div class="arena-grid"></div>
+    <div class="arena-orbit"></div>
+    <svg class="arena-bolt" viewBox="0 0 500 700" fill="none">
+      <path d="M315 10 70 370h173L155 690 455 290H270L315 10Z" />
+    </svg>
+    {Array.from({ length: 16 }, (_, i) => (
+      <i class="ice-spark" style={`--x:${(i * 37 + 11) % 100}%;--delay:${i * -.7}s;--speed:${6 + i % 5}s;--drift:${i % 2 ? 70 : -70}px`}></i>
+    ))}
+  </div>
+
+  <header class="thunder-top">
+    <h2 id="thunder-title"><span class="live-dot" aria-hidden="true"></span> Meet the thunder</h2>
+    <span class="season">{team.season} <span aria-hidden="true">/</span> {team.division}</span>
+  </header>
+
+  <div class="showcase-stage" id="thunder-stage" aria-roledescription="carousel" aria-label="Meet the Lewisville Lightning" tabindex="-1">
+    <article class="scene scene--team" data-scene data-label="The whole team" aria-roledescription="slide" aria-label={`1 of ${players.length + 1}: The whole team`}>
+      <div class="scene-copy">
+        <p class="scene-kicker">Lewisville Lightning</p>
+        <h3 class="team-headline">One team. <br />All <span>thunder.</span></h3>
+        <p class="scene-description">{players.length} players. One promise.<br />A whole lot of Lightning.</p>
+        <a class="scene-link" href="/roster">Meet the squad <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="scene-visual team-visual">
+        <span class="photo-stamp">The {team.season} crew</span>
+        {showPhotos() ? (
+          <picture class="team-frame">
+            <source type="image/webp" srcset="/team/team-1000.webp 1000w, /team/team-1600.webp 1600w, /team/team-2048.webp 2048w" sizes="(max-width: 760px) 92vw, 65vw" />
+            <img src="/team/team-1600.jpg" width="2048" height="1533" fetchpriority="high" alt={`The whole ${team.name} ${team.season} team with their coach`} />
+          </picture>
+        ) : <img class="team-crest" src="/brand/lightning-crest.png" width="533" height="522" alt="Lewisville Lightning crest" />}
+        <span class="photo-caption">One team. One promise. One Lightning.</span>
+      </div>
+    </article>
+
+    {players.map((player, i) => {
+      const photo = photoUrl(player);
+      const [first, last] = nameParts(player);
+      return (
+        <article class="scene scene--player" data-scene data-label={`Number ${player.number}, ${displayName(player)}, ${positions[player.position] ?? player.position}`} hidden aria-roledescription="slide" aria-label={`${i + 2} of ${players.length + 1}: ${displayName(player)}`}>
+          <div class="scene-copy">
+            <p class="scene-kicker"><span class="player-role">{positions[player.position] ?? player.position}</span> <span class="player-team">Lewisville Lightning</span></p>
+            <h3 class:list={["player-headline", last.length > 9 && "player-headline--long"]}>
+              {first && <span class="player-first">{first}</span>}
+              <span class="player-last">{last}</span>
+            </h3>
+            <div class="player-number"><span aria-hidden="true">#</span>{player.number}<span class="number-caption">One team.<br />One Lightning.</span></div>
+            <a class="scene-link" href={`/players/${player.id}`}>Player profile <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="scene-visual player-visual">
+            <span class="giant-number" aria-hidden="true">{player.number}</span>
+            <div class="card-stack">
+              <div class="card-back card-back--one" aria-hidden="true"><img src="/brand/lightning-crest.png" alt="" width="533" height="522" /></div>
+              <div class="card-back card-back--two" aria-hidden="true"></div>
+              <a class="showcase-card" href={`/players/${player.id}`} aria-label={`View ${displayName(player)}'s player profile`}>
+                {photo ? (
+                  <picture>
+                    {player.cardArt && <source type="image/webp" srcset={photo.replace(/\.(jpe?g|png)$/i, ".webp")} />}
+                    <img src={photo} alt={`${displayName(player)} with their coach`} width="760" height="1013" loading="lazy" decoding="async" />
+                  </picture>
+                ) : <div class="number-card"><img src="/brand/lightning-crest.png" alt="" width="533" height="522" /><span>#{player.number}</span><strong>{displayName(player)}</strong></div>}
+                <span class="card-sheen" aria-hidden="true"></span>
+              </a>
+            </div>
+            <span class="card-edition">Lightning original <span aria-hidden="true">✦</span> {String(i + 1).padStart(2, "0")} / {String(players.length).padStart(2, "0")}</span>
+          </div>
+        </article>
+      );
+    })}
+  </div>
+
+  <div class="showcase-controls" hidden data-controls>
+    <div class="playback">
+      <p class="lineup-label">Your team. <strong>Your thunder.</strong></p>
+      <div class="transport">
+        <span class="scene-count" aria-hidden="true"><b data-count>01</b> / {String(players.length + 1).padStart(2, "0")}</span>
+        <button type="button" class="transport-button" data-prev aria-label="Previous player or team photo" aria-controls="thunder-stage">←</button>
+        <button type="button" class="transport-button play-button" data-play aria-label="Pause automatic player rotation" aria-controls="thunder-stage"><span data-play-icon aria-hidden="true">Ⅱ</span></button>
+        <button type="button" class="transport-button" data-next aria-label="Next player or team photo" aria-controls="thunder-stage">→</button>
+      </div>
+    </div>
+    <div class="lineup" role="group" aria-label="Choose a player or the whole team">
+      <button type="button" class="jersey jersey--team" data-pick="0" aria-label="Show the whole team" aria-pressed="true" aria-controls="thunder-stage"><span aria-hidden="true">ϟ</span><small>Team</small></button>
+      {players.map((player, i) => (
+        <button type="button" class="jersey" data-pick={i + 1} aria-label={`Show number ${player.number}, ${displayName(player)}`} aria-pressed="false" aria-controls="thunder-stage" title={displayName(player)}>
+          <span>{String(player.number).padStart(2, "0")}</span><small>{displayName(player).split(" ")[0]}</small>
+        </button>
+      ))}
+    </div>
+    <div class="rotation-track" aria-hidden="true"><span data-progress></span></div>
+    <p class="visually-hidden" aria-live="polite" aria-atomic="true" data-announcement></p>
+  </div>
+  <noscript><p class="no-script">Every player. Every number. <a href="/roster">Explore the full squad →</a></p></noscript>
+</section>
+
+<script>
+  import "../scripts/showcase";
+</script>
+
+<style>
+  .thunder {
+    --electric: #55d8ff;
+    --acid: #dcff65;
+    position: relative; isolation: isolate; overflow: hidden;
+    margin-bottom: clamp(2rem, 5vw, 4rem);
+    background: radial-gradient(ellipse at 75% 45%, #123c96 0%, #081d4a 35%, #050c20 70%);
+    border: 1px solid #366198; border-radius: 4px;
+    box-shadow: 0 24px 90px -45px #087cff80;
+  }
+  .thunder::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--electric); z-index: 3; }
+  .arena-fx { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }
+  .arena-fx::after { content: ""; position: absolute; inset: 0; opacity: .15; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.35' d='M0 0h180v180H0z'/%3E%3C/svg%3E"); }
+  .arena-grid { position: absolute; width: 150%; height: 65%; left: -25%; bottom: -30%; transform: perspective(400px) rotateX(55deg); background: linear-gradient(#58c5ff24 1px, transparent 1px), linear-gradient(90deg, #58c5ff24 1px, transparent 1px); background-size: 65px 65px; mask-image: linear-gradient(transparent, #000); }
+  .arena-orbit { position: absolute; width: 680px; aspect-ratio: 1; border: 1px solid #58c5ff25; border-radius: 50%; right: 0; top: -40px; box-shadow: 0 0 0 65px #58c5ff06, 0 0 0 130px #58c5ff04; }
+  .arena-bolt { position: absolute; height: 110%; width: 56%; right: 9%; top: -12%; opacity: .45; overflow: visible; transform: rotate(9deg); filter: drop-shadow(0 0 12px #2c97ff); }
+  .arena-bolt path { stroke: #43bfff; stroke-width: 2; fill: #1677ff0a; stroke-dasharray: 1600; animation: bolt-trace 9s ease-in-out infinite alternate; }
+  .ice-spark { position: absolute; left: var(--x); top: 105%; width: 2px; height: 7px; background: #9be6ff; box-shadow: 0 0 9px #51c9ff; opacity: 0; transform: rotate(25deg); animation: ice-rise var(--speed) var(--delay) linear infinite; }
+  .thunder-top { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.35rem 2.5rem; border-bottom: 1px solid #95caff26; }
+  .thunder-top h2, .season { font: 700 .8rem var(--font-ui); letter-spacing: .17em; text-transform: uppercase; }
+  .thunder-top h2 { display: flex; align-items: center; gap: .65rem; }
+  .live-dot { width: 7px; height: 7px; background: var(--acid); box-shadow: 0 0 15px #dcff6590; transform: rotate(45deg); }
+  .season { color: #b9d4f5; }
+  .season span { margin: 0 .8rem; color: var(--electric); }
+  .showcase-stage { position: relative; touch-action: pan-y; display: grid; min-height: clamp(590px, 50vw, 770px); }
+  .scene { display: grid; grid-area: 1 / 1; grid-template-columns: 40% 60%; align-items: center; min-height: 590px; padding: 2.5rem; }
+  .scene-copy { position: relative; z-index: 2; min-width: 0; }
+  .scene-kicker { font-size: .78rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--electric); margin-bottom: 1.35rem; }
+  .team-headline { font-size: clamp(3.2rem, 5.9vw, 6rem); line-height: .88; font-style: italic; letter-spacing: -.025em; }
+  .team-headline > span { display: block; color: var(--electric); text-shadow: 0 0 38px #008fff60; }
+  .scene-description { color: #c1d1e7; font-size: 1.2rem; line-height: 1.35; margin-top: 1.8rem; }
+  .scene-link { display: inline-flex; justify-content: space-between; align-items: center; gap: 2rem; background: var(--acid); color: #091628; text-decoration: none; font-size: .84rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: .8rem 1.25rem; margin-top: 1.8rem; clip-path: polygon(0 0, 100% 0, 100% 72%, 94% 100%, 0 100%); transition: background .2s, transform .2s; }
+  .scene-link span { font-size: 1.3rem; }
+  .scene-link:hover { background: #efffaf; transform: translateY(-3px); }
+  .scene-link:focus-visible { outline-offset: -5px; outline-color: #092849; }
+  .scene-visual { position: relative; min-width: 0; }
+  .team-visual { padding: 1.4rem .5rem 1.7rem 1rem; transform: rotate(-3deg); }
+  .team-frame { display: block; border: 1px solid #8ad4ff90; padding: 5px; background: #0a1636; box-shadow: 0 25px 55px #0008, 0 0 45px #1278ff33; }
+  .team-frame img { width: 100%; height: auto; }
+  .photo-stamp { display: block; position: absolute; z-index: 1; top: 0; right: 1.7rem; background: var(--electric); color: #06142c; padding: .4rem .8rem; font-weight: 700; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; transform: rotate(6deg); }
+  .photo-caption { display: block; position: absolute; bottom: 0; right: 1rem; font-size: .7rem; letter-spacing: .15em; font-weight: 700; text-transform: uppercase; color: #a7c9f5; }
+  .team-crest { width: min(100%, 460px); margin-inline: auto; }
+  .player-role { display: inline-block; color: #06142c; background: var(--electric); padding: .2rem .55rem; margin-right: .6rem; }
+  .player-team { font-size: .65rem; letter-spacing: .12em; }
+  .player-headline { font-style: italic; line-height: .86; text-wrap: initial; }
+  .player-first { display: block; font-size: clamp(2.6rem, 4.4vw, 4.5rem); color: #e8f2ff; margin-bottom: .12em; }
+  .player-last { display: block; color: var(--electric); font-size: clamp(3.7rem, 6.3vw, 6.5rem); letter-spacing: -.03em; text-shadow: 0 0 45px #158aff50; }
+  .player-headline--long .player-last { font-size: clamp(2.9rem, 4.6vw, 4.9rem); }
+  .player-number { display: flex; align-items: center; font: italic 900 6rem/.9 var(--font-display); margin-top: 1.8rem; }
+  .player-number > span:first-child { color: #77a5cf; font-size: 2.5rem; margin-right: .3rem; }
+  .number-caption { margin-left: 1.2rem; border-left: 2px solid #58c5ff50; padding-left: 1rem; font: 700 .75rem/1.5 var(--font-ui); text-transform: uppercase; letter-spacing: .12em; color: #a7c9f5; }
+  .player-visual { display: grid; place-items: center; min-height: 510px; perspective: 1200px; }
+  .giant-number { position: absolute; inset: 50% 0 auto; transform: translateY(-55%); text-align: center; font: italic 900 clamp(18rem, 34vw, 34rem)/.8 var(--font-display); color: transparent; -webkit-text-stroke: 2px #72bdff30; user-select: none; }
+  .card-stack { position: relative; width: min(68%, 350px); transform: rotate(4deg); animation: card-hover 7s ease-in-out infinite; }
+  .card-back { position: absolute; inset: 0; border: 1px solid #63c7ff65; border-radius: 5px; background: repeating-linear-gradient(45deg, transparent 0 12px, #5fa7ff08 12px 13px), #0b2052; box-shadow: 0 10px 35px #0006; }
+  .card-back--one { transform: translate(-34px, 9px) rotate(-13deg); display: grid; place-items: center; }
+  .card-back--one img { width: 75%; opacity: .3; }
+  .card-back--two { transform: translate(23px, 10px) rotate(7deg); }
+  .showcase-card { display: block; position: relative; overflow: hidden; border-radius: 4px; padding: 3px; background: linear-gradient(135deg, #c8f4ff, #2069ce 35%, #092455 60%, #76d2ff); box-shadow: 0 28px 60px #0009, 0 0 35px #1c8fe83b; transition: transform .3s; }
+  .showcase-card:hover { transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) scale(1.035); }
+  .showcase-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), #def5ff42, transparent 55%); mix-blend-mode: screen; transition: opacity .25s; }
+  .showcase-card.is-tilting::after { opacity: 1; }
+  .showcase-card img { width: 100%; height: auto; aspect-ratio: 760 / 1013; object-fit: contain; background: #06132b; }
+  .card-sheen { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, #b8e7ff30 45%, #ffffff50 48%, transparent 58%); transform: translateX(-140%); pointer-events: none; animation: foil-pass 7s ease-in-out infinite; }
+  .number-card { aspect-ratio: 760 / 1013; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; background: radial-gradient(ellipse at top, #184d8e, #050d24); }
+  .number-card img { width: 52%; aspect-ratio: auto; background: none; }
+  .number-card span { font: italic 900 6rem/1 var(--font-display); }
+  .number-card strong { text-align: center; text-transform: uppercase; }
+  .card-edition { position: absolute; bottom: -8px; left: 0; right: 0; text-align: center; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .17em; color: #b9d4f5; }
+  .card-edition span { color: var(--acid); margin: 0 .5rem; }
+  .showcase-controls { position: relative; border-top: 1px solid #95caff26; background: #030b1eaa; }
+  .playback { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 2rem .6rem; }
+  .lineup-label { font-size: .73rem; text-transform: uppercase; letter-spacing: .14em; color: #97b0cf; }
+  .lineup-label strong { color: #e5f1ff; }
+  .transport { display: flex; align-items: center; gap: .4rem; }
+  .scene-count { color: #8da7c9; font-size: .8rem; font-variant-numeric: tabular-nums; letter-spacing: .12em; margin-right: .75rem; }
+  .scene-count b { color: var(--electric); }
+  .transport-button { display: grid; place-items: center; padding: 0; width: 44px; height: 44px; border-radius: 2px; border: 1px solid #496482; background: #10213b; font-size: 1.25rem; letter-spacing: 0; }
+  .play-button { color: var(--electric); font-size: 1rem; }
+  .lineup { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 4px; padding: .35rem 2rem 1.3rem; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #376290 #07142a; }
+  .jersey { min-width: 0; min-height: 64px; padding: .4rem .15rem; border: 1px solid #5480af36; border-radius: 2px; background: #0d1c34; color: #c6d7ed; transition: background .2s, border-color .2s, transform .2s; letter-spacing: 0; }
+  .jersey > span { display: block; font: italic 900 1.65rem/1 var(--font-display); }
+  .jersey > small { display: block; overflow: hidden; text-overflow: ellipsis; margin-top: .35rem; font: 600 .58rem/1.1 var(--font-ui); text-transform: none; }
+  .jersey:hover { border-color: var(--electric); background: #173765; }
+  .jersey[aria-pressed="true"] { color: #06142c; background: var(--electric); border-color: var(--electric); box-shadow: 0 0 18px #55d8ff25; }
+  .jersey:focus-visible { outline-offset: 1px; outline-color: var(--acid); }
+  .rotation-track { height: 3px; background: #162a46; }
+  .rotation-track span { display: block; height: 100%; background: var(--electric); transform-origin: left; transform: scaleX(0); }
+  .no-script { padding: 1.5rem; text-align: center; }
+  .thunder.is-running .rotation-track span { animation: rotation-time 6.5s linear forwards; }
+  .thunder:not(.is-running) .arena-bolt path, .thunder:not(.is-running) .ice-spark,
+  .thunder:not(.is-running) .card-stack, .thunder:not(.is-running) .card-sheen { animation-play-state: paused; }
+  .thunder.is-enhanced .scene:not([hidden]) .scene-copy { animation: copy-in .6s cubic-bezier(.2,.7,.2,1) both; }
+  .thunder.is-enhanced .scene:not([hidden]) .scene-visual { animation: visual-in .7s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes rotation-time { to { transform: scaleX(1); } }
+  @keyframes copy-in { from { opacity: 0; translate: -24px 0; } to { opacity: 1; translate: 0 0; } }
+  @keyframes visual-in { from { opacity: 0; translate: 45px 15px; scale: .94; } to { opacity: 1; translate: 0 0; scale: 1; } }
+  @keyframes foil-pass { 0%, 35% { transform: translateX(-140%); } 65%, 100% { transform: translateX(140%); } }
+  @keyframes card-hover { 0%, 100% { transform: translateY(0) rotate(4deg); } 50% { transform: translateY(-9px) rotate(2deg); } }
+  @keyframes bolt-trace { from { stroke-dashoffset: 1600; opacity: .35; } to { stroke-dashoffset: 0; opacity: .85; } }
+  @keyframes ice-rise { 0% { opacity: 0; transform: translate(0, 0) rotate(25deg); } 15%, 70% { opacity: .45; } 100% { opacity: 0; transform: translate(var(--drift), -800px) rotate(25deg); } }
+  @media (max-width: 1100px) {
+    .scene { min-height: 520px; padding: 2rem; }
+    .player-visual { min-height: 450px; }
+    .card-stack { width: min(70%, 310px); }
+    .lineup { grid-template-columns: repeat(20, minmax(47px, 1fr)); }
+    .player-team { display: none; }
+  }
+  @media (max-width: 760px) {
+    .showcase-stage { min-height: clamp(640px, 110vw, 780px); }
+    .thunder-top { padding: 1rem 1.15rem; }
+    .thunder-top h2, .season { font-size: .65rem; letter-spacing: .1em; }
+    .season span { margin: 0 .35rem; }
+    .scene { grid-template-columns: 1fr; gap: 1.25rem; min-height: 0; padding: 1.8rem 1.5rem 2rem; }
+    .scene-copy { text-align: center; }
+    .scene-kicker { margin-bottom: .8rem; font-size: .68rem; }
+    .team-headline { font-size: clamp(3.2rem, 12vw, 5rem); }
+    .team-headline br { display: none; }
+    .team-headline > span { display: inline; }
+    .scene-description { font-size: 1rem; margin-top: 1rem; }
+    .scene-description br { display: none; }
+    .scene-link { margin-top: 1rem; padding: .55rem 1rem; font-size: .73rem; }
+    .team-visual { width: 100%; max-width: 550px; justify-self: center; padding-left: 0; padding-right: 0; }
+    .photo-stamp { font-size: .6rem; }
+    .photo-caption { font-size: .55rem; right: 0; }
+    .player-first { font-size: 2.2rem; }
+    .player-last { font-size: clamp(3.4rem, 11vw, 5rem); }
+    .player-headline--long .player-last { font-size: clamp(2.6rem, 8.5vw, 4.2rem); }
+    .player-number { position: absolute; left: 0; bottom: 0; font-size: 2.5rem; margin: 0; }
+    .player-number > span:first-child { font-size: 1.1rem; }
+    .number-caption { display: none; }
+    .player-visual { min-height: 0; padding-block: .5rem 1.8rem; }
+    .card-stack { width: min(82%, 290px); }
+    .giant-number { font-size: clamp(15rem, 70vw, 28rem); }
+    .card-edition { bottom: 0; font-size: .6rem; }
+    .playback { padding: .65rem 1rem; }
+    .lineup-label { font-size: .62rem; letter-spacing: .08em; }
+    .lineup-label strong { display: block; }
+    .scene-count { font-size: .7rem; margin-right: .25rem; }
+    .lineup { padding: .25rem 1rem 1rem; gap: 5px; grid-template-columns: repeat(20, 49px); }
+    .arena-bolt { right: -12%; width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .thunder *, .thunder *::before, .thunder *::after { animation: none !important; transition: none !important; }
+    .showcase-card:hover { transform: none; }
+    .showcase-card::after { display: none; }
+  }
+</style>
