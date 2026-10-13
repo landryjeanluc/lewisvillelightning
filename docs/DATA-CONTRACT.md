@@ -57,6 +57,7 @@ One `events` array holding both games and practices, discriminated by `type`.
 - Which side Lewisville is on determines home vs away everywhere, including poster layout.
   Do not encode home/away any other way.
 - `score` stays `null` until `status` is `final`.
+- Practices may set `practiceKind` to `on_ice` (the default for existing records) or `off_ice`. Off-ice sessions use the same venue, timing, cancellation and calendar fields as ice sessions.
 - `practice` events carry `id, type, startsAt, endsAt, venue, status, notes` and no teams.
 
 ## `roster.json`

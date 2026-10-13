@@ -346,3 +346,6 @@ ALTER TABLE goal_entries DROP CONSTRAINT IF EXISTS goal_entries_created_by_fkey;
 ALTER TABLE goal_entries ADD CONSTRAINT goal_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE goal_entries DROP CONSTRAINT IF EXISTS goal_entries_removed_by_fkey;
 ALTER TABLE goal_entries ADD CONSTRAINT goal_entries_removed_by_fkey FOREIGN KEY (removed_by) REFERENCES users(id) ON DELETE SET NULL;
+
+-- Optional private contact detail, never included in roster/chat directory responses.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;

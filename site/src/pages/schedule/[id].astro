@@ -1,4 +1,5 @@
 ---
+import { practiceLabel } from "../../lib/schedule";
 import LiveGame from "../../components/LiveGame.astro";
 import Base from "../../layouts/Base.astro";
 import Matchup from "../../components/Matchup.astro";
@@ -16,7 +17,7 @@ const isGame = event.type === "game";
 const s = isGame ? sides(event) : null;
 const o = isGame ? outcome(event) : null;
 const today = isToday(event.startsAt);
-const title = isGame ? `${s!.weAreHome ? "vs" : "at"} ${s!.them.short}` : "Practice";
+const title = isGame ? `${s!.weAreHome ? "vs" : "at"} ${s!.them.short}` : practiceLabel(event);
 const star = isGame ? spotlightFor(event.id) : undefined;
 ---
 <Base title={title} wide>
@@ -43,7 +44,7 @@ const star = isGame ? spotlightFor(event.id) : undefined;
     <dl class="facts">
       <div><dt class="eyebrow">Date</dt>
         <dd><time datetime={machine(event.startsAt)}>{longDate(event.startsAt)}</time></dd></div>
-      <div class="feature"><dt class="eyebrow">{isGame ? "Puck drop" : "Ice time"}</dt>
+      <div class="feature"><dt class="eyebrow">{isGame ? "Puck drop" : event.practiceKind === "off_ice" ? "Training" : "Ice time"}</dt>
         <dd class="big num">{time(event.startsAt)}</dd></div>
       <div><dt class="eyebrow">Venue</dt><dd>{event.venue.name}</dd></div>
       {isGame && <div><dt class="eyebrow">Home / Away</dt>

@@ -34,9 +34,10 @@ const line = skater
   <div class="player">
     <PlayerCard player={p} size="lg" />
 
-    <div class="detail">
-      <span class="eyebrow">#{p.number} · {p.position}{p.captain ? ` · ${p.captain === "C" ? "Captain" : "Alternate Captain"}` : ""}</span>
+    <div class="detail" data-player-detail={p.id}>
+      <span class="eyebrow">#{p.number} · <span data-position>{p.position}</span>{p.captain ? ` · ${p.captain === "C" ? "Captain" : "Alternate Captain"}` : ""}</span>
       <h1>{displayName(p)}</h1>
+      <p data-nickname hidden></p>
 
       {line.length > 0 && (
         <div class="statline">
@@ -50,8 +51,8 @@ const line = skater
       )}
 
       <dl class="bio">
-        <div><dt class="dim">Position</dt><dd>{p.position}</dd></div>
-        {p.shoots && <div><dt class="dim">Shoots</dt><dd>{p.shoots === "L" ? "Left" : "Right"}</dd></div>}
+        <div><dt class="dim">Position</dt><dd data-position>{p.position}</dd></div>
+        <div data-shoots-row hidden={!p.shoots}><dt class="dim">Shoots</dt><dd data-shoots>{p.shoots === "L" ? "Left" : "Right"}</dd></div>
         {showBirthYear() && p.birthYear && <div><dt class="dim">Born</dt><dd>{p.birthYear}</dd></div>}
         {p.affiliate && <div><dt class="dim">Status</dt><dd>Affiliate player</dd></div>}
       </dl>

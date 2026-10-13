@@ -16,7 +16,7 @@ const art = showPhotos() && p.cardArt ? toPublic(p.cardArt) : null;
 const artWebp = art ? art.replace(/\.(jpe?g|png)$/i, ".webp") : null;
 const Tag = href ? "a" : "div";
 ---
-<Tag data-player-card={p.id} data-allow-photo={showPhotos() ? "true" : "false"} class:list={["pcard", `pcard--${size}`, art && "pcard--art", !art && p.position === "G" && "pcard--goalie"]} href={href}>
+<Tag data-player-card={p.id} data-base-position={p.position} data-base-shoots={p.shoots ?? ""} data-allow-photo={showPhotos() ? "true" : "false"} class:list={["pcard", `pcard--${size}`, art && "pcard--art", !art && p.position === "G" && "pcard--goalie"]} href={href}>
   <div class="holo" aria-hidden="true"></div>
   <div class="glare" aria-hidden="true"></div>
   <div class="foil" aria-hidden="true"></div>

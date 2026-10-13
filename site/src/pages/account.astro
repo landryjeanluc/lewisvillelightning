@@ -1,69 +1,105 @@
 ---
 import Base from "../layouts/Base.astro";
+import PlayerGoals from "../components/PlayerGoals.astro";
+import { allEvents, sides } from "../lib/data";
+import { practiceLabel } from "../lib/schedule";
+import { scriptJson } from "../lib/security";
+const events = allEvents.map(e => ({id:e.id, startsAt:e.startsAt, endsAt:e.endsAt, status:e.status,
+  venue:e.venue.name, type:e.type, label:e.type === "game" ? `${sides(e).weAreHome ? "vs" : "at"} ${sides(e).them.short}` : practiceLabel(e)}));
 ---
-<Base title="Your account">
-  <h1>Your account</h1>
+<Base title="Your account" wide>
+  <header class="account-heading"><span class="eyebrow">Your Lightning home</span><h1>Your account</h1></header>
   <p id="account-loading" role="status">Checking your session…</p>
   <p id="account-gate" hidden>Your session has ended. <a href="/login?next=/account">Sign in</a></p>
-  <section id="account-content" class="card account" hidden>
-    <h2 id="account-name"></h2>
-    <p id="account-handle" class="dim"></p>
-    <form id="password-form">
-      <h3>Change your password</h3>
-      <p>Use at least 8 characters. Changing your password signs out your other devices.</p>
-      <label>Current password<input name="current" type="password" required autocomplete="current-password" /></label>
-      <label>New password<input name="new" type="password" required minlength="8" autocomplete="new-password" /></label>
-      <label>Confirm new password<input name="confirm" type="password" required minlength="8" autocomplete="new-password" /></label>
-      <button type="submit">Change password</button>
-    </form>
-    <p id="account-status" role="status" aria-live="polite"></p>
-    <button id="account-logout" type="button" class="ghost">Sign out on all devices</button>
-  </section>
+  <div id="account-content" hidden>
+    <header class="card account-welcome">
+      <div><span id="account-role" class="eyebrow"></span><h2 id="account-name"></h2><p id="account-handle" class="dim"></p></div>
+      <a id="player-link" class="ghost" hidden>View player page →</a>
+    </header>
+    <p id="details-status" role="status" aria-live="polite"></p>
+    <button id="details-retry" type="button" class="ghost" hidden>Retry account details</button>
+    <div class="account-columns">
+      <div class="account-main">
+        <section id="player-section" class="card account-panel" hidden aria-labelledby="profile-title">
+          <span class="eyebrow" id="player-number"></span><h2 id="profile-title">Your player profile</h2>
+          <p>Make this profile yours. Nicknames and bios are visible to signed-in teammates and families and are monitored by coaches. Keep phone numbers and personal contact details out of your bio.</p>
+          <form id="profile-form">
+            <div class="field-pair">
+              <label>Position<select name="position" required><option value="C">Centre</option><option value="LW">Left wing</option><option value="RW">Right wing</option><option value="F">Forward</option><option value="D">Defence</option><option value="G">Goaltender</option></select></label>
+              <label>Shoots<select name="shoots"><option value="">Not set</option><option value="L">Left</option><option value="R">Right</option></select></label>
+            </div>
+            <label>Nickname<input name="nickname" maxlength="100" autocomplete="nickname" /></label>
+            <label>About you<textarea name="bio" rows="5" maxlength="5000" placeholder="What you love about hockey, your favourite move, or what you’re working on…"></textarea></label>
+            <button type="submit">Save player profile</button>
+          </form>
+          <p id="profile-status" role="status" aria-live="polite"></p>
+        </section>
+        <PlayerGoals playerId="self" />
+        <section id="contact-section" class="card account-panel" hidden aria-labelledby="contact-title">
+          <span class="eyebrow">Keep in touch</span><h2 id="contact-title">Your contact details</h2>
+          <p>Your name appears to the team. Your email and optional phone number stay in your account; they are not shown on the roster or chat directory.</p>
+          <form id="contact-form">
+            <label>Your name<input name="display_name" required maxlength="100" autocomplete="name" /></label>
+            <label>Email / current sign-in<input name="email" required maxlength="254" autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="email-help" /></label>
+            <p id="email-help" class="dim">You can keep your current sign-in name. To change it, enter an email address; that becomes your new sign-in.</p>
+            <label>Phone number <span class="dim">(optional)</span><input name="phone" type="tel" maxlength="40" autocomplete="tel" /></label>
+            <label>Current password <span class="dim">(required only when changing your email)</span><input name="current_password" type="password" autocomplete="current-password" /></label>
+            <button type="submit">Save contact details</button>
+          </form>
+          <p id="contact-status" role="status" aria-live="polite"></p>
+        </section>
+        <section class="card account-panel" aria-labelledby="security-title">
+          <h2 id="security-title">Password &amp; sign-in</h2>
+          <form id="password-form">
+            <h3>Change your password</h3>
+            <p>Use at least 8 characters. Changing your password signs out your other devices.</p>
+            <label>Current password<input name="current" type="password" required autocomplete="current-password" /></label>
+            <label>New password<input name="new" type="password" required minlength="8" autocomplete="new-password" /></label>
+            <label>Confirm new password<input name="confirm" type="password" required minlength="8" autocomplete="new-password" /></label>
+            <button type="submit">Change password</button>
+          </form>
+          <p id="account-status" role="status" aria-live="polite"></p>
+          <button id="account-logout" type="button" class="ghost">Sign out on all devices</button>
+        </section>
+      </div>
+      <aside class="account-side">
+        <section class="card account-panel" aria-labelledby="next-title">
+          <span class="eyebrow">Show up ready</span><h2 id="next-title">Next with the team</h2>
+          <p class="dim">Games, ice practices and off-ice training. Times are Atlantic time.</p>
+          <div id="account-schedule" class="account-list"></div>
+          <a href="/schedule">Full schedule &amp; calendars →</a>
+        </section>
+        <section id="assignments-section" class="card account-panel" hidden aria-labelledby="assignments-title">
+          <span class="eyebrow">Everyone plays a part</span><h2 id="assignments-title">Your family’s game tasks</h2>
+          <p>Assignments such as 50/50 belong to your player’s family. Open the game to volunteer or check who has claimed the task.</p>
+          <div id="account-assignments" class="account-list"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+  <script id="account-events" type="application/json" set:html={scriptJson(events)} />
 </Base>
-<script>
-  import { postAuth } from "../scripts/auth-form";
-  const content = document.getElementById("account-content")!;
-  const loading = document.getElementById("account-loading")!;
-  const gate = document.getElementById("account-gate")!;
-  const status = document.getElementById("account-status")!;
-  const form = document.getElementById("password-form") as HTMLFormElement;
-  const logout = document.getElementById("account-logout") as HTMLButtonElement;
-  async function boot() {
-    try {
-      const response = await fetch("/api/auth/me", {credentials:"same-origin", cache:"no-store", signal:AbortSignal.timeout(15000)});
-      if (!response.ok) throw new Error();
-      const user = await response.json();
-      loading.hidden = true;
-      if (!user) { gate.hidden = false; return; }
-      document.getElementById("account-name")!.textContent = user.display_name;
-      document.getElementById("account-handle")!.textContent = `Sign-in: ${user.email}`;
-      content.hidden = false;
-    } catch { loading.textContent = "Could not check your session. Please reload to try again."; }
-  }
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    const data = new FormData(form);
-    if (data.get("new") !== data.get("confirm")) { status.textContent = "The new passwords do not match."; return; }
-    const button = form.querySelector("button")!;
-    button.disabled = true;
-    const result = await postAuth("change-password", {current:data.get("current"), new:data.get("new")});
-    button.disabled = false;
-    status.textContent = result.ok ? "Password changed. Your other devices have been signed out." : result.detail;
-    if (result.ok) form.reset();
-  });
-  logout.addEventListener("click", async () => {
-    logout.disabled = true;
-    const result = await postAuth("logout", {});
-    if (result.ok) {
-      try { sessionStorage.removeItem("lvlnb.play-draft.v1"); localStorage.removeItem("lvlnb.play-draft.v1"); } catch { /* storage unavailable */ }
-      location.replace("/login");
-    } else { status.textContent = result.detail; logout.disabled = false; }
-  });
-  void boot();
-</script>
+<script>import "../scripts/account";</script>
 <style>
-  .account { max-width: 38rem; padding: var(--s-5); }
-  form { display: grid; gap: var(--s-3); }
-  label { display: grid; gap: var(--s-1); }
-  input { width: 100%; min-height: 44px; }
+  .account-heading { margin-bottom:var(--s-6); }
+  .account-heading h1 { margin-top:var(--s-2); }
+  .account-welcome { padding:var(--s-5); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--s-4); margin-bottom:var(--s-5); border-top:3px solid var(--blue-400); }
+  .account-welcome h2 { margin:var(--s-2) 0; overflow-wrap:anywhere; }
+  .account-columns { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:var(--s-6); align-items:start; }
+  .account-main,.account-side { display:grid; gap:var(--s-6); min-width:0; }
+  .account-panel { padding:var(--s-5); min-width:0; }
+  .account-panel h2 { margin-block:var(--s-2) var(--s-4); }
+  form { display:grid; gap:var(--s-3); }
+  label { display:grid; gap:var(--s-1); }
+  input,select,textarea { width:100%; min-width:0; min-height:44px; }
+  textarea { resize:vertical; }
+  form button { justify-self:start; }
+  .field-pair { display:grid; grid-template-columns:1fr 1fr; gap:var(--s-4); }
+  .account-list { display:grid; gap:var(--s-4); margin-block:var(--s-4); }
+  :global(.account-item) { padding-block:var(--s-3); border-bottom:1px solid var(--hairline); overflow-wrap:anywhere; }
+  :global(.account-item h3) { font-size:var(--t-lg); margin-block:var(--s-2); }
+  :global(.account-item p) { margin-block:var(--s-2); }
+  :global(.account-main .pgoals) { margin-top:0; }
+  #account-handle { overflow-wrap:anywhere; }
+  @media(max-width:760px) { .account-columns { grid-template-columns:1fr; } .account-side { grid-row:1; } .account-panel { padding:var(--s-4); } }
 </style>

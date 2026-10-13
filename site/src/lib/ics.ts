@@ -5,6 +5,7 @@
  * text values, fold long lines at 75 octets, and emit UTC stamps. Getting any
  * of those wrong produces a file that imports silently wrong, or not at all.
  */
+import { practiceLabel } from "./schedule";
 import { sides, team, type GameEvent, type PracticeEvent } from "./data";
 
 const PRODID = "-//Lewisville Lightning//lvlnb.ca//EN";
@@ -49,7 +50,7 @@ export function eventLines(e: GameEvent | PracticeEvent, stamp: string): string[
 
   const summary = isGame
     ? `${team.name} ${s!.weAreHome ? "vs" : "@"} ${s!.them.short}`
-    : `${team.name} practice`;
+    : `${team.name} ${practiceLabel(e).toLowerCase()}`;
 
   const detail: string[] = [];
   if (isGame) {

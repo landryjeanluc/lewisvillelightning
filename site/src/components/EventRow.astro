@@ -1,4 +1,5 @@
 ---
+import { practiceLabel } from "../lib/schedule";
 import TeamCrest from "./TeamCrest.astro";
 import { sides, outcome, US } from "../lib/data";
 import { monthAbbr, dayNum, weekdayAbbr, time, relativeDay, machine } from "../lib/format";
@@ -39,11 +40,11 @@ const href = `/schedule/${event.id}`;
         )}
       </div>
     ) : (
-      <div class="teams"><span class="tname tname--solo">Practice</span></div>
+      <div class="teams"><span class="tname tname--solo">{practiceLabel(event)}</span></div>
     )}
 
     <div class="line2 dim">
-      <span class="ha">{isGame ? (s!.weAreHome ? "Home" : "Away") : "Ice time"}</span>
+      <span class="ha">{isGame ? (s!.weAreHome ? "Home" : "Away") : event.practiceKind === "off_ice" ? "Training" : "Ice time"}</span>
       <span>{time(event.startsAt)}</span>
       <span class="venue">{event.venue.name}</span>
       {isGame && event.gameType && event.gameType !== "regular" && (

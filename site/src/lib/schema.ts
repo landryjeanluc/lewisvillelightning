@@ -79,6 +79,7 @@ const gameEvent = z.object({
 const practiceEvent = z.object({
   id: safeId,
   type: z.literal("practice"),
+  practiceKind: z.enum(["on_ice", "off_ice"]).default("on_ice"),
   startsAt: isoOffset,
   endsAt: isoOffset.nullable(),
   venue,

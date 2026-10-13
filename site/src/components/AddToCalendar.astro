@@ -1,4 +1,5 @@
 ---
+import { practiceLabel } from "../lib/schedule";
 import { sides, team, type GameEvent } from "../lib/data";
 
 interface Props { event: any; compact?: boolean }
@@ -8,7 +9,7 @@ const isGame = event.type === "game";
 const s = isGame ? sides(event as GameEvent) : null;
 const title = isGame
   ? `${team.name} ${s!.weAreHome ? "vs" : "@"} ${s!.them.short}`
-  : `${team.name} practice`;
+  : `${team.name} ${practiceLabel(event).toLowerCase()}`;
 
 // Google wants UTC basic-format stamps; same 90-minute default as the .ics.
 const utc = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");

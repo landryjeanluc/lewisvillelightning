@@ -1267,6 +1267,10 @@ async def review_flag(flag_id: DatabaseId, body: ReviewBody,
                                 ref, surface.split(":", 1)[1], text)
             elif surface == "bio":
                 await c.execute("UPDATE player_profiles SET bio=NULL WHERE player_id=$1 AND bio=$2", ref, text)
+            elif surface == "account:name" and ref:
+                await c.execute("UPDATE users SET display_name='Team member' WHERE id=$1 AND display_name=$2", int(ref), text)
+            elif surface == "profile:nickname":
+                await c.execute("UPDATE player_profiles SET nickname=NULL WHERE player_id=$1 AND nickname=$2", ref, text)
             elif surface == "news" and ref:
                 await c.execute("UPDATE news_posts SET status='draft' WHERE id=$1"
                     " AND title || E'\\n' || coalesce(summary,'') || E'\\n' || body=$2", int(ref), text)
@@ -1304,3 +1308,6 @@ app.include_router(plays_router(current_user, require_admin, db, slugify, contra
 # Training targets and activity are live, like the coach's plays.
 from goals import build_router as goals_router
 app.include_router(goals_router(current_user, require_admin, db, contract))
+
+from account import build_router as account_router
+app.include_router(account_router(current_user, db, contract, screen))
