@@ -133,15 +133,59 @@ def to_iso(date_str: str, time_local: str) -> str:
 
 # ------------------------------------------------------------- transform ---
 
+NEW_TEAMS: list[dict] = []          # teams met for the first time, this run
+
+def slug(label: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFKD", label)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
 def team_id(label: str) -> str:
+    """Resolve a Spordle team label to a stable id, inventing one if needed.
+
+    Aborting on an unseen club meant a single new opponent in the schedule
+    stopped the whole sync. Now the team is added with no crest — the site
+    falls back to a monogram in their colours — and reported so a logo can be
+    fetched with tools/fetch_opponent_logo.py.
+    """
     key = label.strip()
-    if key not in TEAM_IDS:
-        sys.exit(
-            f"\nUnknown team label {key!r} in the capture.\n"
-            f"Add it to TEAM_IDS in this file AND to data/opponents.json\n"
-            f"(name, short, crest, colours) in the same change.\n"
-        )
-    return TEAM_IDS[key]
+    if key in TEAM_IDS:
+        return TEAM_IDS[key]
+
+    tid = slug(key)
+    TEAM_IDS[key] = tid
+    # Title-case the label for display; Spordle shouts everything.
+    nice = " ".join(w.capitalize() for w in key.split())
+    NEW_TEAMS.append({
+        "id": tid,
+        "name": nice,
+        "short": nice.split("/")[0].split()[-1] if " " in nice else nice,
+        "town": None,
+        "crest": None,                      # monogram until a logo is adopted
+        "colours": {"primary": "#3A4A63", "secondary": "#17202E", "accent": "#8FA3BF"},
+    })
+    return tid
+
+def merge_new_teams() -> None:
+    """Write any first-time opponents into data/opponents.json, keeping the
+    crest and colours of teams already there."""
+    if not NEW_TEAMS:
+        return
+    f = DATA / "opponents.json"
+    doc = json.loads(f.read_text())
+    have = {t["id"] for t in doc["teams"]}
+    added = [t for t in NEW_TEAMS if t["id"] not in have]
+    if not added:
+        return
+    doc["teams"].extend(added)
+    f.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n")
+    print(f"\n  + {len(added)} opponent(s) we have never played, added to opponents.json:")
+    for t in added:
+        print(f"      {t['id']:<28} {t['name']}")
+    print("    They will show a monogram until you fetch a crest:")
+    for t in added:
+        print(f"      python3 tools/fetch_opponent_logo.py {t['id']}")
 
 def build_roster(src: dict, overrides: dict) -> dict:
     players, flagged = [], []
@@ -246,7 +290,9 @@ def main() -> None:
     write(DATA / "roster.json", roster)
 
     sched_src = json.loads((NORM / "schedule.json").read_text())
-    write(DATA / "schedule.json", build_schedule(sched_src))
+    schedule = build_schedule(sched_src)     # may discover new opponents
+    merge_new_teams()                        # ...so merge before writing
+    write(DATA / "schedule.json", schedule)
 
     with_art = sum(1 for p in roster["players"] if p["cardArt"])
     print(f"  card art matched for {with_art}/{len(roster['players'])} players")

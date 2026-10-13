@@ -35,11 +35,19 @@ rsync -a           data/      "$HOST:/srv/lvlnb-data/"
 # so a schedule or roster change needs it to re-read. /reload needs an admin
 # session; a restart is the version that works from a script.
 echo "==> reloading the API"
-ssh "$HOST" 'sudo systemctl restart lvlnb-api' || \
+ssh "$HOST" "bash -c 'sudo systemctl restart lvlnb-api'" || \
   echo "    (could not restart lvlnb-api — do it by hand if data/ changed)"
 
 echo "==> verifying"
-ssh "$HOST" 'curl -fsS --max-time 5 http://127.0.0.1:8112/health && echo' | sed 's/^/    api: /'
+# systemctl returns as soon as the unit is started, not when uvicorn has bound
+# the port — checking immediately reports a healthy service as dead.
+# arachnea's login shell is fish, so anything with bash syntax needs wrapping.
+ssh "$HOST" "bash -c '
+  for i in \$(seq 1 20); do
+    out=\$(curl -fsS --max-time 3 http://127.0.0.1:8112/health 2>/dev/null) && { echo \"\$out\"; exit 0; }
+    sleep 0.5
+  done
+  echo \"API did not answer within 10s\"; exit 1'" | sed 's/^/    api: /'
 code=$(curl -sk -o /dev/null -w '%{http_code}' --resolve lvlnb.ca:443:192.168.1.21 https://lvlnb.ca/ || true)
 login=$(curl -sk -o /dev/null -w '%{http_code}' --resolve lvlnb.ca:443:192.168.1.21 https://lvlnb.ca/login || true)
 echo "    gate: / -> $code (expect 302)   /login -> $login (expect 200)"

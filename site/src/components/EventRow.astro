@@ -6,6 +6,9 @@ import { monthAbbr, dayNum, weekdayAbbr, time, relativeDay, machine } from "../l
 interface Props { event: any }
 const { event } = Astro.props;
 const isGame = event.type === "game";
+// Away on the left, home on the right — the scoreboard convention, and the
+// same one the matchup band and the posters use. Showing only the opponent
+// told you nothing about which rink you were driving to.
 const s = isGame ? sides(event) : null;
 const o = isGame ? outcome(event) : null;
 const href = `/schedule/${event.id}`;
@@ -18,28 +21,37 @@ const href = `/schedule/${event.id}`;
   </time>
 
   <div class="body">
-    <div class="line1">
-      {isGame ? (
-        <>
-          <TeamCrest team={s!.them} size={34} />
-          <span class="opp">
-            <span class="va">{s!.weAreHome ? "vs" : "at"}</span> {s!.them.short}
+    {isGame ? (
+      <div class="teams">
+        <span class:list={["team", s!.left.id === US && "team--us"]}>
+          <TeamCrest team={s!.left} size={30} />
+          <span class="tname">{s!.left.short}</span>
+        </span>
+        <span class="at" aria-hidden="true">{s!.weAreHome ? "vs" : "@"}</span>
+        <span class:list={["team", "team--r", s!.right.id === US && "team--us"]}>
+          <span class="tname">{s!.right.short}</span>
+          <TeamCrest team={s!.right} size={30} />
+        </span>
+        {o && (
+          <span class:list={["pill", o.result === "W" ? "pill--win" : o.result === "L" ? "pill--loss" : ""]}>
+            {o.label}
           </span>
-        </>
-      ) : (
-        <span class="opp"><span class="va">Practice</span></span>
-      )}
+        )}
+      </div>
+    ) : (
+      <div class="teams"><span class="tname tname--solo">Practice</span></div>
+    )}
+
+    <div class="line2 dim">
+      <span class="ha">{isGame ? (s!.weAreHome ? "Home" : "Away") : "Ice time"}</span>
+      <span>{time(event.startsAt)}</span>
+      <span class="venue">{event.venue.name}</span>
       {isGame && event.gameType && event.gameType !== "regular" && (
         <span class="pill pill--type">{event.gameType}</span>
       )}
-      {event.status === "cancelled"  && <span class="pill pill--loss">Cancelled</span>}
-      {event.status === "postponed"  && <span class="pill">Postponed</span>}
-      {event.status === "in_progress"&& <span class="pill pill--live">Live</span>}
-      {o && <span class:list={["pill", o.result === "W" ? "pill--win" : o.result === "L" ? "pill--loss" : ""]}>{o.label}</span>}
-    </div>
-    <div class="line2 dim">
-      {time(event.startsAt)} · {event.venue.name}
-      {isGame && s!.weAreHome && <span class="pill pill--home">Home</span>}
+      {event.status === "cancelled" && <span class="pill pill--loss">Cancelled</span>}
+      {event.status === "postponed" && <span class="pill">Postponed</span>}
+      {event.status === "in_progress" && <span class="pill pill--live">Live</span>}
     </div>
   </div>
 
@@ -65,19 +77,39 @@ const href = `/schedule/${event.id}`;
     text-transform: uppercase; color: var(--text-dim);
   }
   .chip-day { font-size: 1.5rem; color: var(--text); }
-  .row :global(.tc) { --crest-size: 34px; }
+
   .body { min-width: 0; }
-  .line1 { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
-  .opp {
+  .teams { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+  .team { display: inline-flex; align-items: center; gap: var(--s-2); }
+  .row :global(.team .tc) { --crest-size: 30px; }
+  .tname {
     font-family: var(--font-display); font-weight: 900; font-style: italic;
     font-size: var(--t-md); text-transform: uppercase; letter-spacing: var(--track-tight);
+    color: var(--text-muted);
   }
-  .va { color: var(--text-dim); font-style: normal; font-weight: 700; font-size: .8em; }
-  .line2 { display: flex; align-items: center; gap: var(--s-3); font-size: var(--t-sm); margin-top: 2px; }
-  .when { font-size: var(--t-sm); white-space: nowrap; }
+  /* our own name reads solid so the row is scannable at a glance */
+  .team--us .tname { color: var(--white); }
+  .tname--solo { color: var(--white); }
+  .at {
+    font-family: var(--font-ui); font-size: var(--t-xs); font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim);
+  }
+
+  .line2 {
+    display: flex; align-items: center; gap: var(--s-3);
+    font-size: var(--t-sm); margin-top: var(--s-2); flex-wrap: wrap;
+  }
+  .ha {
+    font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    font-size: var(--t-micro); color: var(--accent-text);
+  }
+  .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pill--type { color: var(--ice-200); border-color: var(--hairline-sv); }
-  @media (max-width: 560px) {
+  .when { font-size: var(--t-sm); white-space: nowrap; }
+
+  @media (max-width: 640px) {
     .row { grid-template-columns: auto 1fr; }
     .when { display: none; }
+    .venue { max-width: 14rem; }
   }
 </style>

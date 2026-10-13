@@ -34,7 +34,7 @@
       "name": "Dieppe",
       "short": "Dieppe",
       "town": "Dieppe",
-      "crest": null,
+      "crest": "assets/brand/dieppe-crest.png",
       "colours": {
         "primary": "#1F6F3F",
         "secondary": "#111111",
