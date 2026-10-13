@@ -3,7 +3,7 @@ import Auth from "../layouts/Auth.astro";
 ---
 <Auth title="Sign in">
   <form id="f">
-    <label>Email<input name="email" type="email" required autocomplete="username" autofocus /></label>
+    <label>Email or username<input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" autofocus /></label>
     <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
     <button type="submit">Sign in</button>
     <p id="msg" class="auth-msg err" hidden></p>

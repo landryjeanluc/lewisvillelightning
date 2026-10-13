@@ -229,6 +229,20 @@ async def main() -> int:
             return 0
 
         if args.cmd == "seed-families":
+            # Preflight. The password is generated, the account is created, and
+            # only then is the handout written — so a directory we cannot write
+            # to leaves accounts whose password nobody ever saw. Check first.
+            try:
+                HANDOUT_DIR.mkdir(parents=True, exist_ok=True)
+                probe = HANDOUT_DIR / ".write-test"
+                probe.write_text("ok"); probe.unlink()
+            except OSError as exc:
+                raise SystemExit(
+                    f"\ncannot write handouts to {HANDOUT_DIR}\n  {exc}\n\n"
+                    f"Nothing has been created. Fix the directory first, e.g.\n"
+                    f"  sudo install -d -o lvlnb -g lvlnb -m 700 {HANDOUT_DIR}\n"
+                    f"or point HANDOUT_DIR somewhere writable.\n")
+
             rels = [r.strip() for r in args.relationships.split(",") if r.strip()]
             if not args.no_players:
                 rels = rels + ["Player"]

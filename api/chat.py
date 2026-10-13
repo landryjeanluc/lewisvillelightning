@@ -2,7 +2,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -34,7 +34,8 @@ MESSAGE_SELECT = """SELECT m.id, m.conversation_id, m.sender_id, m.body,
 
 
 def chat_router(current_user, db):
-    async def member(request: Request, user=Depends(current_user)):
+    async def member(request: Request, response: Response, user=Depends(current_user)):
+        response.headers["Cache-Control"] = "no-store"
         if user is None:
             raise HTTPException(401, "sign in to use chat")
         # Same-origin browser writes; cookies remain HttpOnly and SameSite=Lax.
@@ -43,10 +44,6 @@ def chat_router(current_user, db):
         return user
 
     router = APIRouter(prefix="/chat", dependencies=[Depends(member)])
-
-    @router.middleware if False else (lambda f: f)
-    def _unused():
-        pass
 
     async def conversation(c, cid, uid, lock=False):
         row = await c.fetchrow(
@@ -123,7 +120,7 @@ def chat_router(current_user, db):
     async def send(cid: int, body: MessageBody, user=Depends(member), pool=Depends(db)):
         async with pool.acquire() as c, c.transaction():
             # Serialize a sender's rate check and nonce, and a room's revisions.
-            await c.execute("SELECT id FROM users WHERE id=$1 FOR UPDATE", user.id)
+            await c.execute("SELECT id FROM users WHERE id=$1 FOR NO KEY UPDATE", user.id)
             await conversation(c, cid, user.id, lock=True)
             existing = await c.fetchrow(MESSAGE_SELECT + " WHERE m.sender_id=$1 AND m.client_id=$2",
                                        user.id, body.client_id)
