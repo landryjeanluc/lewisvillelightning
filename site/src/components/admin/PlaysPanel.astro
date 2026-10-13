@@ -5,6 +5,7 @@ import { roster, games, sides } from "../../lib/data";
 import { shortDate } from "../../lib/format";
 import { PATH_KINDS, TOKEN_KINDS } from "../../lib/play";
 import { SURFACES } from "../../lib/rink";
+import PlayToolIcon from "./PlayToolIcon.astro";
 
 // Full names here, not displayName(): this panel is admin-only, and the coach
 // needs to recognise the kid. Nothing from this list is published — binding a
@@ -20,6 +21,16 @@ const gameList = games.map((g: any) => {
 }).reverse();
 
 const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
+const toolGroups = [
+  { label: "Pieces", tools: TOKEN_KINDS },
+  { label: "Lines", tools: PATH_KINDS },
+  { label: "Extras", tools: [
+    { value: "text" as const, label: "Label", hint: "Drop a short label on the ice" },
+    { value: "pen" as const, label: "Pen", hint: "Freehand scribble" },
+    { value: "select" as const, label: "Move", hint: "Move pieces, pick a line" },
+    { value: "erase" as const, label: "Erase", hint: "Take something off the board" },
+  ] },
+];
 ---
 <section class="pe">
   <div class="pe-head">
@@ -41,38 +52,29 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
 
   <div class="pe-grid">
     <!-- ------------------------------------------------------------ tools -->
-    <aside class="card pe-tools" id="pe-tools">
-      <h4>Pieces</h4>
-      <div class="pe-row">
-        {TOKEN_KINDS.map((k) => (
-          <button type="button" class="pe-tool" data-tool={k.value} title={k.hint}>{k.label}</button>
-        ))}
+    <div class="card pe-tools" id="pe-tools" role="group" aria-label="Drawing tools">
+      {toolGroups.map((group) => (
+        <div class="pe-toolgroup" role="group" aria-label={group.label}>
+          <h4>{group.label}</h4>
+          <div class="pe-row">
+            {group.tools.map((k) => (
+              <button type="button" class="pe-tool pe-iconbutton" data-tool={k.value}
+                      title={`${k.label} — ${k.hint}`} aria-label={k.label} aria-pressed="false">
+                <PlayToolIcon name={k.value} />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div class="pe-toolgroup" role="group" aria-label="Board actions">
+        <h4>Board</h4>
+        <div class="pe-row">
+          <button type="button" class="pe-iconbutton" id="pe-undo" title="Undo" aria-label="Undo" disabled><PlayToolIcon name="undo" /></button>
+          <button type="button" class="pe-iconbutton" id="pe-redo" title="Redo" aria-label="Redo" disabled><PlayToolIcon name="redo" /></button>
+          <button type="button" class="danger" id="pe-clear" title="Clear the board"><PlayToolIcon name="clear" />Clear</button>
+        </div>
       </div>
-
-      <h4>Lines</h4>
-      <div class="pe-row">
-        {PATH_KINDS.map((k) => (
-          <button type="button" class="pe-tool" data-tool={k.value} title={k.hint}>{k.label}</button>
-        ))}
-      </div>
-
-      <h4>Extras</h4>
-      <div class="pe-row">
-        <button type="button" class="pe-tool" data-tool="text" title="Drop a short label on the ice">Label</button>
-        <button type="button" class="pe-tool" data-tool="pen" title="Freehand scribble">Pen</button>
-        <button type="button" class="pe-tool" data-tool="select" title="Move pieces, pick a line">Move</button>
-        <button type="button" class="pe-tool" data-tool="erase" title="Take something off the board">Erase</button>
-      </div>
-
-      <h4>Board</h4>
-      <div class="pe-row">
-        <button type="button" id="pe-undo" disabled>Undo</button>
-        <button type="button" id="pe-redo" disabled>Redo</button>
-        <button type="button" class="danger" id="pe-clear">Clear</button>
-      </div>
-
-      <div class="pe-inspector card" id="pe-inspector"></div>
-    </aside>
+    </div>
 
     <!-- ------------------------------------------------------------ board -->
     <div class="pe-stagewrap">
@@ -85,6 +87,7 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
       </div>
       <div class="pl-board" id="pe-stage"></div>
       <p class="dim pe-hint" id="pe-hint"></p>
+      <div class="pe-inspector card" id="pe-inspector" aria-label="Selected piece or line"></div>
 
       <div class="pe-steps-bar">
         <span class="eyebrow">Steps</span>
@@ -177,8 +180,8 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
 
   .pe-grid {
     display: grid; gap: var(--s-4);
-    grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
-    grid-template-areas: "tools stage" "tools meta";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "tools" "stage" "meta";
     align-items: start;
   }
   .pe-tools { grid-area: tools; }
@@ -190,15 +193,10 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
   .pe-meta h4, .pe-meta .pe-save { grid-column: 1 / -1; }
   .pe-meta label { min-width: 0; }
   .pe-meta input, .pe-meta select { width: 100%; min-width: 0; }
-  @media (max-width: 900px) {
-    .pe-grid {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-areas: "stage" "tools" "meta";
-    }
-  }
-
-  .pe-tools, .pe-meta { padding: var(--s-4); display: grid; gap: var(--s-3); }
-  .pe-meta label, .pe-tools label { display: grid; gap: var(--s-2); font-size: var(--t-sm); }
+  .pe-tools { padding: var(--s-3); display: flex; flex-wrap: wrap; gap: var(--s-4); }
+  .pe-toolgroup { min-width: 0; }
+  .pe-meta { padding: var(--s-4); display: grid; gap: var(--s-3); }
+  .pe-meta label { display: grid; gap: var(--s-2); font-size: var(--t-sm); }
 
   .pe-row { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: end; }
   .pe-tool, .pe-row button, .pe-steps-bar button {
@@ -208,14 +206,20 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
     font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600;
   }
   .pe-tool:hover, .pe-row button:hover { color: var(--text); border-color: var(--hairline-sv); }
-  .pe-tool.is-on {
+  .pe-tools .pe-iconbutton { width: 44px; height: 44px; padding: 9px; display: grid; place-items: center; }
+  .pe-tools .pe-tool[data-tool="us"], .pe-tools .pe-tool[data-tool="goalie"] { color: #75c8ff; }
+  .pe-tools .pe-tool[data-tool="them"], .pe-tools .pe-tool[data-tool="goalieThem"] { color: #ff9299; }
+  #pe-clear { display: inline-flex; align-items: center; gap: var(--s-2); min-height: 44px; }
+  .pe-tools .pe-tool.is-on {
     color: #fff; background: var(--volt-500); border-color: var(--volt-500);
   }
   .pe-row button.danger { color: var(--loss); }
   .pe-row button[disabled] { opacity: .4; cursor: default; }
 
-  .pe-inspector { padding: var(--s-3); display: grid; gap: var(--s-3); margin-top: var(--s-2); }
-  .pe-inspector p { font-size: var(--t-xs); margin: 0; }
+  .pe-inspector { padding: var(--s-3); display: flex; flex-wrap: wrap; align-items: end; gap: var(--s-3); margin-top: var(--s-2); }
+  .pe-inspector :global(p) { font-size: var(--t-xs); margin: 0; }
+  .pe-inspector :global(h4) { flex-basis: 100%; margin: 0; }
+  .pe-inspector :global(label) { flex: 1 1 12rem; min-width: 0; }
 
   .pe-hint { font-size: var(--t-sm); margin-top: var(--s-3); min-height: 1.4em; }
 

@@ -1,0 +1,30 @@
+---
+import type { PathKind, TokenKind } from "../../lib/play";
+
+type Icon = TokenKind | PathKind | "text" | "pen" | "select" | "erase" | "undo" | "redo" | "clear";
+interface Props { name: Icon }
+const { name } = Astro.props;
+const paths: Record<Icon, string> = {
+  us: "M5 5 19 19 M19 5 5 19",
+  them: "M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
+  puck: "M4 10a8 4 0 1 0 16 0 8 4 0 1 0-16 0 M4 10v4a8 4 0 0 0 16 0v-4",
+  goalie: "M4 3h16v18H4z M8 8l8 8 M16 8l-8 8",
+  goalieThem: "M4 3h16v18H4z M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
+  cone: "M12 3 4 20h16L12 3 M8 12h8 M3 21h18",
+  skate: "M3 19 20 4 M12 4h8v8",
+  pass: "M3 19l3-3 M9 13l3-3 M15 7l5-3 M12 4h8v8",
+  shot: "M3 19 20 4 M12 4h8v8 M10 4l10 10",
+  backward: "M3 19c8 0-4-9 4-9s0-7 13-6 M13 2l7 2-2 7",
+  text: "M4 6V4h16v2 M12 4v16 M8 20h8",
+  pen: "m4 16 12-12 4 4L8 20H4v-4 M13 7l4 4",
+  select: "M12 3v18 M3 12h18 M9 6l3-3 3 3 M9 18l3 3 3-3 M6 9l-3 3 3 3 M18 9l3 3-3 3",
+  erase: "m4 13 9-9 7 7-9 9H8l-4-4v-3 M9 8l7 7 M11 20h10",
+  undo: "M8 4 3 9l5 5 M3 9h10a7 7 0 0 1 0 14",
+  redo: "m16 4 5 5-5 5 M21 9H11a7 7 0 0 0 0 14",
+  clear: "M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7",
+};
+---
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor"
+     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <path d={paths[name]} />
+</svg>

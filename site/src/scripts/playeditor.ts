@@ -171,8 +171,11 @@ function render() {
 }
 
 function renderTools() {
-  document.querySelectorAll<HTMLElement>("#pe-tools [data-tool]").forEach((b) =>
-    b.classList.toggle("is-on", b.dataset.tool === tool));
+  document.querySelectorAll<HTMLElement>("#pe-tools [data-tool]").forEach((b) => {
+    const active = b.dataset.tool === tool;
+    b.classList.toggle("is-on", active);
+    b.setAttribute("aria-pressed", String(active));
+  });
 }
 
 function renderSteps() {
