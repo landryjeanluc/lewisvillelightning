@@ -31,14 +31,14 @@
     },
     {
       "id": "dieppe",
-      "name": "Dieppe",
-      "short": "Dieppe",
+      "name": "Dieppe Aigles",
+      "short": "Aigles",
       "town": "Dieppe",
       "crest": "assets/brand/dieppe-crest.png",
       "colours": {
-        "primary": "#1F6F3F",
-        "secondary": "#111111",
-        "accent": "#F0C230"
+        "primary": "#C8102E",
+        "secondary": "#1F3A7A",
+        "accent": "#F2B134"
       }
     }
   ]
