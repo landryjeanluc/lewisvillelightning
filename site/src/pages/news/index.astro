@@ -1,56 +1,16 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { articles } from "../../lib/data";
-import { longDate, machine } from "../../lib/format";
-const [lead, ...rest] = articles;
+import NewsFeed from "../../components/NewsFeed.astro";
 ---
 <Base title="News">
   <header class="page-head">
     <span class="eyebrow">Team news</span>
     <h1>The Latest</h1>
   </header>
-
-  {!lead && <p class="dim">No articles yet.</p>}
-
-  {lead && (
-    <a class="lead card card--link" href={`/news/${lead.slug}`}>
-      {lead.image && <img class="lead-img" src={`/${lead.image.replace(/^assets\//, "")}`} alt="" />}
-      <div class="lead-body">
-        <span class="eyebrow">
-          <time datetime={machine(lead.publishedAt)}>{longDate(lead.publishedAt)}</time>
-          {lead.lang === "fr" && <span class="lang">FR</span>}
-        </span>
-        <h2>{lead.title}</h2>
-        {lead.summary && <p class="muted">{lead.summary}</p>}
-      </div>
-    </a>
-  )}
-
-  {rest.length > 0 && (
-    <div class="grid">
-      {rest.map((a: any) => (
-        <a class="item card card--link" href={`/news/${a.slug}`}>
-          <span class="eyebrow">
-            <time datetime={machine(a.publishedAt)}>{longDate(a.publishedAt)}</time>
-            {a.lang === "fr" && <span class="lang">FR</span>}
-          </span>
-          <h3>{a.title}</h3>
-          {a.summary && <p class="dim">{a.summary}</p>}
-        </a>
-      ))}
-    </div>
-  )}
+  <NewsFeed />
 </Base>
 
 <style>
   .page-head { margin-bottom: var(--s-6); }
   .page-head h1 { margin-top: var(--s-2); }
-  .lead { display: block; overflow: hidden; text-decoration: none; margin-bottom: var(--s-6); }
-  .lead-img { width: 100%; aspect-ratio: 16/7; object-fit: cover; }
-  .lead-body { padding: var(--s-5); }
-  .lead-body h2 { margin-block: var(--s-3); }
-  .grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-  .item { display: block; padding: var(--s-5); text-decoration: none; }
-  .item h3 { margin-block: var(--s-2) var(--s-3); }
-  .lang { margin-left: var(--s-2); padding: 1px 5px; border: 1px solid var(--hairline-sv); border-radius: 3px; }
 </style>

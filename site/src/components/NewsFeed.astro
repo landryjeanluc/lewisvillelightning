@@ -1,0 +1,58 @@
+---
+import { articles } from "../lib/data";
+import { shortDate, machine } from "../lib/format";
+import { md } from "../scripts/live";
+
+interface Props { limit?: number }
+const { limit } = Astro.props;
+const posts = limit ? articles.slice(0, limit) : articles;
+const full = !limit;
+---
+<div class:list={["news-feed", full && "news-feed--full"]} data-news-feed data-limit={limit}>
+  <div class="feed-grid" data-news-list>
+    {posts.map((post: any) => (
+      <article class="feed-card card" data-slug={post.slug} data-published={post.publishedAt} id={`post-${post.slug}`}>
+        {post.image && <img class="feed-image" src={`/${post.image.replace(/^assets\//, "")}`} alt="" loading="lazy" decoding="async" />}
+        <div class="feed-content">
+          <time class="eyebrow" datetime={machine(post.publishedAt)}>{shortDate(post.publishedAt)}</time>
+          {full ? <h2>{post.title}</h2> : <h3><a href={`/news/${post.slug}`}>{post.title}</a></h3>}
+          {post.summary && <p class="muted">{post.summary}</p>}
+          {full ? <div class="feed-body" set:html={md(post.body)} /> : <a class="feed-link" href={`/news/${post.slug}`}>Read update →</a>}
+        </div>
+      </article>
+    ))}
+  </div>
+  <p class="feed-empty card muted" data-news-empty hidden={posts.length > 0}>Team updates will appear here when they're posted.</p>
+  <noscript><p class="dim">Enable JavaScript to see the latest published team updates.</p></noscript>
+  <!-- Cloning this template preserves Astro's scoped styles on live posts. -->
+  <template data-news-template>
+    <article class="feed-card card">
+      <img class="feed-image" alt="" loading="lazy" decoding="async" hidden />
+      <div class="feed-content">
+        <time class="eyebrow"></time>
+        {full ? <h2></h2> : <h3><a></a></h3>}
+        <p class="muted" data-summary hidden></p>
+        {full ? <div class="feed-body"></div> : <a class="feed-link">Read update →</a>}
+      </div>
+    </article>
+  </template>
+</div>
+<script>import "../scripts/news-feed";</script>
+<style>
+  .feed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--s-4); align-items: start; }
+  .feed-card { min-width: 0; overflow: hidden; scroll-margin-top: 6rem; }
+  .feed-image { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .feed-content { display: grid; gap: var(--s-3); padding: var(--s-5); }
+  h3 { font-size: var(--t-lg); line-height: 1.05; }
+  h3 a { text-decoration: none; }
+  h3 a:hover { color: var(--accent-text); }
+  h2 { font-size: var(--t-xl); line-height: 1.05; }
+  .feed-link { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-text); font-weight: 700; text-decoration: none; }
+  .feed-empty { padding: var(--s-5); }
+  .news-feed--full { max-width: 72ch; }
+  .news-feed--full .feed-grid { grid-template-columns: minmax(0, 1fr); }
+  .feed-body :global(p + p) { margin-top: var(--s-3); }
+  .feed-body :global(h3), .feed-body :global(h4) { margin-block: var(--s-4) var(--s-2); font-size: var(--t-lg); }
+  .feed-body :global(ul) { margin-block: var(--s-3); padding-left: 1.4em; }
+  .feed-body :global(a) { color: var(--accent-text); }
+</style>
