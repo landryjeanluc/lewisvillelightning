@@ -159,8 +159,8 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
 </script>
 
 <style>
-  /* Shorter than the viewer's: the editor has tools and a step strip to fit. */
-  #pe-stage { --pl-board-h: min(58vh, 460px); }
+  /* Let the ice use the wider workspace, including near-square zone views. */
+  #pe-stage { --pl-board-h: min(72vh, 680px); }
 
   .pe h3 { font-size: var(--t-lg); }
   .pe h4 {
@@ -177,12 +177,24 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
 
   .pe-grid {
     display: grid; gap: var(--s-4);
-    grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr) minmax(13rem, 17rem);
+    grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
+    grid-template-areas: "tools stage" "tools meta";
     align-items: start;
   }
-  @media (max-width: 1180px) {
-    .pe-grid { grid-template-columns: minmax(0, 1fr); }
-    .pe-stagewrap { order: -1; }
+  .pe-tools { grid-area: tools; }
+  .pe-stagewrap { grid-area: stage; }
+  .pe-meta {
+    grid-area: meta;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pe-meta h4, .pe-meta .pe-save { grid-column: 1 / -1; }
+  .pe-meta label { min-width: 0; }
+  .pe-meta input, .pe-meta select { width: 100%; min-width: 0; }
+  @media (max-width: 900px) {
+    .pe-grid {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "stage" "tools" "meta";
+    }
   }
 
   .pe-tools, .pe-meta { padding: var(--s-4); display: grid; gap: var(--s-3); }
@@ -265,6 +277,7 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
   :global(.pe-inspector button.link.danger) { color: var(--loss); }
   .pe-grid > *, .pe-head > * { min-width: 0; max-width: 100%; }
   @media (max-width: 600px) {
+    .pe-meta { grid-template-columns: minmax(0, 1fr); }
     .pe-stepedit .grow { flex-basis: 100%; }
     .pe-dur { min-width: 0; width: 100%; }
   }
