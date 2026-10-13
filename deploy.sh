@@ -8,28 +8,42 @@
 #
 #   ./deploy.sh              build, publish, verify
 #   ./deploy.sh --posters    also re-render the game graphics
+#   ./deploy.sh --api-only   skip the site entirely; ship the API and restart
+#
+# --api-only exists because several agents share this repo: a half-written page
+# from someone else breaks the site build, and that should not block shipping a
+# backend fix that is ready.
 set -euo pipefail
 
 HOST=${LVLNB_HOST:-arachnea}
 ROOT=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT"
 
+API_ONLY=0
+for a in "$@"; do [[ "$a" == "--api-only" ]] && API_ONLY=1; done
+
 command -v node >/dev/null || { echo "node not on PATH — enter the dev shell (direnv allow / nix develop)"; exit 1; }
 
-echo "==> validating data/ against the contract"
-( cd site && npm run validate --silent )
+if [[ $API_ONLY -eq 0 ]]; then
+  echo "==> validating data/ against the contract"
+  ( cd site && npm run validate --silent )
 
-echo "==> building"
-( cd site && npm run build --silent >/dev/null )
+  echo "==> building"
+  ( cd site && npm run build --silent >/dev/null )
+else
+  echo "==> --api-only: skipping the site build"
+fi
 
 if [[ "${1:-}" == "--posters" ]]; then
   echo "==> rendering game graphics"
   node render/render.mjs --all
 fi
 
-echo "==> publishing to $HOST"
-rsync -a --delete site/dist/ "$HOST:/srv/lvlnb/"
-rsync -a           data/      "$HOST:/srv/lvlnb-data/"
+if [[ $API_ONLY -eq 0 ]]; then
+  echo "==> publishing to $HOST"
+  rsync -a --delete site/dist/ "$HOST:/srv/lvlnb/"
+fi
+rsync -a data/ "$HOST:/srv/lvlnb-data/"
 
 # The API runs from its own checkout in /opt/lvlnb. Publishing only the site
 # meant backend changes never reached production — they sat in git looking

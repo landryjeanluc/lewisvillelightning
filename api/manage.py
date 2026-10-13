@@ -28,10 +28,29 @@ from pathlib import Path
 import asyncpg
 import bcrypt
 
-ROOT = Path(__file__).resolve().parents[1]
-# Handouts carry plaintext passwords, so they go under private/, which is
-# gitignored. They must never reach the repo.
-HANDOUT_DIR = ROOT / "private/family-logins"
+HERE = Path(__file__).resolve().parent
+
+# A manual CLI run gets none of the service's environment, so read the .env
+# sitting next to this script if there is one. On the box that is
+# /opt/lvlnb/.env; in the repo there is none and the defaults below apply.
+_envfile = HERE / ".env"
+if _envfile.exists():
+    for _line in _envfile.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _, _v = _line.partition("=")
+            os.environ.setdefault(_k.strip(), _v.strip())
+
+# The roster is NOT beside this script on the box — it is deployed to
+# /srv/lvlnb-data. Deriving it from __file__ sent the host looking in
+# /opt/data/roster.json. Use the same DATA_DIR the service uses, and fall back
+# to the repo layout when running from a checkout.
+DATA_DIR = Path(os.environ.get("DATA_DIR") or (HERE.parent / "data"))
+
+# Handouts carry plaintext passwords. In the repo they land under private/,
+# which is gitignored; on the box they sit beside the service, readable only
+# by it.
+HANDOUT_DIR = Path(os.environ.get("HANDOUT_DIR") or (HERE / "private/family-logins"))
 WORDS = ["bolt", "ice", "rink", "puck", "slapshot", "crease", "zamboni",
          "overtime", "faceoff", "blueline", "hattrick", "backcheck"]
 
@@ -45,7 +64,13 @@ def slugify(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 def load_roster() -> list[dict]:
-    return json.loads((ROOT / "data/roster.json").read_text())["players"]
+    f = DATA_DIR / "roster.json"
+    if not f.exists():
+        raise SystemExit(
+            f"no roster at {f}\n"
+            f"Set DATA_DIR to where data/*.json is deployed "
+            f"(the service uses /srv/lvlnb-data).")
+    return json.loads(f.read_text())["players"]
 
 def write_handout(player: dict, logins: list[tuple[str, str, str]]) -> Path:
     """One file per family — never one list with everyone's credentials on it."""
@@ -242,7 +267,7 @@ async def main() -> int:
             print(f"\n  {made} login(s) created, {skipped} already existed "
                   f"(use --force to re-issue).")
             if made:
-                print(f"  Handouts: {HANDOUT_DIR.relative_to(ROOT)}/  "
+                print(f"  Handouts: {HANDOUT_DIR}/  "
                       f"— one per family, gitignored, each contains a plaintext password.")
             return 0
 
