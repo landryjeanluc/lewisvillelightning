@@ -4,6 +4,10 @@ import { roster } from "../../lib/data";
 // not carry, stored against the contract player id.
 const players = [...roster.players].sort((a: any, b: any) => a.number - b.number);
 const POS = ["C", "LW", "RW", "F", "D", "G"];
+// Card art JL has already drawn lives in the repo (assets/photos, matched to
+// players by the Spordle import). The profiles table only carries art uploaded
+// through this panel, so an empty card_art column is not an empty card.
+const fileName = (s: string) => s.split("/").pop() ?? s;
 ---
 <section class="rp">
   <h3>Roster detail</h3>
@@ -47,7 +51,10 @@ const POS = ["C", "LW", "RW", "F", "D", "G"];
         </label>
 
         <div class="rp-art">
-          <span class="rp-artstate dim" data-artstate>no card art</span>
+          <span class:list={["rp-artstate", "dim", p.cardArt && "has"]} data-artstate
+                data-repoart={p.cardArt ?? ""} title={p.cardArt ?? undefined}>
+            {p.cardArt ? `card art — ${fileName(p.cardArt)}` : "no card art"}
+          </span>
           <label class="rp-upload">
             <input type="file" data-art accept="image/jpeg,image/png,image/webp" hidden />
             <span class="rp-uploadbtn">Upload card art</span>
@@ -81,10 +88,16 @@ const POS = ["C", "LW", "RW", "F", "D", "G"];
         const input = el.querySelector(`[data-f="${f}"]`) as any;
         if (input) input.value = p[f] ?? "";
       }
+      // dataset.art stays the uploaded override alone, so saving an unrelated
+      // field never copies repo art into the profiles row.
       el.dataset.art = p.card_art ?? "";
       const st = el.querySelector("[data-artstate]") as HTMLElement;
-      st.textContent = p.card_art ? "card art attached" : "no card art";
-      st.classList.toggle("has", !!p.card_art);
+      const repo = st.dataset.repoart || "";
+      st.textContent = p.card_art
+        ? "uploaded card art attached"
+        : repo ? `card art — ${repo.split("/").pop()}` : "no card art";
+      st.title = p.card_art || repo;
+      st.classList.toggle("has", !!(p.card_art || repo));
     });
   }
 

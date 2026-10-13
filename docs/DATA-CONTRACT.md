@@ -70,7 +70,7 @@ One `events` array holding both games and practices, discriminated by `type`.
   "affiliate": false }
 ```
 
-`photo` and `cardArt` are repo-relative paths under `assets/players/`, or `null`.
+`photo` and `cardArt` are repo-relative paths under `assets/photos/`, or `null`.
 `cardArt` is the hockey-card artwork; the player page falls back to a generated card
 when it is `null`.
 

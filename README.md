@@ -125,6 +125,27 @@ re-render never hands that game to a different player. When all 19 have been
 featured the cycle increments and the pool refills. The card falls back to the
 jersey number until `cardArt` lands in `data/roster.json`.
 
+## Card art
+
+Each player's hockey card is a finished piece of artwork — crest, name, number
+and position are already on it — kept in `assets/photos/` under the player's
+name. `tools/spordle/to_data.py` matches those files to players on each sync
+and writes the path into `roster.json` as `cardArt`; the import prints how many
+it matched and names any file it could not place. Where a card exists it *is*
+the card, and `PlayerCard.astro` drops the generated chrome rather than print
+the name twice.
+
+`/admin → Roster` shows which art each player has. Two things can supply it:
+the repo file above, and an upload made in that panel, which is stored in the
+`player_profiles.card_art` column and wins where both exist. **An upload only
+changes the admin panel.** The public site is built from `data/roster.json`, so
+art uploaded here does not reach a player's page until that path is in the
+contract file — put finished art in `assets/photos/` and re-sync.
+
+`tools/test_roster_ui.mjs` drives that panel in a real browser: it was written
+for a bug where the panel read the state from the database alone and reported
+"no card art" for all nineteen players, every one of whom had art in the repo.
+
 ## Plays of the week
 
 The coach draws a play on a rink in `/admin → Plays`; the team watches it run at
