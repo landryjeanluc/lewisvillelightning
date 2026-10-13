@@ -10,6 +10,10 @@
  *
  * The card renders `hidden` and is revealed by script: inside the installed app
  * `display-mode: standalone` matches, and an install button there is noise.
+ *
+ * Placement is deliberate — last on the home page, under the sign-in form.
+ * Installing is a once-ever act, so it does not earn space above the things
+ * families come back for every week.
  */
 interface Props { compact?: boolean }
 const { compact = false } = Astro.props;

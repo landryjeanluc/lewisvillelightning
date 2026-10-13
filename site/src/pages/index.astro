@@ -23,7 +23,7 @@ const star = g ? spotlightFor(g.id) : undefined;
 const rot = spotlightProgress();
 ---
 <Base wide>
-  <HomeGoals />
+  <HomeGoals slot="header-footer" />
 
   {g ? (
     <section class="hero">
@@ -63,8 +63,6 @@ const rot = spotlightProgress();
       <p class="muted">The schedule will fill in once the season data syncs.</p>
     </section>
   )}
-
-  <InstallApp />
 
   <TeamShowcase />
 
@@ -123,6 +121,8 @@ const rot = spotlightProgress();
 
     </section>
   </div>
+
+  <InstallApp />
 
   <script>import "../scripts/cardfx";</script>
 </Base>

@@ -33,6 +33,27 @@ done
 if [[ $API_ONLY -eq 1 && $POSTERS -eq 1 ]]; then
   echo "--api-only cannot be combined with --posters" >&2; exit 2
 fi
+
+# A clean release worktree alone is insufficient: another local checkout may
+# contain newer work already shown to the user. Publishing an older snapshot
+# silently undid the homepage changes on 2026-10-13. Reconcile that work first.
+check_release_sources() {
+  local entry checkout
+  while IFS= read -r -d '' entry; do
+    case "$entry" in
+      'worktree '*)
+        checkout=${entry#worktree }
+        if [[ -n $(git -C "$checkout" status --porcelain --untracked-files=normal -- site api data render tools deploy.sh flake.nix flake.lock) ]]; then
+          echo "Deployment stopped: unpublished application edits in $checkout" >&2
+          echo "Review and commit the intended changes before deploying a release." >&2
+          return 1
+        fi
+        ;;
+    esac
+  done < <(git worktree list --porcelain -z)
+}
+if [[ $CHECK_ONLY -eq 0 ]]; then check_release_sources; fi
+RELEASE_REVISION=$(git rev-parse HEAD)
 command -v uv >/dev/null || { echo "uv not on PATH — enter nix develop" >&2; exit 1; }
 echo "==> testing the API against an isolated PostgreSQL"
 uv run --project api --frozen bash api/test.sh
@@ -56,6 +77,10 @@ if [[ $CHECK_ONLY -eq 1 ]]; then
   exit 0
 fi
 
+# Recheck after building in case another editor changed the shared checkout.
+check_release_sources
+echo "==> deploying revision $RELEASE_REVISION"
+
 # Refuse a deploy without a restorable database backup. No credentials are
 # copied to this checkout. Backups stay on the service host, mode 0600.
 echo "==> backing up the database on $HOST"
@@ -67,6 +92,7 @@ sudo -u lvlnb bash -c 'umask 077; pg_dump -Fc lvlnb > /var/backups/lvlnb/pre-dep
 REMOTE
 
 if [[ $API_ONLY -eq 0 ]]; then
+  printf '{"revision":"%s"}\n' "$RELEASE_REVISION" > site/dist/deployment.json
   echo "==> publishing to $HOST"
   rsync -a --delay-updates --delete-delay site/dist/ "$HOST:/srv/lvlnb/"
 fi

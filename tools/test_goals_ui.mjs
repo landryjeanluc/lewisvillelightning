@@ -222,10 +222,9 @@ try {
   ok('signing out returns to sign-in and removes the admin interface', await test(`location.pathname === '/login' && !document.querySelector('#editor')`));
 
 
-  /* ------------------------------------- the two goal bars on the home page -- */
-  // Two designs sit side by side on the home page so they can be compared. The
-  // sample-progress preview is the only part that works with no API answering —
-  // which is every local dev run, there being no API to run locally.
+  /* ------------------------------------- progress in the home-page header -- */
+  // The chosen hockey design belongs in the header. Its labelled preview must
+  // still work when the API is unavailable.
   await cdp.send('Emulation.setDeviceMetricsOverride', {width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false});
   const bars = () => test(`[...document.querySelectorAll('[data-goal-bar]')].map(b => ({
     theme: b.dataset.goalBar, title: b.querySelector('[data-goal-title]').textContent,
@@ -235,10 +234,17 @@ try {
   const previewHidden = () => test(`document.querySelector('[data-goals-preview]').hidden`);
 
   signedOut = false; failLoad = true; await go('/');
-  ok('both bar designs are on the home page', (await bars()).map(b => b.theme).join() === 'hockey,lightning');
+  ok('the single hockey progress bar is in the header',
+     (await bars()).map(b => b.theme).join() === 'hockey'
+     && await test(`!!document.querySelector('.site-head [data-home-goals] [data-goal-bar]')`));
+  ok('the install card follows all other home-page content', await test(`(() => {
+    const main = document.querySelector('main');
+    const content = [...main.children].filter(el => !['SCRIPT', 'STYLE', 'DIALOG'].includes(el.tagName));
+    return content.at(-1)?.matches('[data-install]');
+  })()`));
   ok('an unreachable API still offers the design preview', !(await previewHidden()));
   await click('[data-goals-preview]');
-  ok('the preview fills both designs with the same sample progress',
+  ok('the preview fills the header bar with sample progress',
      (await bars()).every(b => b.pct === '65' && b.progress === '65%' && b.title === '1,000 shots. One team.'));
   ok('the preview says the progress is not real',
      await test(`document.querySelector('[data-goals-notice]').textContent.includes('Design preview only')`));
@@ -255,8 +261,21 @@ try {
                target: 1000, total: 450, family_total: 50,
                starts_on: '2026-10-12', ends_on: '2026-10-18', archived: false });
   await go('/');
-  ok('a real team goal drives both bars', (await bars()).every(b => b.pct === '45' && b.title === 'Team off-ice shots'));
+  ok('a real team goal drives the header bar', (await bars()).every(b => b.pct === '45' && b.title === 'Team off-ice shots'));
   ok('the design preview is out of the way once there is real progress', await previewHidden());
+
+  await cdp.send('Emulation.setDeviceMetricsOverride', {width: 390, height: 844, deviceScaleFactor: 1, mobile: false});
+  await go('/');
+  ok('the header progress bar fits on a phone', await test(`(() => {
+    const bar = document.querySelector('[data-goal-bar]').getBoundingClientRect();
+    return bar.left >= 0 && bar.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth;
+  })()`));
+  await click('.menu-toggle');
+  ok('the mobile menu opens without the progress bar crowding it', await test(`
+    getComputedStyle(document.querySelector('[data-home-goals]')).display === 'none'
+    && document.querySelector('#primary-nav').getBoundingClientRect().height > 0`));
+  await click('.menu-toggle');
+  ok('closing the menu restores the progress bar', await test(`getComputedStyle(document.querySelector('[data-home-goals]')).display !== 'none'`));
 
   signedOut = true; await go('/');
   ok('a signed-out visitor is asked to sign in, not shown a preview',

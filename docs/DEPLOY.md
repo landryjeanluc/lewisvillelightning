@@ -127,6 +127,12 @@ CI runs; coordinate manual deployments separately. Transfers are delayed within
 each rsync, but this is not an atomic release of site, data and API together.
 Use a maintenance window for schema or authorization changes.
 
+Before publishing, the script checks every local Git worktree for unpublished
+application edits. Review and commit the intended changes before creating the
+release checkout; a clean isolated checkout must not silently omit newer work.
+Static releases include `deployment.json` with the deployed Git revision so the
+served version can be identified without guessing from its appearance.
+
 After deployment, verify anonymously from the external origin that private
 routes/media redirect or reject, and that login/manifest/worker/icons still work.
 With a test account, check no-store headers, uploads, peer chat, unrelated

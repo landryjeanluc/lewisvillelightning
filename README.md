@@ -215,7 +215,11 @@ node tools/test_plays_ui.mjs                 # add --shots <dir> to keep the scr
 
 The team was on Spordle's app. The replacement is not an app: the site installs
 itself. `/` and `/login` carry an **Install app** card, and the whole thing —
-manifest, icons, service worker — lives in `site/public/`.
+manifest, icons, service worker — lives in `site/public/`. On the home page the
+card is the *last* thing on the page: installing is done once and never again,
+so it sits below the news and the schedule rather than above them. On the
+sign-in page it stays under the form, where it is the only install a parent can
+reach before they have a password.
 
 Two platforms, two different truths behind one button:
 

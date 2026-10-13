@@ -11,7 +11,6 @@ const picker = root.querySelector<HTMLElement>('[data-goals-picker]')!;
 const notice = root.querySelector<HTMLElement>('[data-goals-notice]')!;
 const retry = root.querySelector<HTMLButtonElement>('[data-goals-retry]')!;
 const preview = root.querySelector<HTMLButtonElement>('[data-goals-preview]')!;
-const link = root.querySelector<HTMLAnchorElement>('[data-goals-link]')!;
 const format = new Intl.NumberFormat('en-CA');
 const date = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', timeZone: 'America/Moncton' });
 let goals: TeamGoal[] = [];
@@ -58,7 +57,6 @@ async function load() {
         text(bar, 'remaining', 'See the team’s challenge and add your activity.');
       }
       notice.textContent = 'Sign in to see the team’s progress.';
-      link.href = '/login?next=/goals'; link.textContent = 'Sign in ↗';
       return;
     }
     if (!response.ok) throw new Error('Goals unavailable');
@@ -73,22 +71,18 @@ async function load() {
     if (goals.some(g => String(g.id) === previous)) select.value = previous;
     picker.hidden = goals.length < 2;
     preview.hidden = goals.length > 0;
-    preview.setAttribute('aria-pressed', 'false'); preview.textContent = 'Preview both styles';
-    link.href = '/goals'; link.textContent = 'Team goals ↗';
+    preview.setAttribute('aria-pressed', 'false'); preview.textContent = 'Preview progress';
     if (goals.length) {
-      showSelected(); notice.textContent = 'Two looks. The same team effort. Log your activity in Goals.';
+      showSelected(); notice.textContent = '';
     } else {
       paint(null);
-      notice.textContent = board.admin ? 'Set your next team challenge in Goals, or preview the two styles below.' : 'Your coach can set the next team challenge. Preview the two styles below.';
+      notice.textContent = board.admin ? 'Set your next team challenge in Goals.' : 'Your coach can set the next team challenge.';
     }
   } catch {
-    // The preview is sample data drawn in the page, so it is the one part of
-    // this that still works with no API answering — which is every local dev
-    // run, and precisely when comparing the two designs is all there is to do.
-    // Hiding it here left the bars dead and the comparison impossible.
+    // A clearly labelled sample remains available if the API is offline.
     goals = []; failed = true; picker.hidden = true;
     preview.hidden = false; preview.setAttribute('aria-pressed', 'false');
-    preview.textContent = 'Preview both styles';
+    preview.textContent = 'Preview progress';
     paint(null, 'Team progress unavailable');
     for (const bar of bars) {
       text(bar, 'target', ' / Progress unavailable');
@@ -104,7 +98,7 @@ retry.addEventListener('click', () => void load());
 preview.addEventListener('click', () => {
   const show = preview.getAttribute('aria-pressed') !== 'true';
   preview.setAttribute('aria-pressed', String(show));
-  preview.textContent = show ? 'Close design preview' : 'Preview both styles';
+  preview.textContent = show ? 'Close preview' : 'Preview progress';
   // Closing it after a failed load must not claim there is simply no goal —
   // go back and find out what the real state is.
   if (!show && failed) { void load(); return; }
