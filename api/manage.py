@@ -12,7 +12,8 @@ hatch for the day someone locks themselves out.
   python manage.py set-role coach@example.ca admin
   python manage.py set-password jl@hexpi.ca
   python manage.py seed-families            # Mom + Dad logins for every player
-  python manage.py add-guardian pl-02 "Grandma" 
+  python manage.py add-guardian pl-02 "Grandma"
+  python manage.py rename-families          # re-label family logins from the roster
 """
 from __future__ import annotations
 
@@ -62,6 +63,20 @@ def slugify(s: str) -> str:
     s = unicodedata.normalize("NFKD", s)
     s = "".join(c for c in s if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+def full_name(player: dict) -> str:
+    return f"{player['firstName']} {player['lastName']}"
+
+def family_label(player: dict, relationship: str) -> str:
+    """How a family login is named in the chat directory and the admin list.
+
+    The surname is part of the label, not a nicety: two players can share a
+    first name (the roster has had two Oliviers), and "Mom to Olivier" then
+    names nobody. An initial would not save it either — both Oliviers are
+    L-surnames.
+    """
+    full = full_name(player)
+    return full if relationship == "Player" else f"{relationship} to {full}"
 
 def load_roster() -> list[dict]:
     f = DATA_DIR / "roster.json"
@@ -161,6 +176,11 @@ async def main() -> int:
     ag = sub.add_parser("add-guardian", help="add another login to one player's family")
     ag.add_argument("player_id"); ag.add_argument("relationship")
 
+    rn = sub.add_parser("rename-families",
+                        help="re-label existing family logins from the roster")
+    rn.add_argument("--dry-run", action="store_true",
+                    help="print what would change and write nothing")
+
     args = ap.parse_args()
     conn = await asyncpg.connect(DATABASE_URL)
     try:
@@ -173,7 +193,7 @@ async def main() -> int:
                 return 0
             for r_ in rows:
                 seen = r_["last_login_at"].strftime("%Y-%m-%d") if r_["last_login_at"] else "never"
-                print(f"  {r_['role']:<6} {r_['email']:<30} {r_['display_name']:<20} last login {seen}")
+                print(f"  {r_['role']:<6} {r_['email']:<30} {r_['display_name']:<26} last login {seen}")
             return 0
 
         if args.cmd == "bootstrap":
@@ -248,7 +268,7 @@ async def main() -> int:
                 rels = rels + ["Player"]
             made = skipped = 0
             for p in sorted(load_roster(), key=lambda x: x["number"]):
-                full = f"{p['firstName']} {p['lastName']}"
+                full = full_name(p)
                 base = slugify(full)
                 logins = []
                 for rel in rels:
@@ -269,7 +289,7 @@ async def main() -> int:
                             "INSERT INTO users (email, display_name, password_hash, role,"
                             " player_id, relationship) VALUES ($1,$2,$3,$4,$5,$6)",
                             handle,
-                            full if rel == "Player" else f"{rel} to {p['firstName']}",
+                            family_label(p, rel),
                             hash_password(pw),
                             "player" if rel == "Player" else "parent",
                             p["id"], rel)
@@ -290,7 +310,7 @@ async def main() -> int:
             p = roster.get(args.player_id)
             if p is None:
                 print(f"no player {args.player_id}"); return 1
-            full = f"{p['firstName']} {p['lastName']}"
+            full = full_name(p)
             handle = f"{slugify(args.relationship)}.{slugify(full)}"
             if await conn.fetchval("SELECT 1 FROM users WHERE lower(email)=$1", handle):
                 print(f"{handle} already exists"); return 1
@@ -298,16 +318,50 @@ async def main() -> int:
             await conn.execute(
                 "INSERT INTO users (email, display_name, password_hash, role,"
                 " player_id, relationship) VALUES ($1,$2,$3,'parent',$4,$5)",
-                handle, f"{args.relationship} to {p['firstName']}", hash_password(pw),
+                handle, family_label(p, args.relationship), hash_password(pw),
                 p["id"], args.relationship)
             # rewrite the family handout with every login they now have
             rows = await conn.fetch(
                 "SELECT relationship, email FROM users WHERE player_id=$1 ORDER BY id",
                 p["id"])
-            print(f"  added {handle} ({args.relationship} to {p['firstName']})")
+            print(f"  added {handle} ({family_label(p, args.relationship)})")
             print(f"  password: {pw}")
             print(f"  family now has {len(rows)} login(s); handout not rewritten "
                   f"(it would need every password, which is not stored)")
+            return 0
+
+        if args.cmd == "rename-families":
+            # Labels only: no password and no session_epoch is touched, so this
+            # is safe to run on the live box without signing anybody out.
+            roster = {p["id"]: p for p in load_roster()}
+            rows = await conn.fetch(
+                "SELECT id, email, display_name, player_id, relationship FROM users"
+                " WHERE player_id IS NOT NULL ORDER BY lower(email)")
+            renamed = left = 0
+            for r_ in rows:
+                p = roster.get(r_["player_id"])
+                if p is None:
+                    print(f"  ?  {r_['email']:<34} {r_['player_id']} is not on the "
+                          f"roster — left alone")
+                    left += 1
+                    continue
+                if not r_["relationship"]:
+                    print(f"  ?  {r_['email']:<34} no relationship recorded — left alone")
+                    left += 1
+                    continue
+                want = family_label(p, r_["relationship"])
+                if want == r_["display_name"]:
+                    continue
+                print(f"     {r_['display_name']:<26} ->  {want}")
+                if not args.dry_run:
+                    await conn.execute("UPDATE users SET display_name=$1 WHERE id=$2",
+                                       want, r_["id"])
+                renamed += 1
+            verb = "would be renamed" if args.dry_run else "renamed"
+            print(f"\n  {renamed} login(s) {verb}, {len(rows) - renamed - left} already "
+                  f"correct, {left} left alone.")
+            if renamed and not args.dry_run:
+                print("  Nobody was signed out; only the display name changed.")
             return 0
 
         if args.cmd == "remove":

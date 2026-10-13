@@ -22,3 +22,12 @@ export DATA_DIR="$API_DIR/../data"
 export COOKIE_SECURE=0
 cd "$API_DIR"
 python test_api.py
+
+# manage.py seeds whole families, so it gets its own database rather than
+# asserting around whatever test_api.py left behind. No app to apply the
+# schema here — psql does it.
+echo "manage.py family commands"
+createdb -h "$PGHOST" -U postgres lvlnb_manage
+psql -q -h "$PGHOST" -U postgres -d lvlnb_manage -f "$API_DIR/schema.sql" >/dev/null
+DATABASE_URL="postgresql://postgres@/lvlnb_manage?host=$PGHOST" \
+  HANDOUT_DIR="$TEST_ROOT/handouts" python test_manage.py

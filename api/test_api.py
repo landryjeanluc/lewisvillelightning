@@ -392,12 +392,13 @@ async def main():
             # ---------------- families, game jobs, password change ----------------
             # two families, each with a parent login
             fam = {}
-            for pid, who in (("pl-02", "landry"), ("pl-03", "goguen")):
+            for pid, who, kid in (("pl-02", "landry", "Olivier Landry"),
+                                  ("pl-03", "goguen", "Henry Goguen")):
                 h = bcrypt.hashpw(b"familypass1", bcrypt.gensalt(rounds=4)).decode()
                 uid = await pool.fetchval(
                     "INSERT INTO users (email, display_name, password_hash, role, player_id,"
                     " relationship) VALUES ($1,$2,$3,'parent',$4,'Mom') RETURNING id",
-                    f"mom.{who}", f"Mom to {who}", h, pid)
+                    f"mom.{who}", f"Mom to {kid}", h, pid)
                 fam[pid] = (f"mom.{who}", uid)
             results.append(ok("parent accounts can be created with a handle, not an email",
                               len(fam) == 2))

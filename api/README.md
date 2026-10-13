@@ -13,9 +13,15 @@ Real Postgres, in-process ASGI, no mocks:
 
 ```
 nix-shell -p postgresql \
-  "python312.withPackages(ps: with ps; [ fastapi uvicorn asyncpg bcrypt itsdangerous pydantic httpx ])" \
+  "python312.withPackages(ps: with ps; [ fastapi uvicorn asyncpg bcrypt \
+     itsdangerous pydantic httpx pillow python-multipart ])" \
   --run "bash test.sh"
 ```
+
+`test_chat.py` and `test_plays.py` run inside `test_api.py`. `test_manage.py`
+drives `manage.py` as a subprocess against a second database, because it seeds
+whole families and should not assert around what the API tests left behind.
+`test.sh` throws both databases away afterwards.
 
 ## Endpoints
 
@@ -63,6 +69,35 @@ psql lvlnb -c "INSERT INTO users (email, display_name, password_hash, role)
                VALUES ('you@hexpi.ca', 'JL', '<hash>', 'admin')"
 ```
 
+## Family logins
+
+`manage.py` seeds one login per grown-up per player, plus one for the kid, and
+writes a per-family handout under `api/private/family-logins/` (gitignored):
+
+```
+python manage.py seed-families                   # Mom + Dad + the player
+python manage.py seed-families --relationships Mom,Dad,Guardian
+python manage.py add-guardian pl-02 "Grandma"    # one more login for one family
+python manage.py rename-families --dry-run       # re-label from the roster
+```
+
+A parent account is named **`<relationship> to <full name>`** — "Mom to Olivier
+Landry", not "Mom to Olivier". That display name is the only thing the chat
+directory, the admin user list and the account menu show, and two players can
+share a first name: the roster carries both Olivier Landry and Olivier LeBlanc,
+so the short form named neither of them. A last initial is no help either —
+both of those surnames start with L.
+
+`rename-families` recomputes those labels for every account with a `player_id`,
+which is how the short names seeded before 2026-10-13 get fixed. It writes
+nothing but `display_name` — no password, no `session_epoch` — so it is safe on
+the live box and signs nobody out. Rows whose `player_id` has left the roster,
+or that have no `relationship` recorded (a name typed by hand in the admin UI),
+are reported and left alone. `--dry-run` prints the changes and writes nothing.
+
+The login handle itself already carried the full name (`mom.olivier-leblanc`),
+so no handle changes and no handout is stale.
+
 ## Team chat
 
 `/chat` uses existing team logins, including parents, players and viewers. It
@@ -97,7 +132,7 @@ notifications in this version.
 Deployment uses the existing `deploy.sh`: it copies `chat.py` with the API and
 restarts the service, which applies the additive tables in `schema.sql`.
 No extra service or dependency is required. `test_chat.py` runs as part of
-`test_api.py`; `test.sh` creates an isolated temporary database for each run.
+`test_api.py`; `test.sh` creates isolated temporary databases for each run.
 
 ## Plays of the week
 

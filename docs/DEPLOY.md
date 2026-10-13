@@ -69,6 +69,19 @@ curl -s localhost:8112/health   # on the box
 Then the two steps only JL can do: an NPM proxy-host
 `lvlnb.ca -> http://192.168.1.20:8111`, and a DNS record for lvlnb.ca.
 
+## Re-labelling the family logins (one-off, 2026-10-13)
+
+Parent accounts seeded before this now read "Mom to Olivier" for two different
+Oliviers. `deploy.sh` ships `manage.py`, so after a deploy:
+
+```
+ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py rename-families --dry-run'
+ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py rename-families'
+```
+
+Display names only — no passwords, no sessions, nobody is signed out. Safe to
+re-run; the second run reports nothing to do. See `api/README.md`.
+
 ## Publishing a content update
 
 Content changes need no rebuild — only an rsync:
