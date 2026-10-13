@@ -44,9 +44,12 @@ Category = Literal["breakout", "forecheck", "powerplay", "penaltykill",
                    "faceoff", "neutralzone", "dzone", "drill", "other"]
 
 
+# allow_inf_nan=False everywhere a coordinate is declared: a browser that has
+# lost its transform produces NaN, NaN compares false against every bound, and
+# an unbounded coordinate would otherwise be stored as a piece nobody can see.
 class Point(BaseModel):
-    x: float = Field(ge=0, le=RINK_LENGTH)
-    y: float = Field(ge=0, le=RINK_WIDTH)
+    x: float = Field(ge=0, le=RINK_LENGTH, allow_inf_nan=False)
+    y: float = Field(ge=0, le=RINK_WIDTH, allow_inf_nan=False)
 
 
 class Step(BaseModel):
@@ -65,8 +68,8 @@ class Token(BaseModel):
     """A piece on the ice: one of ours, one of theirs, the puck, a cone, a net."""
     id: str = Field(min_length=1, max_length=40)
     kind: Literal["us", "them", "puck", "cone", "goalie", "goalieThem"]
-    x: float = Field(ge=0, le=RINK_LENGTH)
-    y: float = Field(ge=0, le=RINK_WIDTH)
+    x: float = Field(ge=0, le=RINK_LENGTH, allow_inf_nan=False)
+    y: float = Field(ge=0, le=RINK_WIDTH, allow_inf_nan=False)
     label: str = Field(default="", max_length=4)
     # Optional binding to a real roster id, so the coach can say "this is you".
     playerId: str | None = None
@@ -94,8 +97,8 @@ class Path(BaseModel):
 class Note(BaseModel):
     id: str = Field(min_length=1, max_length=40)
     step: int = Field(ge=0, lt=MAX_STEPS)
-    x: float = Field(ge=0, le=RINK_LENGTH)
-    y: float = Field(ge=0, le=RINK_WIDTH)
+    x: float = Field(ge=0, le=RINK_LENGTH, allow_inf_nan=False)
+    y: float = Field(ge=0, le=RINK_WIDTH, allow_inf_nan=False)
     text: str = Field(min_length=1, max_length=80)
 
     @field_validator("text")

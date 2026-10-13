@@ -144,6 +144,21 @@ async def run_plays_tests(app, pool, ok):
             paths=[{"id": "p1", "kind": "teleport", "step": 0, "tokenId": None,
                     "points": [{"x": 10, "y": 10}, {"x": 20, "y": 20}]}], notes=[]))
 
+        # A browser that has lost its transform produces NaN. json.dumps cannot
+        # write it, so this one has to go out as raw text rather than as `json=`.
+        r = await coach.post(
+            "/plays",
+            content=('{"title":"NaN coords","diagram":{"v":1,'
+                     '"steps":[{"id":"s1","caption":"","duration":1400}],'
+                     '"tokens":[{"id":"t1","kind":"us","x":NaN,"y":1,"label":""}],'
+                     '"paths":[],"notes":[],"pen":[]}}'),
+            headers={"content-type": "application/json"})
+        check("a not-a-number coordinate is a clean 422, not a 500",
+              r.status_code == 422, f"got {r.status_code}: {r.text[:120]}")
+        check("and the error response itself is valid JSON",
+              r.headers.get("content-type", "").startswith("application/json")
+              and isinstance(r.json().get("detail"), list), r.text[:120])
+
         r = await coach.post("/plays", json={"title": "   ", "diagram": diagram()})
         check("a play needs a name -> 422", r.status_code == 422, f"got {r.status_code}")
         r = await coach.post("/plays", json={"title": "Ghost game", "game_id": "g-not-real",

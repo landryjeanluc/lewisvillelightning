@@ -75,6 +75,13 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
 
     <!-- ------------------------------------------------------------ board -->
     <div class="pe-stagewrap">
+      <div class="pe-draft" id="pe-draft" hidden>
+        <p id="pe-draft-what"></p>
+        <div class="pe-row">
+          <button type="button" id="pe-draft-restore">Put it back on the board</button>
+          <button type="button" class="danger" id="pe-draft-discard">Discard</button>
+        </div>
+      </div>
       <div class="pl-board" id="pe-stage"></div>
       <p class="dim pe-hint" id="pe-hint"></p>
 
@@ -198,6 +205,13 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
   .pe-inspector p { font-size: var(--t-xs); margin: 0; }
 
   .pe-hint { font-size: var(--t-sm); margin-top: var(--s-3); min-height: 1.4em; }
+
+  .pe-draft {
+    display: grid; gap: var(--s-3); margin-bottom: var(--s-4); padding: var(--s-4);
+    border: 1px solid rgb(28 143 232 / .4); border-radius: var(--r-md);
+    background: rgb(28 143 232 / .08);
+  }
+  .pe-draft p { margin: 0; font-size: var(--t-sm); color: var(--text-muted); }
 
   .pe-steps-bar {
     display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-3);

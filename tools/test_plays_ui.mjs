@@ -43,6 +43,7 @@ const MIME = {
 // Postgres; what is being tested here is the browser half.
 let nextId = 10;
 let signedOut = false;
+let failWrites = false;
 const saved = [];
 const store = [{
   id: 1, slug: "wheel-breakout", title: "Wheel breakout",
@@ -92,6 +93,8 @@ function api(req, res, body) {
   // Control routes first: once the gate is on it would answer 401 to the very
   // request that turns it off.
   if (p === "/__signout") { signedOut = url.searchParams.get("v") === "1"; return json(200, { signedOut }); }
+  if (p === "/__fail") { failWrites = url.searchParams.get("v") === "1"; return json(200, { failWrites }); }
+  if (failWrites && req.method !== "GET") return json(400, { detail: "nope" });
   if (p === "/__saved") return json(200, saved);
   // With the gate on, the stub behaves like the real API does for a stranger.
   if (signedOut) return json(401, { detail: "sign in to see the plays" });
@@ -140,8 +143,17 @@ function serve() {
 /* ------------------------------------------------------------------ CDP -- */
 class CDP {
   constructor(ws) { this.ws = ws; this.id = 0; this.waiting = new Map(); this.session = null;
+    this.dialogs = 0;
     ws.addEventListener("message", (m) => {
       const msg = JSON.parse(m.data);
+      // An editor with unsaved work puts up a beforeunload dialog on navigate.
+      // That is the point of it — but headless chromium blocks on a dialog
+      // nobody answers, so the run has to answer it.
+      if (msg.method === "Page.javascriptDialogOpening") {
+        this.dialogs++;
+        this.send("Page.handleJavaScriptDialog", { accept: true });
+        return;
+      }
       if (msg.id && this.waiting.has(msg.id)) {
         const { resolve, reject } = this.waiting.get(msg.id);
         this.waiting.delete(msg.id);
@@ -200,7 +212,16 @@ if (!(await readFile(path.join(DIST, "plays", "index.html")).catch(() => null)))
 
 const { server, port } = await serve();
 const base = `http://127.0.0.1:${port}`;
-const dbg = 9456;
+// Ask the OS for a free debug port rather than hard-coding one: a run that is
+// interrupted leaves its browser behind, and a fixed port means the next run
+// silently attaches to that stale browser instead of its own.
+const dbg = await new Promise((resolve) => {
+  const probe = createServer();
+  probe.listen(0, "127.0.0.1", () => {
+    const p = probe.address().port;
+    probe.close(() => resolve(p));
+  });
+});
 const chrome = spawn(CHROME, [
   "--headless=new", "--disable-gpu", "--no-sandbox", "--hide-scrollbars",
   `--remote-debugging-port=${dbg}`, "--window-size=1600,1200", "about:blank",
@@ -285,6 +306,7 @@ try {
 
   /* --------------------------------------------------------- the editor -- */
   await goto(`${base}/admin`);
+  await cdp.eval(`localStorage.clear(); true`);   // no draft left from a prior run
   await cdp.eval(`[...document.querySelectorAll(".tab")].find(b => b.dataset.tab === "plays-tab").click()`);
   await sleep(500);
   ok("the editor mounts when its tab opens",
@@ -414,11 +436,55 @@ try {
   await shot("05-editor-preview.png");
   ok("preview runs the play in the editor",
      await cdp.eval(`document.querySelector("#pe-stage").classList.contains("is-preview")`));
+  await cdp.eval(`document.querySelector("#pe-preview").click()`);
+  await sleep(200);
+
+  /* ------------------------------------------------- a save that fails -- */
+  // The thing that actually costs a coach his evening: fifteen minutes of
+  // drawing, then the save is rejected. The work must survive it.
+  await fetch(`${base}/api/__fail?v=1`);
+  await pick("them");
+  await tap(140, 30);
+  const drawn = await cdp.eval(`document.querySelectorAll("#pe-stage .pl-token").length`);
+  await cdp.eval(`document.querySelector("#pe-save").click()`);
+  await sleep(500);
+
+  const said = await cdp.eval(`document.querySelector("#pe-status-line").textContent`);
+  ok("a rejected save says what the server said", said.includes("400"), said);
+  ok("and says the drawing is not gone", /still here/i.test(said), said);
+  const draft = await cdp.eval(`localStorage.getItem("lvlnb.play-draft.v1")`);
+  ok("the work is written to the browser", !!draft && JSON.parse(draft).diagram.tokens.length === drawn,
+     `${drawn} pieces`);
+
+  await fetch(`${base}/api/__fail?v=0`);
+  const dialogsBefore = cdp.dialogs;
+  await goto(`${base}/admin`);
+  ok("leaving with unsaved work warns first", cdp.dialogs > dialogsBefore,
+     `${cdp.dialogs - dialogsBefore} prompt(s)`);
+  await cdp.eval(`[...document.querySelectorAll(".tab")].find(b => b.dataset.tab === "plays-tab").click()`);
+  await sleep(700);
+  ok("after a reload the editor offers the work back",
+     await cdp.eval(`!document.querySelector("#pe-draft").hidden`));
+  ok("and says what it is holding",
+     (await cdp.eval(`document.querySelector("#pe-draft-what").textContent`)).includes("Stretch out of the zone"),
+     await cdp.eval(`document.querySelector("#pe-draft-what").textContent`));
+
+  await cdp.eval(`document.querySelector("#pe-draft-restore").click()`);
+  await sleep(400);
+  ok("restoring puts every piece back on the board",
+     await cdp.eval(`document.querySelectorAll("#pe-stage .pl-token").length`) === drawn,
+     `${drawn} expected`);
+  ok("and the lines with them",
+     await cdp.eval(`document.querySelectorAll("#pe-stage .pl-path").length`) === 2);
+  ok("and the name it was saved under",
+     (await cdp.eval(`document.querySelector("#pe-title").value`)) === "Stretch out of the zone",
+     await cdp.eval(`document.querySelector("#pe-title").value`));
+  await shot("06-draft-restored.png");
 
   console.log(`\n${results.filter(Boolean).length}/${results.length} passed`);
   console.log(`screenshots: ${OUT}`);
   process.exitCode = results.every(Boolean) ? 0 : 1;
 } finally {
-  chrome.kill();
+  chrome.kill("SIGKILL");
   server.close();
 }

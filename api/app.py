@@ -19,6 +19,7 @@ import smtplib
 from email.message import EmailMessage
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from math import isfinite
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -26,6 +27,8 @@ import asyncpg
 import bcrypt
 from fastapi import (Cookie, Depends, FastAPI, File, Form, HTTPException,
                      Request, Response, UploadFile, status)
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from pydantic import BaseModel, Field, field_validator
 
@@ -92,6 +95,28 @@ async def lifespan(app: FastAPI):
     await app.state.pool.close()
 
 app = FastAPI(title="lvlnb stats", lifespan=lifespan, root_path="/api")
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(_request: Request, exc: RequestValidationError):
+    """Return 422 even when the rejected value cannot be written as JSON.
+
+    Pydantic echoes the offending input back inside the error detail, and JSON
+    has no NaN or Infinity — so a single not-a-number coordinate made the error
+    response itself fail to serialise, and the caller got an opaque 500 instead
+    of being told which field was wrong. Scrub those values out of the detail.
+    """
+    def clean(v):
+        if isinstance(v, float) and not isfinite(v):
+            return repr(v)                      # "nan" / "inf", as a string
+        if isinstance(v, dict):
+            return {k: clean(x) for k, x in v.items()}
+        if isinstance(v, (list, tuple)):
+            return [clean(x) for x in v]
+        if isinstance(v, (str, int, bool, type(None))):
+            return v
+        return str(v)
+    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        content={"detail": clean(exc.errors())})
 
 async def db() -> asyncpg.Pool:
     return app.state.pool

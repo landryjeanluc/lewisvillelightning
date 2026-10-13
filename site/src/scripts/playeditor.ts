@@ -54,6 +54,73 @@ let dirty = false;
 const past: string[] = [];
 const future: string[] = [];
 
+/**
+ * The working document, mirrored into the browser on every change.
+ *
+ * A save can fail — a lapsed session, a rejected document, a flaky rink wifi —
+ * and when it does, the only copy of a play somebody just spent a quarter of an
+ * hour drawing is in a tab he must not close. That is not an acceptable way to
+ * treat someone's work. The draft is written on every change, offered back when
+ * the editor next opens, and cleared only once the play is safely saved.
+ */
+const DRAFT_KEY = "lvlnb.play-draft.v1";
+let draftTimer = 0;
+
+function keepDraft(now = false) {
+  clearTimeout(draftTimer);
+  const write = () => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        at: Date.now(), playId: editing?.id ?? null, ...formToPlay(),
+      }));
+    } catch { /* private window, or a full quota — never worth breaking over */ }
+  };
+  now ? write() : (draftTimer = window.setTimeout(write, 400));
+}
+
+const dropDraft = () => {
+  clearTimeout(draftTimer);
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* as above */ }
+  $("#pe-draft").hidden = true;
+};
+
+function offerDraft() {
+  let draft: any = null;
+  try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { /* ignore */ }
+  if (!draft?.diagram?.tokens?.length && !draft?.diagram?.paths?.length) return;
+
+  const d = normaliseDiagram(draft.diagram);
+  const when = new Date(draft.at).toLocaleString("en-CA",
+    { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  $("#pe-draft-what").textContent =
+    `Unsaved work from ${when} — ${draft.title || "untitled"}, ` +
+    `${d.tokens.length} piece${d.tokens.length === 1 ? "" : "s"}, ` +
+    `${d.paths.length} line${d.paths.length === 1 ? "" : "s"}, ` +
+    `${d.steps.length} step${d.steps.length === 1 ? "" : "s"}.`;
+  $("#pe-draft").hidden = false;
+
+  $("#pe-draft-restore").addEventListener("click", () => {
+    const owner = draft.playId ? plays.find((x) => x.id === draft.playId) ?? null : null;
+    loadIntoForm(owner);
+    doc = d;
+    $<HTMLInputElement>("#pe-title").value = draft.title ?? "";
+    $<HTMLInputElement>("#pe-subtitle").value = draft.subtitle ?? "";
+    $<HTMLSelectElement>("#pe-category").value = draft.category ?? "other";
+    $<HTMLSelectElement>("#pe-status").value = draft.status ?? "draft";
+    $<HTMLInputElement>("#pe-week").value = draft.week_of ?? "";
+    $<HTMLSelectElement>("#pe-game").value = draft.game_id ?? "";
+    stage.load(doc, (draft.surface ?? "full") as Surface);
+    dirty = true;
+    $("#pe-draft").hidden = true;
+    render();
+    say("Restored. Nothing has been saved to the server yet.");
+  }, { once: true });
+
+  $("#pe-draft-discard").addEventListener("click", () => {
+    if (confirm("Throw away the unsaved drawing?")) dropDraft();
+  });
+}
+
 function snapshot() {
   past.push(JSON.stringify(doc));
   if (past.length > 60) past.shift();
@@ -105,6 +172,7 @@ function render() {
   $("#pe-redo").toggleAttribute("disabled", future.length === 0);
   const s = $("#pe-save") as HTMLButtonElement;
   s.textContent = dirty ? "Save play •" : "Save play";
+  if (dirty) keepDraft();
 }
 
 function renderTools() {
@@ -214,11 +282,19 @@ function setHint(override?: string) {
 
 /* --------------------------------------------------------------- pointing */
 
-function toRink(e: PointerEvent): Pt {
-  const svg = stage.svg;
-  const m = svg.getScreenCTM();
-  if (!m) return { x: 0, y: 0 };
+/**
+ * Pointer position in rink feet, or null if the board cannot be mapped.
+ *
+ * A board with no layout — a hidden tab, a collapsed column — has a degenerate
+ * screen matrix, and inverting it gives NaN. Returning a point anyway would put
+ * a piece at coordinate not-a-number, which survives every clamp, lands in the
+ * document, and is only noticed when the save fails. Better to do nothing.
+ */
+function toRink(e: PointerEvent): Pt | null {
+  const m = stage.svg.getScreenCTM();
+  if (!m || !m.a || !m.d) return null;
   const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+  if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return null;
   return clampToRink(pt.x, pt.y);
 }
 
@@ -283,6 +359,7 @@ function onDown(e: PointerEvent) {
   if (previewing) return;
   if (e.button !== 0 && e.pointerType === "mouse") return;
   const p = toRink(e);
+  if (!p) return;
   capture(true, e.pointerId);
 
   if (isTokenTool(tool)) {
@@ -355,6 +432,7 @@ function onMove(e: PointerEvent) {
   const d = drag;
   if (!d) return;
   const p = toRink(e);
+  if (!p) return;
 
   if (d.kind === "token") {
     const t = doc.tokens.find((x) => x.id === d.id)!;
@@ -483,9 +561,17 @@ async function save() {
     : await api("/plays", { method: "POST", body: JSON.stringify(payload) });
   btn.disabled = false;
   if (!ok) {
-    const detail = Array.isArray(body?.detail) ? body.detail[0]?.msg : body?.detail;
-    return say(status === 401 ? "Session expired — sign in again."
-                             : `Could not save. ${detail ?? status}`);
+    // Say what actually went wrong, name the field if the server named one,
+    // and make it clear the drawing is not gone.
+    const d = body?.detail;
+    const detail = Array.isArray(d)
+      ? d.map((e: any) => `${(e.loc ?? []).slice(-2).join(" ")} — ${e.msg}`).join("; ")
+      : typeof d === "string" ? d : `HTTP ${status}`;
+    keepDraft(true);
+    console.error("[plays] save failed", status, body);
+    return say(status === 401
+      ? "Session expired — sign in again. Your drawing is still here."
+      : `Could not save (${status}): ${detail}. Your drawing is still here.`);
   }
   // Deliberately *not* reloading the board from the response. A save is not a
   // reason to throw away what is on screen: the coach may already be drawing
@@ -494,6 +580,7 @@ async function save() {
   // one being edited, so the next save is a PUT.
   editing = { ...(editing ?? {}), ...body } as Play;
   dirty = false;
+  dropDraft();              // it is on the server now; the local copy is noise
   say(payload.status === "published" ? "Saved and published." : "Saved as a draft.");
   await reload();
   $<HTMLSelectElement>("#pe-select").value = String(editing.id);
@@ -626,5 +713,5 @@ export function mountPlayEditor() {
   window.addEventListener("beforeunload", (e) => { if (dirty) e.preventDefault(); });
 
   loadIntoForm(null);
-  reload();
+  reload().then(offerDraft);
 }

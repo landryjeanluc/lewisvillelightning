@@ -117,6 +117,9 @@ export function rinkMarkup(iceFill = "#EFF5FC"): string {
 
 /** Clamp a point to the ice, so a dragged piece can never end up in the stands. */
 export function clampToRink(x: number, y: number): { x: number; y: number } {
+  // NaN sails straight through Math.min/Math.max, so it has to be caught here
+  // rather than relying on the clamp to bound it.
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { x: 0, y: 0 };
   return {
     x: Math.min(RINK.length, Math.max(0, x)),
     y: Math.min(RINK.width, Math.max(0, y)),
