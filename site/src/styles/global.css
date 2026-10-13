@@ -84,6 +84,48 @@ a:hover { text-decoration-color: var(--volt-400); }
   border-radius: var(--r-sm);
 }
 
+/* ------------------------------------------------------------ form controls */
+/* Defined once, globally. Astro scopes component CSS, so a rule written in
+   admin.astro never reaches a control inside an admin panel component — which
+   is exactly how the roster panel ended up with raw browser widgets. Element
+   selectors lose to any class, so .cta / .atc-btn keep their own looks. */
+input, select, textarea {
+  padding: var(--s-3);
+  font: inherit; font-size: 1rem; font-weight: 600;
+  color: var(--text); background: var(--bg-sunken);
+  border: 1px solid var(--hairline-sv); border-radius: var(--r-md);
+}
+textarea { font-size: .95rem; font-weight: 500; line-height: 1.5; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--volt-400); outline-offset: 1px;
+}
+input::placeholder, textarea::placeholder { color: var(--steel-500); }
+
+button {
+  padding: var(--s-3) var(--s-5); cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+  letter-spacing: var(--track-label); text-transform: uppercase;
+  color: #fff; border: 0; border-radius: 999px;
+  background: linear-gradient(180deg, var(--volt-500), var(--blue-600));
+  transition: transform .18s var(--ease), box-shadow .18s var(--ease);
+}
+button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--glow-volt); }
+button:disabled { opacity: .5; cursor: default; }
+button.ghost {
+  background: none; color: var(--text); border: 1px solid var(--hairline-sv);
+}
+button.link {
+  background: none; border: 0; padding: 0; color: var(--accent-text);
+  font-size: var(--t-sm); font-weight: 600; text-transform: none; letter-spacing: 0;
+}
+button.link.danger { color: var(--loss); }
+
+label {
+  display: grid; gap: var(--s-2);
+  font-family: var(--font-ui); font-size: var(--t-xs); font-weight: 700;
+  letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+}
+
 /* ----------------------------------------------------------------- layout */
 .wrap { width: min(100% - 2.5rem, var(--wrap)); margin-inline: auto; }
 .wrap--wide { width: min(100% - 2.5rem, var(--wrap-wide)); margin-inline: auto; }

@@ -1,0 +1,166 @@
+---
+import { roster } from "../../lib/data";
+// Spordle owns names and numbers; everything editable here is detail it does
+// not carry, stored against the contract player id.
+const players = [...roster.players].sort((a: any, b: any) => a.number - b.number);
+const POS = ["C", "LW", "RW", "F", "D", "G"];
+---
+<section class="rp">
+  <h3>Roster detail</h3>
+  <p class="dim rp-note">
+    Names and numbers come from Spordle and are not editable here. Position,
+    shot hand, captaincy, nickname and bio are ours — Spordle carries none of them.
+  </p>
+
+  <div class="rp-list">
+    {players.map((p: any) => (
+      <article class="rp-item card" data-player={p.id}>
+        <header class="rp-top">
+          <span class="jn num">{p.number}</span>
+          <span class="rp-name">{p.firstName} {p.lastName}</span>
+          <span class="rp-saved dim" data-saved></span>
+        </header>
+
+        <div class="rp-fields">
+          <label>Position
+            <select data-f="position">
+              <option value="">—</option>
+              {POS.map((x) => <option value={x}>{x}</option>)}
+            </select>
+          </label>
+          <label>Shoots
+            <select data-f="shoots">
+              <option value="">—</option><option value="L">L</option><option value="R">R</option>
+            </select>
+          </label>
+          <label>Letter
+            <select data-f="captain">
+              <option value="">—</option><option value="C">C</option><option value="A">A</option>
+            </select>
+          </label>
+          <label>Nickname<input data-f="nickname" maxlength="40" /></label>
+        </div>
+
+        <label class="rp-bio">Bio
+          <textarea data-f="bio" rows="3" maxlength="600"
+            placeholder="A couple of lines about them — how they play, what they're working on."></textarea>
+        </label>
+
+        <div class="rp-art">
+          <span class="rp-artstate dim" data-artstate>no card art</span>
+          <label class="rp-upload">
+            <input type="file" data-art accept="image/jpeg,image/png,image/webp" hidden />
+            <span class="rp-uploadbtn">Upload card art</span>
+          </label>
+          <button type="button" data-save>Save</button>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
+
+<script>
+  const api = async (p: string, o: any = {}) => {
+    const r = await fetch("/api" + p, {
+      credentials: "same-origin",
+      headers: o.body instanceof FormData ? {} : { "content-type": "application/json" },
+      ...o,
+    });
+    return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
+  };
+
+  const items = () => document.querySelectorAll<HTMLElement>(".rp-item");
+
+  async function load() {
+    const { ok, body } = await api("/profiles");
+    if (!ok) return;
+    items().forEach((el) => {
+      const p = body[el.dataset.player!];
+      if (!p) return;
+      for (const f of ["position", "shoots", "captain", "nickname", "bio"]) {
+        const input = el.querySelector(`[data-f="${f}"]`) as any;
+        if (input) input.value = p[f] ?? "";
+      }
+      el.dataset.art = p.card_art ?? "";
+      const st = el.querySelector("[data-artstate]") as HTMLElement;
+      st.textContent = p.card_art ? "card art attached" : "no card art";
+      st.classList.toggle("has", !!p.card_art);
+    });
+  }
+
+  async function save(el: HTMLElement) {
+    const val = (f: string) => {
+      const i = el.querySelector(`[data-f="${f}"]`) as any;
+      return i && i.value.trim() !== "" ? i.value.trim() : null;
+    };
+    const saved = el.querySelector("[data-saved]") as HTMLElement;
+    saved.textContent = "saving…";
+    const { ok, body } = await api(`/profiles/${el.dataset.player}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        position: val("position"), shoots: val("shoots"), captain: val("captain"),
+        nickname: val("nickname"), bio: val("bio"),
+        card_art: el.dataset.art || null,
+      }),
+    });
+    // 409 is the one-captain rule; show exactly who already has the C
+    saved.textContent = ok ? "saved" : (body?.detail ?? "could not save");
+    saved.classList.toggle("err", !ok);
+    if (ok) { await load(); setTimeout(() => (saved.textContent = ""), 2500); }
+  }
+
+  document.addEventListener("click", (e: any) => {
+    const el = e.target.closest?.(".rp-item");
+    if (el && e.target.hasAttribute?.("data-save")) save(el);
+  });
+
+  document.addEventListener("change", async (e: any) => {
+    if (!e.target.hasAttribute?.("data-art")) return;
+    const el = e.target.closest(".rp-item") as HTMLElement;
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const st = el.querySelector("[data-artstate]") as HTMLElement;
+    st.textContent = "uploading…";
+    const fd = new FormData();
+    fd.append("file", f); fd.append("kind", "card_art");
+    const { ok, body } = await api("/uploads", { method: "POST", body: fd });
+    if (!ok) { st.textContent = body?.detail ?? "upload failed"; return; }
+    el.dataset.art = body.path;
+    st.textContent = `uploaded — press Save to attach`;
+    st.classList.add("has");
+  });
+
+  load();
+</script>
+
+<style>
+  .rp h3 { font-size: var(--t-lg); }
+  .rp-note { font-size: var(--t-sm); margin-block: var(--s-2) var(--s-5); max-width: 62ch; }
+  .rp-list { display: grid; gap: var(--s-4); }
+  .rp-item { padding: var(--s-4); display: grid; gap: var(--s-3); }
+  .rp-top { display: flex; align-items: center; gap: var(--s-3); }
+  .rp-name { font-family: var(--font-display); font-style: italic; font-weight: 900;
+             font-size: var(--t-md); text-transform: uppercase; }
+  .rp-saved { margin-left: auto; font-size: var(--t-sm); }
+  :global(.rp-saved.err) { color: var(--loss); }
+  .rp-fields { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); }
+  .rp-bio textarea {
+    width: 100%; padding: var(--s-3); font: inherit; font-size: .95rem;
+    color: var(--text); background: var(--bg-sunken);
+    border: 1px solid var(--hairline-sv); border-radius: var(--r-md); resize: vertical;
+  }
+  .rp-art { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+  .rp-artstate { font-size: var(--t-sm); }
+  :global(.rp-artstate.has) { color: var(--win); }
+  .rp-uploadbtn {
+    display: inline-block; padding: var(--s-2) var(--s-4); cursor: pointer;
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase;
+    border: 1px solid var(--hairline-sv); border-radius: 999px; color: var(--text);
+  }
+  .rp-uploadbtn:hover { border-color: var(--volt-500); }
+  .rp-art button { margin-left: auto; }
+  .jn { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none;
+        font-size: var(--t-sm); color: var(--volt-300);
+        background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 6px; }
+</style>

@@ -1,0 +1,183 @@
+---
+// News editing. Posts live in the API, not in data/news.json, so saving is
+// instant and needs no rebuild on the box.
+---
+<section class="np">
+  <div class="np-head">
+    <h3>News</h3>
+    <button type="button" id="np-new">New post</button>
+  </div>
+
+  <ul id="np-list" class="np-list"></ul>
+
+  <form id="np-form" class="card np-form" hidden>
+    <div class="np-row">
+      <label class="grow">Title<input name="title" required maxlength="160" /></label>
+      <label>Language
+        <select name="lang"><option value="en">English</option><option value="fr">Français</option></select>
+      </label>
+    </div>
+    <label>Summary <span class="dim">(shown in the list)</span>
+      <input name="summary" maxlength="300" />
+    </label>
+    <label>Body <span class="dim">(markdown — **bold**, # heading, - list)</span>
+      <textarea name="body" rows="12"></textarea>
+    </label>
+    <div class="np-row">
+      <label class="grow">Image
+        <div class="np-img">
+          <input type="file" id="np-file" accept="image/jpeg,image/png,image/webp" />
+          <span id="np-imgstate" class="dim"></span>
+        </div>
+      </label>
+    </div>
+    <input type="hidden" name="image" />
+    <input type="hidden" name="id" />
+    <div class="np-actions">
+      <span id="np-status" class="dim"></span>
+      <div class="np-btns">
+        <button type="button" id="np-cancel" class="ghost">Cancel</button>
+        <button type="button" id="np-draft" class="ghost">Save draft</button>
+        <button type="submit">Publish</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<script>
+  const $ = (s: string) => document.querySelector(s) as any;
+  const api = async (p: string, o: any = {}) => {
+    const r = await fetch("/api" + p, {
+      credentials: "same-origin",
+      headers: o.body instanceof FormData ? {} : { "content-type": "application/json" },
+      ...o,
+    });
+    return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
+  };
+  const form = $("#np-form");
+  const say = (m: string) => ($("#np-status").textContent = m);
+  const fmt = (s: string | null) =>
+    s ? new Date(s).toLocaleDateString("en-CA", { month: "short", day: "numeric", year: "numeric" }) : "—";
+
+  async function load() {
+    const { ok, body } = await api("/news?include_drafts=true");
+    const list = $("#np-list");
+    if (!ok) { list.innerHTML = `<li class="dim">Could not load posts.</li>`; return; }
+    if (!body.length) { list.innerHTML = `<li class="dim">No posts yet. Write the first one.</li>`; return; }
+    list.innerHTML = "";
+    for (const p of body) {
+      const li = document.createElement("li");
+      li.className = "np-item";
+      li.innerHTML = `
+        <span class="np-dot ${p.status}" title="${p.status}"></span>
+        <span class="np-title">${p.title}</span>
+        ${p.lang === "fr" ? '<span class="pill">FR</span>' : ""}
+        <span class="dim np-date">${p.status === "published" ? fmt(p.published_at) : "draft"}</span>
+        <span class="np-row-actions">
+          <button type="button" class="link" data-edit='${JSON.stringify(p).replace(/'/g, "&#39;")}'>Edit</button>
+          <button type="button" class="link danger" data-del="${p.id}" data-t="${p.title}">Delete</button>
+        </span>`;
+      list.appendChild(li);
+    }
+  }
+
+  function open(post: any = null) {
+    form.hidden = false;
+    form.reset();
+    form.id.value = post?.id ?? "";
+    form.title.value = post?.title ?? "";
+    form.summary.value = post?.summary ?? "";
+    form.body.value = post?.body ?? "";
+    form.lang.value = post?.lang ?? "en";
+    form.image.value = post?.image ?? "";
+    $("#np-imgstate").textContent = post?.image ? "image attached" : "";
+    say(post ? "" : "New post");
+    form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  async function save(status: "draft" | "published") {
+    if (!form.title.value.trim()) { say("A post needs a title."); return; }
+    const payload = {
+      title: form.title.value, summary: form.summary.value || null,
+      body: form.body.value, image: form.image.value || null,
+      lang: form.lang.value, status,
+    };
+    const id = form.id.value;
+    const { ok, body } = id
+      ? await api(`/news/${id}`, { method: "PUT", body: JSON.stringify(payload) })
+      : await api("/news", { method: "POST", body: JSON.stringify(payload) });
+    if (!ok) {
+      const d = body?.detail;
+      say(Array.isArray(d) ? d[0]?.msg ?? "Could not save." : d ?? "Could not save.");
+      return;
+    }
+    form.hidden = true;
+    await load();
+  }
+
+  $("#np-new").addEventListener("click", () => open());
+  $("#np-cancel").addEventListener("click", () => { form.hidden = true; });
+  $("#np-draft").addEventListener("click", () => save("draft"));
+  form.addEventListener("submit", (e: Event) => { e.preventDefault(); save("published"); });
+
+  $("#np-file").addEventListener("change", async (e: any) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    $("#np-imgstate").textContent = "uploading…";
+    const fd = new FormData();
+    fd.append("file", f); fd.append("kind", "news_image");
+    const { ok, body } = await api("/uploads", { method: "POST", body: fd });
+    if (!ok) { $("#np-imgstate").textContent = body?.detail ?? "upload failed"; return; }
+    form.image.value = body.path;
+    $("#np-imgstate").textContent = `attached (${Math.round(body.bytes / 1024)} KB)`;
+  });
+
+  document.addEventListener("click", async (e: any) => {
+    const ed = e.target.dataset?.edit;
+    const del = e.target.dataset?.del;
+    if (ed && e.target.closest("#np-list")) { open(JSON.parse(ed)); return; }
+    if (del && e.target.closest("#np-list")) {
+      if (!confirm(`Delete “${e.target.dataset.t}”? This cannot be undone.`)) return;
+      await api(`/news/${del}`, { method: "DELETE" });
+      load();
+    }
+  });
+
+  load();
+</script>
+
+<style>
+  .np-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-4); }
+  .np-head h3 { font-size: var(--t-lg); }
+  .np-list { list-style: none; padding: 0; display: grid; gap: var(--s-2); }
+  :global(.np-item) {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--r-md);
+  }
+  :global(.np-dot) { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--steel-500); }
+  :global(.np-dot.published) { background: var(--win); box-shadow: 0 0 8px rgb(47 191 113 / .7); }
+  :global(.np-title) { font-weight: 700; }
+  :global(.np-date) { margin-left: auto; font-size: var(--t-sm); white-space: nowrap; }
+  :global(.np-row-actions) { display: flex; gap: var(--s-3); white-space: nowrap; }
+  :global(.np-item button.link) {
+    background: none; border: 0; padding: 0; cursor: pointer; color: var(--accent-text);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600; text-transform: none;
+  }
+  :global(.np-item button.link.danger) { color: var(--loss); }
+
+  .np-form { padding: var(--s-5); margin-top: var(--s-5); display: grid; gap: var(--s-4); }
+  .np-row { display: flex; gap: var(--s-4); flex-wrap: wrap; }
+  .np-row .grow { flex: 1 1 18rem; }
+  .np-form textarea {
+    padding: var(--s-3); font: inherit; font-size: .95rem; line-height: 1.5;
+    color: var(--text); background: var(--bg-sunken);
+    border: 1px solid var(--hairline-sv); border-radius: var(--r-md); resize: vertical;
+  }
+  .np-img { display: flex; align-items: center; gap: var(--s-3); }
+  .np-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
+  .np-btns { display: flex; gap: var(--s-3); }
+  .np-form button.ghost {
+    background: none; border: 1px solid var(--hairline-sv); color: var(--text);
+  }
+</style>

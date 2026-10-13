@@ -1,0 +1,105 @@
+---
+import { games, sides } from "../../lib/data";
+import { shortDate } from "../../lib/format";
+const list = games.map((g: any) => {
+  const s = sides(g);
+  return { id: g.id, label: `${s.weAreHome ? "vs" : "at"} ${s.them.short}`, date: shortDate(g.startsAt) };
+}).reverse();
+---
+<section class="cn">
+  <h3>Coach's notes</h3>
+  <p class="dim cn-note">
+    A preview before the game and a recap after. Both appear on the game page
+    for the team to read. Clearing the text removes the note.
+  </p>
+
+  <label class="cn-pick">Game
+    <select id="cn-game">
+      {list.map((g) => <option value={g.id}>{g.date} — {g.label}</option>)}
+    </select>
+  </label>
+
+  <div class="cn-cols">
+    <div class="card cn-box">
+      <header><h4>Preview</h4><span class="dim" data-meta="preview"></span></header>
+      <textarea data-kind="preview" rows="9"
+        placeholder="What to watch for. Their big line, what we're working on, when to be at the rink."></textarea>
+      <div class="cn-actions">
+        <span class="dim" data-status="preview"></span>
+        <button type="button" data-save="preview">Save preview</button>
+      </div>
+    </div>
+
+    <div class="card cn-box">
+      <header><h4>Recap</h4><span class="dim" data-meta="recap"></span></header>
+      <textarea data-kind="recap" rows="9"
+        placeholder="How it went. Who stepped up, what we fixed, what's next."></textarea>
+      <div class="cn-actions">
+        <span class="dim" data-status="recap"></span>
+        <button type="button" data-save="recap">Save recap</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const $ = (s: string) => document.querySelector(s) as any;
+  const api = async (p: string, o: any = {}) => {
+    const r = await fetch("/api" + p, {
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" }, ...o,
+    });
+    return { ok: r.ok, body: await r.json().catch(() => null) };
+  };
+  const fmt = (s: string) =>
+    new Date(s).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  async function load() {
+    const gid = $("#cn-game").value;
+    const { ok, body } = await api(`/notes/${gid}`);
+    for (const kind of ["preview", "recap"]) {
+      const ta = document.querySelector(`[data-kind="${kind}"]`) as any;
+      const meta = document.querySelector(`[data-meta="${kind}"]`) as HTMLElement;
+      const n = ok ? body?.[kind] : null;
+      ta.value = n?.body ?? "";
+      meta.textContent = n ? `${n.author ?? "—"} · ${fmt(n.updated_at)}` : "not written yet";
+    }
+  }
+
+  async function save(kind: string) {
+    const gid = $("#cn-game").value;
+    const ta = document.querySelector(`[data-kind="${kind}"]`) as any;
+    const st = document.querySelector(`[data-status="${kind}"]`) as HTMLElement;
+    st.textContent = "saving…";
+    const { ok, body } = await api(`/notes/${gid}/${kind}`, {
+      method: "PUT", body: JSON.stringify({ body: ta.value }),
+    });
+    st.textContent = ok ? (body.cleared ? "cleared" : "saved") : "could not save";
+    if (ok) { await load(); setTimeout(() => (st.textContent = ""), 2500); }
+  }
+
+  $("#cn-game").addEventListener("change", load);
+  document.addEventListener("click", (e: any) => {
+    const k = e.target.dataset?.save;
+    if (k && e.target.closest(".cn")) save(k);
+  });
+  load();
+</script>
+
+<style>
+  .cn h3 { font-size: var(--t-lg); }
+  .cn-note { font-size: var(--t-sm); margin-block: var(--s-2) var(--s-5); max-width: 60ch; }
+  .cn-pick { display: block; max-width: 24rem; margin-bottom: var(--s-5); }
+  .cn-cols { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); }
+  .cn-box { padding: var(--s-4); display: grid; gap: var(--s-3); }
+  .cn-box header { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+  .cn-box h4 { font-family: var(--font-display); font-style: italic; font-weight: 900;
+               font-size: var(--t-md); text-transform: uppercase; }
+  .cn-box header span { font-size: var(--t-xs); }
+  .cn-box textarea {
+    width: 100%; padding: var(--s-3); font: inherit; font-size: .95rem; line-height: 1.5;
+    color: var(--text); background: var(--bg-sunken);
+    border: 1px solid var(--hairline-sv); border-radius: var(--r-md); resize: vertical;
+  }
+  .cn-actions { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+</style>

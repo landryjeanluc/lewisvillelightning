@@ -1,5 +1,8 @@
 ---
 import Base from "../layouts/Base.astro";
+import NewsPanel from "../components/admin/NewsPanel.astro";
+import RosterPanel from "../components/admin/RosterPanel.astro";
+import NotesPanel from "../components/admin/NotesPanel.astro";
 import { roster, games, sides } from "../lib/data";
 
 // Roster and fixtures are build-time data; only the stats themselves are live.
@@ -34,6 +37,9 @@ const gameList = games.map((g: any) => {
   <div id="editor" hidden>
     <nav class="tabs" role="tablist">
       <button type="button" class="tab is-on" data-tab="sheet-tab" role="tab">Scoresheet</button>
+      <button type="button" class="tab" data-tab="news-tab"   role="tab">News</button>
+      <button type="button" class="tab" data-tab="roster-tab" role="tab">Roster</button>
+      <button type="button" class="tab" data-tab="notes-tab"  role="tab">Coach's notes</button>
       <button type="button" class="tab" data-tab="people-tab" role="tab">Team access</button>
     </nav>
 
@@ -76,6 +82,10 @@ const gameList = games.map((g: any) => {
       <button id="save" type="button">Save scoresheet</button>
     </div>
     </section>
+
+    <section id="news-tab" hidden><NewsPanel /></section>
+    <section id="roster-tab" hidden><RosterPanel /></section>
+    <section id="notes-tab" hidden><NotesPanel /></section>
 
     <section id="people-tab" hidden>
       <div class="tablewrap card">
@@ -283,8 +293,8 @@ const gameList = games.map((g: any) => {
     b.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((x) => x.classList.remove("is-on"));
       b.classList.add("is-on");
-      $("#sheet-tab").hidden = b.dataset.tab !== "sheet-tab";
-      $("#people-tab").hidden = b.dataset.tab !== "people-tab";
+      for (const id of ["sheet-tab", "news-tab", "roster-tab", "notes-tab", "people-tab"])
+        $("#" + id).hidden = b.dataset.tab !== id;
       if (b.dataset.tab === "people-tab") loadPeople();
     }));
 
@@ -325,24 +335,6 @@ const gameList = games.map((g: any) => {
   .page-head h1 { margin-top: var(--s-2); }
 
   .login, .note { padding: var(--s-5); max-width: 26rem; display: grid; gap: var(--s-4); }
-  label { display: grid; gap: var(--s-2); font-size: var(--t-sm); font-weight: 700;
-          letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
-  input, select {
-    padding: var(--s-3); font-size: 1rem; font-weight: 600;
-    color: var(--text); background: var(--bg-sunken);
-    border: 1px solid var(--hairline-sv); border-radius: var(--r-md);
-  }
-  input:focus, select:focus { outline: 2px solid var(--volt-400); outline-offset: 1px; }
-  button {
-    padding: var(--s-3) var(--s-5); font-family: var(--font-ui);
-    font-size: var(--t-sm); font-weight: 700; letter-spacing: var(--track-label);
-    text-transform: uppercase; color: #fff; cursor: pointer;
-    background: linear-gradient(180deg, var(--volt-500), var(--blue-600));
-    border: 0; border-radius: 999px;
-  }
-  button:disabled { opacity: .5; cursor: default; }
-  button.link { background: none; padding: 0; color: var(--accent-text);
-                text-transform: none; letter-spacing: 0; font-size: inherit; }
   .err { color: var(--loss); font-size: var(--t-sm); }
 
   .bar { display: flex; flex-wrap: wrap; align-items: end; gap: var(--s-5);

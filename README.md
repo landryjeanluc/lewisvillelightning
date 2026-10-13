@@ -127,5 +127,15 @@ jersey number until `cardArt` lands in `data/roster.json`.
 
 ## Deploying
 
-See `docs/DEPLOY.md`. Short version: it is a static site on arachnea:8111 behind
-basic auth; content updates are an rsync, no rebuild.
+```
+./deploy.sh              # validate, build, publish to arachnea, verify
+./deploy.sh --posters    # also re-render the game graphics
+```
+
+The build **bakes in `data/`** — the spotlight player, the schedule, the roster
+are all resolved at build time. Editing `data/` and rsyncing without rebuilding
+publishes a stale page; that is how the game banner kept naming the wrong
+featured player. `deploy.sh` always builds first, for that reason.
+
+Full detail, including first-time setup and account creation, in
+`docs/DEPLOY.md`.
