@@ -270,3 +270,36 @@ CREATE TABLE IF NOT EXISTS flagged_content (
   reviewed_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS flagged_pending_idx ON flagged_content (status, at DESC);
+
+-- Training goals are independent from scoresheet goals. Team targets pool
+-- contributions; player targets belong to exactly one roster player.
+CREATE TABLE IF NOT EXISTS training_goals (
+  id BIGSERIAL PRIMARY KEY,
+  title TEXT NOT NULL CHECK (char_length(trim(title)) BETWEEN 1 AND 100),
+  scope TEXT NOT NULL CHECK (scope IN ('team', 'player')),
+  player_id TEXT,
+  unit TEXT NOT NULL CHECK (unit IN ('shots', 'reps', 'minutes', 'seconds')),
+  target INT NOT NULL CHECK (target BETWEEN 1 AND 1000000),
+  starts_on DATE NOT NULL,
+  ends_on DATE NOT NULL CHECK (ends_on >= starts_on),
+  archived BOOLEAN NOT NULL DEFAULT false,
+  created_by BIGINT REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((scope = 'team' AND player_id IS NULL)
+      OR (scope = 'player' AND player_id IS NOT NULL))
+);
+CREATE TABLE IF NOT EXISTS goal_entries (
+  id BIGSERIAL PRIMARY KEY,
+  goal_id BIGINT NOT NULL REFERENCES training_goals(id),
+  player_id TEXT NOT NULL,
+  amount INT NOT NULL CHECK (amount BETWEEN 1 AND 1000000),
+  performed_on DATE NOT NULL,
+  created_by BIGINT NOT NULL REFERENCES users(id),
+  client_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  removed_at TIMESTAMPTZ,
+  removed_by BIGINT REFERENCES users(id),
+  UNIQUE (created_by, client_id)
+);
+CREATE INDEX IF NOT EXISTS goal_entries_goal_idx ON goal_entries (goal_id, id DESC);

@@ -551,6 +551,9 @@ async def main():
             from test_plays import run_plays_tests
             results.extend(await run_plays_tests(app, pool, ok))
 
+            from test_goals import run_goals_tests
+            results.extend(await run_goals_tests(app, pool, ok))
+
             print(f"\n{sum(results)}/{len(results)} passed")
             return 0 if all(results) else 1
 

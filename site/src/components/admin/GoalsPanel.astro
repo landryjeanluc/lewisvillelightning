@@ -1,0 +1,47 @@
+---
+import GoalEditor from "../GoalEditor.astro";
+import "../../styles/goals.css";
+---
+<div class="goals-page">
+  <div class="goals-toolbar">
+    <h3>Team and player goals</h3>
+    <button id="goal-new" type="button">+ Set a goal</button>
+  </div>
+  <p class="dim">Set a shared team target or give an individual player something to work toward.</p>
+  <p><a href="/goals">View goals, edit targets and track progress →</a></p>
+  <p id="admin-goals-status" role="status" aria-live="polite"></p>
+  <GoalEditor />
+</div>
+
+<script>
+  import { initGoalEditor } from "../../scripts/goal-editor";
+
+  const status = document.querySelector<HTMLElement>("#admin-goals-status")!;
+  const button = document.querySelector<HTMLButtonElement>("#goal-new")!;
+  async function api(path: string, method = "GET", body?: unknown) {
+    const response = await fetch("/api/goals" + path, {
+      method, credentials: "same-origin", cache: "no-store",
+      headers: body ? { "content-type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(typeof data?.detail === "string" ? data.detail : "Could not load or save goals. Please try again.");
+    return data;
+  }
+  const editor = initGoalEditor({
+    save: api,
+    onSaved: () => { status.textContent = "Goal saved. It is now on the goals page."; },
+  });
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    status.textContent = "Loading goal form…";
+    try {
+      const board = await api("");
+      if (!board?.admin) throw new Error("Sign in as an admin to set goals.");
+      editor.open(board);
+      status.textContent = "";
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : "Could not load the goal form. Please try again.";
+    } finally { button.disabled = false; }
+  });
+</script>

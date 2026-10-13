@@ -1242,3 +1242,7 @@ async def reload_terms(_: Annotated[User, Depends(require_admin)]):
 from plays import plays_router                                    # noqa: E402
 
 app.include_router(plays_router(current_user, require_admin, db, slugify, contract))
+
+# Training targets and activity are live, like the coach's plays.
+from goals import build_router as goals_router
+app.include_router(goals_router(current_user, require_admin, db, contract))

@@ -205,3 +205,47 @@ Deliberate behaviours:
 - `week_of` is a real `DATE`; null means evergreen rather than weekly.
 - The list endpoint returns diagrams, so the index can draw a real miniature of
   each play. A season of documents is a few tens of kilobytes.
+
+## Training goals
+
+`/goals` is a live training board. Admins set either a **shared team target**
+(e.g. 1,000 off-ice shots) or an **individual player target** (e.g. 50 squats).
+Targets use shots, repetitions, minutes or seconds, with inclusive start/end
+dates in `America/Moncton`. The page has this-week and next-week shortcuts.
+Each date range is its own goal; nothing automatically resets or recurs.
+
+Players and parents use their existing `users.player_id` family link. Both
+can add activity and remove incorrect entries for that player. Admins can
+record activity for any roster player. Unlinked accounts and viewers can
+read shared team totals but cannot contribute. Individual goals and activity
+history are visible only to admins and the linked family; team totals include
+everyone, while a family's team activity history contains only its own entries.
+
+| method | path | purpose |
+|---|---|---|
+| GET | `/api/goals` | Authorized goals, totals, available players and team-local date |
+| POST | `/api/goals` | Admin creates a team or individual target |
+| PUT | `/api/goals/{id}` | Admin edits or archives a goal |
+| GET | `/api/goals/{id}/entries` | Latest 100 visible activity entries |
+| POST | `/api/goals/{id}/entries` | Add `player_id`, `amount`, `performed_on`, retry-safe UUID `client_id` |
+| DELETE | `/api/goals/{id}/entries/{entry_id}` | Remove an incorrect entry; retain audit history |
+
+Progress is summed from activity entries, never overwritten with a browser's
+running total. Retries reuse a client UUID, including after a lost response;
+removing an entry does not let a retry resurrect it. One entry counts toward
+one goal only. Activity can exceed a target and can be backfilled into a past
+period, but cannot be future-dated or outside the goal's dates. Archived goals
+reject new activity. Once a goal has activity, its player, scope, unit and date
+range are fixed; its title, target and archived state can still change.
+
+The shot counter and stopwatch are page-local tools. Saving subtracts the
+logged amount only after success; the stopwatch saves whole units and retains
+the remainder. Failed requests preserve the session for retry. Tools only log
+to current goals of the matching unit. Leaving the page discards unsaved tool
+state, with a browser navigation warning where supported. Saved progress lives
+in Postgres and is shared across logins and devices.
+
+`schema.sql` adds the tables on API restart; normal `deploy.sh` includes the
+module. `test_goals.py` runs with `api/test.sh`. Build the site and run
+`node tools/test_goals_ui.mjs` for browser coverage of admin creation, family
+views, failed-save retries, counters, timer logging and mobile layout.

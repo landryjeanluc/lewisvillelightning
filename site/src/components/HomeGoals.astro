@@ -1,0 +1,36 @@
+---
+import GoalBar from "./GoalBar.astro";
+---
+<section class="home-goals" aria-labelledby="home-goals-heading" data-home-goals>
+  <div class="hg-top">
+    <h2 id="home-goals-heading">One team. <span>One target.</span></h2>
+    <a href="/goals" class="hg-link" data-goals-link>Team goals <span aria-hidden="true">↗</span></a>
+  </div>
+  <label class="hg-select" hidden data-goals-picker>Team challenge <select aria-label="Choose a team goal" data-goals-select></select></label>
+  <div class="hg-variants">
+    <GoalBar theme="hockey" />
+    <GoalBar theme="lightning" />
+  </div>
+  <div class="hg-notice">
+    <p class="dim" data-goals-notice role="status">Two looks. The same team effort.</p>
+    <button class="link" type="button" data-goals-retry hidden>Try again</button>
+    <button class="link" type="button" data-goals-preview hidden aria-pressed="false">Preview both styles</button>
+  </div>
+  <noscript><p class="dim">Enable JavaScript to load your team's progress, or <a href="/goals">visit Goals</a>.</p></noscript>
+</section>
+<script>import "../scripts/home-goals";</script>
+<style>
+  .home-goals { margin-bottom: clamp(1.5rem, 3vw, 2.5rem); }
+  .hg-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .65rem; }
+  .hg-top h2 { font: 700 .8rem/1.4 var(--font-ui); letter-spacing: .13em; text-transform: uppercase; }
+  .hg-top h2 span { color: var(--accent-text); }
+  .hg-link { display: inline-flex; align-items: center; justify-content: space-between; gap: .8rem; min-height: 44px; color: var(--accent-text); text-decoration: none; font-size: .85rem; font-weight: 700; white-space: nowrap; }
+  .hg-link span { font-size: 1.2rem; }
+  .hg-variants { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
+  .hg-select { max-width: 32rem; margin-bottom: 1rem; }
+  .hg-select select { width: 100%; text-transform: none; letter-spacing: normal; }
+  .hg-notice { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem 1rem; margin-top: .5rem; font-size: .75rem; }
+  .hg-notice button { font-size: .8rem; }
+  @media (max-width: 900px) { .hg-variants { grid-template-columns: minmax(0, 1fr); gap: var(--s-3); } }
+  @media (max-width: 400px) { .hg-top h2 { max-width: 15ch; } }
+</style>

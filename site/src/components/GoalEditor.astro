@@ -1,0 +1,17 @@
+<dialog id="goal-editor" aria-labelledby="goal-editor-title">
+  <form id="goal-form" class="goal-dialog-form">
+    <div class="goal-dialog-head"><h2 id="goal-editor-title">Set a goal</h2><button type="button" class="ghost" data-close aria-label="Close goal editor">×</button></div>
+    <label>Goal name<input name="title" required maxlength="100" placeholder="Off-ice shots" /></label>
+    <div class="goal-form-row">
+      <label>Goal for<select name="scope"><option value="team">Whole team · shared total</option><option value="player">Individual player</option></select></label>
+      <label id="goal-player-field" hidden>Player<select name="player_id"></select></label>
+    </div>
+    <div class="goal-form-row"><label>Target<input name="target" type="number" inputmode="numeric" required min="1" max="1000000" step="1" placeholder="1000" /></label>
+      <label>Count in<select name="unit"><option value="shots">Shots</option><option value="reps">Repetitions (squats, push-ups…)</option><option value="minutes">Minutes</option><option value="seconds">Seconds</option></select></label></div>
+    <div class="goal-form-row"><label>Starts<input name="starts_on" type="date" required /></label><label>Ends<input name="ends_on" type="date" required /></label></div>
+    <div class="tool-actions"><button type="button" class="ghost" id="goal-this-week">This week</button><button type="button" class="ghost" id="goal-next-week">Next week</button></div>
+    <label class="goal-history-toggle" id="goal-archive-field" hidden><input type="checkbox" name="archived" /> Archive this goal</label>
+    <p class="dim">Team goals pool everyone's activity. Player goals are separate and visible to that player's family and admins. Dates are inclusive, in Atlantic time.</p>
+    <p class="goal-error" role="alert"></p><button type="submit">Save goal</button>
+  </form>
+</dialog>

@@ -1,0 +1,71 @@
+---
+import Base from "../layouts/Base.astro";
+import GoalEditor from "../components/GoalEditor.astro";
+import "../styles/goals.css";
+---
+<Base title="Goals">
+  <div class="goals-page">
+    <header class="goals-head">
+      <div><span class="eyebrow">Put in the work</span><h1>Small steps.<br /><em>Big goals.</em></h1>
+        <p class="muted">Build your game, one session at a time.</p></div>
+    </header>
+    <p id="goals-message" role="status" aria-live="polite">Loading goals…</p>
+    <div id="goals-gate" class="card goal-panel" hidden><p>Sign in to see your team's goals.</p><a href="/login">Sign in →</a></div>
+    <button id="goals-retry" type="button" class="ghost" hidden>Try again</button>
+    <div id="goals-content" hidden>
+      <div class="goals-toolbar">
+        <div class="goal-tabs" role="group" aria-label="Goal type">
+          <button type="button" data-scope="team" aria-pressed="true">Team goals</button>
+          <button type="button" data-scope="player" aria-pressed="false" id="personal-tab">My goals</button>
+        </div>
+        <label class="goal-history-toggle"><input id="goal-history" type="checkbox" /> Past &amp; archived goals</label>
+      </div>
+      <p id="goals-context" class="muted"></p>
+      <div id="goal-grid" class="goal-grid"></div>
+      <div id="goals-empty" class="card goal-empty" hidden><span class="eyebrow">Room to grow</span><h2>No goals here yet</h2><p class="muted" id="goals-empty-text"></p></div>
+      <section class="goal-tools" aria-labelledby="tools-title">
+        <div><span class="eyebrow">Make every session count</span><h2 id="tools-title">Training tools</h2>
+          <p class="muted">Pick a goal when you're ready to save your session.</p></div>
+        <div class="goal-tools-grid">
+          <article class="card goal-tool">
+            <div class="goal-tool-heading"><h3>Shot counter</h3><span class="eyebrow">Find your rhythm</span></div>
+            <output id="shot-count" class="tool-number" aria-live="polite">0</output>
+            <p class="dim">shots this session</p>
+            <div class="tool-actions"><button type="button" id="shot-add">+1 Shot</button><button type="button" class="ghost" id="shot-ten">+10</button><button type="button" class="ghost" id="shot-undo">Undo</button></div>
+            <div class="tool-actions"><button type="button" class="ghost" id="shot-save" disabled>Log shots to a goal</button><button type="button" class="link" id="shot-reset">Reset</button></div>
+          </article>
+          <article class="card goal-tool">
+            <div class="goal-tool-heading"><h3>Session timer</h3><span class="eyebrow">Time well spent</span></div>
+            <output id="timer-count" class="tool-number" aria-label="Elapsed time">00:00</output>
+            <p class="dim" id="timer-state">Ready when you are</p>
+            <div class="tool-actions"><button type="button" id="timer-toggle">Start timer</button><button type="button" class="ghost" id="timer-reset">Reset</button></div>
+            <div class="tool-actions"><button type="button" class="ghost" id="timer-save" disabled>Log time to a goal</button></div>
+          </article>
+        </div>
+        <p class="dim tool-note">Tools stay on this page until you leave. Save your session to keep your progress. Each log counts toward one goal.</p>
+      </section>
+    </div>
+
+    <GoalEditor />
+
+    <dialog id="goal-log" aria-labelledby="goal-log-title">
+      <form id="goal-log-form" class="goal-dialog-form">
+        <div class="goal-dialog-head"><h2 id="goal-log-title">Log activity</h2><button type="button" class="ghost" data-close aria-label="Close activity form">×</button></div>
+        <label>Goal<select name="goal_id" required></select></label>
+        <label>Player<select name="player_id" required></select></label>
+        <div class="goal-form-row"><label id="goal-amount-label">Amount<input name="amount" type="number" inputmode="numeric" required min="1" max="1000000" step="1" /></label><label>Activity date<input name="performed_on" type="date" required /></label></div>
+        <p class="dim" id="goal-log-help"></p>
+        <p class="goal-error" role="alert"></p><button type="submit">Save activity</button>
+      </form>
+    </dialog>
+
+    <dialog id="goal-activity" aria-labelledby="goal-activity-title">
+      <div class="goal-dialog-form">
+        <div class="goal-dialog-head"><h2 id="goal-activity-title">Activity</h2><button type="button" class="ghost" data-close aria-label="Close activity history">×</button></div>
+        <p class="muted">Latest 100 entries. Remove an incorrect entry, then log the correct amount.</p>
+        <p class="goal-error" role="alert"></p><div id="goal-activity-list"></div>
+      </div>
+    </dialog>
+  </div>
+  <script>import "../scripts/goals";</script>
+</Base>
