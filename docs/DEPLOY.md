@@ -58,9 +58,29 @@ client address and does not trust raw forwarded headers itself.
 
 ## Hosting boundary
 
+Public ingress (as of 2026-10-13) is the `hexpi-lan` **Cloudflare tunnel** on
+ct170, not a port-forward and not NPM: Zero Trust → Public Hostname `lvlnb.ca` →
+`http://192.168.1.20:8111`. Cloudflare terminates TLS; the public DNS record is a
+proxied CNAME onto the tunnel. The tunnel's service type must be **HTTP** — the
+arachnea vhost is a plain-HTTP listener and an `https://` origin fails the
+handshake. Nothing inbound is open on the WAN, and the house FibreOp address is
+dynamic, so no A record should ever be pointed at it again.
+
+Because a CDN now sits in front of the gate, cache headers are load-bearing in a
+way they were not on the LAN: Cloudflare caches by URL and will serve a cached
+object **without consulting `auth_request`**. Images are in its default
+cache-by-extension list, so removing an `expires` directive is not sufficient —
+private media must send `Cache-Control: no-store` explicitly.
+
 `ops/nginx.conf` is a validated reference server block. Integrate its requirements
 into `HexPi/nixos-builds/hosts/arachnea/guests/default.nix`; it is not automatically
-installed by `deploy.sh`.
+installed by `deploy.sh`. The deployed vhost currently satisfies the `no-store`,
+`/uploads/` and 13 MB body-size requirements below, but still diverges from the
+reference on CSP (absent), `X-Frame-Options` (`SAMEORIGIN`, not `DENY`),
+`Referrer-Policy` (`strict-origin-when-cross-origin`, not `no-referrer`),
+`X-Robots-Tag` (absent) and site-wide `no-store` on private HTML. It also gates
+`/api/` at nginx — more restrictive than the JSON-401 rule below, at the cost of
+feeding HTML to `fetch()` when a session expires.
 
 - Gate HTML, photos, team images, calendars, rendered posters and uploads.
 - Serve `/uploads/` from `/srv/lvlnb-uploads/` behind the same session gate.
