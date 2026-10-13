@@ -978,19 +978,27 @@ async def change_password(
 # Jobs belong to a FAMILY, not a person: the parents decide between themselves
 # who actually turns up, then one of them claims it so the team can see.
 
+# The jobs every game actually needs filling. "Add the standard jobs" seeds
+# these and nothing else, so the game page is not a wall of rows nobody signs.
 DEFAULT_JOBS = [
     ("50/50 tickets",  "Sell 50/50 tickets in the stands", 10),
     ("Scoresheet",     "Keep the official scoresheet",      20),
     ("Timekeeper",     "Run the clock",                     30),
-    ("Penalty box",    "Penalty box door",                  40),
-    ("Jerseys",        "Collect and wash the jerseys",      50),
-    ("Snacks",         "Post-game snacks",                  60),
+]
+
+# Jobs this team does not run every night but might want back one day. Offered
+# one at a time instead of seeded, alongside whatever the admin invents for a
+# tournament weekend.
+OPTIONAL_JOBS = [
+    ("Penalty box", "Penalty box door",             40),
+    ("Jerseys",     "Collect and wash the jerseys", 50),
+    ("Snacks",      "Post-game snacks",             60),
 ]
 
 class JobTypeIn(BaseModel):
     name: str
     description: str | None = None
-    sort: int = 100
+    sort: int | None = None           # unset: land at the end of the list
     active: bool = True
 
 class JobAssign(BaseModel):
@@ -1004,6 +1012,13 @@ async def list_job_types(pool: Annotated[asyncpg.Pool, Depends(db)]):
         "SELECT id, name, description, sort, active FROM job_types ORDER BY sort, name")
     return [dict(r) for r in rows]
 
+@app.get("/jobs/suggestions")
+async def suggest_job_types(pool: Annotated[asyncpg.Pool, Depends(db)]):
+    """The extras we know about that this team has not added, for one-tap adding."""
+    have = {r["n"] for r in await pool.fetch("SELECT lower(name) AS n FROM job_types")}
+    return [{"name": n, "description": d, "sort": srt}
+            for n, d, srt in OPTIONAL_JOBS if n.lower() not in have]
+
 @app.post("/jobs/types", status_code=status.HTTP_201_CREATED)
 async def create_job_type(body: JobTypeIn, actor: Annotated[User, Depends(require_admin)],
                           pool: Annotated[asyncpg.Pool, Depends(db)]):
@@ -1012,19 +1027,25 @@ async def create_job_type(body: JobTypeIn, actor: Annotated[User, Depends(requir
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "a job needs a name")
     if await pool.fetchval("SELECT 1 FROM job_types WHERE lower(name)=lower($1)", name):
         raise HTTPException(status.HTTP_409_CONFLICT, f"there is already a job called {name}")
+    sort = body.sort
+    if sort is None:
+        sort = await pool.fetchval("SELECT coalesce(max(sort), 0) + 10 FROM job_types")
     row = await pool.fetchrow(
         "INSERT INTO job_types (name, description, sort, active) VALUES ($1,$2,$3,$4)"
         " RETURNING id, name, description, sort, active",
-        name, body.description, body.sort, body.active)
+        name, body.description, sort, body.active)
     return dict(row)
 
 @app.delete("/jobs/types/{type_id}")
 async def delete_job_type(type_id: int, actor: Annotated[User, Depends(require_admin)],
                           pool: Annotated[asyncpg.Pool, Depends(db)]):
+    # Counted before the delete, because the assignments cascade away with it.
+    assigned = await pool.fetchval(
+        "SELECT count(*) FROM game_jobs WHERE job_type_id=$1", type_id)
     gone = await pool.execute("DELETE FROM job_types WHERE id=$1", type_id)
     if gone.endswith("0"):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such job")
-    return {"ok": True}
+    return {"ok": True, "assignments_removed": assigned}
 
 @app.post("/jobs/seed-defaults")
 async def seed_default_jobs(actor: Annotated[User, Depends(require_admin)],

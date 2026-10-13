@@ -404,12 +404,34 @@ async def main():
                               len(fam) == 2))
 
             r = await c.post("/jobs/seed-defaults")
-            results.append(ok("default job list seeds", r.status_code == 200 and r.json()["added"] == 6,
-                              str(r.json())))
+            results.append(ok("the standard three seed, and only those",
+                              r.status_code == 200 and r.json()["added"] == 3, str(r.json())))
             types = (await c.get("/jobs/types")).json()
             tid = {t_["name"]: t_["id"] for t_ in types}
             r = await c.post("/jobs/types", json={"name": "50/50 tickets"})
             results.append(ok("duplicate job name -> 409", r.status_code == 409))
+
+            # the ones this team does not run every night are offered, not seeded
+            sugg = (await c.get("/jobs/suggestions")).json()
+            results.append(ok("the jobs we stopped seeding are offered instead",
+                              {s_["name"] for s_ in sugg} == {"Penalty box", "Jerseys", "Snacks"},
+                              str([s_["name"] for s_ in sugg])))
+            r = await c.post("/jobs/types",
+                             json=next(s_ for s_ in sugg if s_["name"] == "Jerseys"))
+            results.append(ok("an offered job can be added on its own", r.status_code == 201))
+            results.append(ok("a job already on the list stops being offered",
+                              "Jerseys" not in {s_["name"] for s_ in
+                                                (await c.get("/jobs/suggestions")).json()}))
+
+            # something nobody planned for — a tournament needs a person on the gate
+            r = await c.post("/jobs/types", json={"name": "Tournament gate",
+                                                  "description": "Take admission at the door"})
+            results.append(ok("a job invented on the spot can be added", r.status_code == 201))
+            types = (await c.get("/jobs/types")).json()
+            results.append(ok("a job added without a sort lands at the end",
+                              types[-1]["name"] == "Tournament gate",
+                              str([t_["name"] for t_ in types])))
+            tid = {t_["name"]: t_["id"] for t_ in types}
 
             gid = "g-2026-10-13-shediac"
             r = await c.put(f"/jobs/{gid}", json=[
@@ -462,6 +484,17 @@ async def main():
             jobs = {j["name"]: j for j in (await c.get(f"/jobs/{gid}")).json()}
             results.append(ok("reassigning to another family drops the stale claim",
                               jobs["50/50 tickets"]["claimed_by"] is None))
+
+            # the tournament is over: dropping the job takes its assignments with it
+            await c.put(f"/jobs/{gid}",
+                        json=[{"job_type_id": tid["Tournament gate"], "player_id": "pl-02"}])
+            r = await c.delete(f"/jobs/types/{tid['Tournament gate']}")
+            results.append(ok("dropping a job reports the assignments that went with it",
+                              r.status_code == 200 and r.json()["assignments_removed"] == 1,
+                              str(r.json())))
+            results.append(ok("a dropped job leaves every game's list",
+                              "Tournament gate" not in
+                              {j["name"] for j in (await c.get(f"/jobs/{gid}")).json()}))
 
             # ---------------- moderation ----------------
             r = await c.put(f"/notes/{gid}/preview", json={"body": "Clean hit, great backcheck."})

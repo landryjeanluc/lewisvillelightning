@@ -98,6 +98,46 @@ are reported and left alone. `--dry-run` prints the changes and writes nothing.
 The login handle itself already carried the full name (`mom.olivier-leblanc`),
 so no handle changes and no handout is stale.
 
+## Game jobs
+
+A job belongs to a **family**, not a person. The admin puts a family on the
+hook; the parents sort out between themselves who actually turns up, and
+whichever of them it is claims it so the rest of the team can see it is
+covered. Reassigning a job to a different family drops the old claim.
+
+| method | path | auth | |
+|---|---|---|---|
+| GET | `/api/jobs/types` | — | the reusable job list |
+| GET | `/api/jobs/suggestions` | — | known extras this team has not added |
+| POST | `/api/jobs/types` | **admin** | add a job; no `sort` lands it at the end |
+| DELETE | `/api/jobs/types/{id}` | **admin** | drop a job; reports the assignments that cascaded |
+| POST | `/api/jobs/seed-defaults` | **admin** | add the standard three, skipping any already there |
+| GET | `/api/jobs/{game_id}` | — | every job for one game, who is on the hook, who claimed it |
+| PUT | `/api/jobs/{game_id}` | **admin** | assign families; only the listed jobs are touched |
+| POST | `/api/jobs/{game_id}/{type_id}/claim` | parent | take it, or hand it back with `?release=1` |
+
+**Seeding stays small on purpose.** `seed-defaults` adds 50/50 tickets, the
+scoresheet and the timekeeper — the jobs a night actually needs. Penalty box,
+jerseys and snacks are in `OPTIONAL_JOBS` instead: real jobs for some teams,
+but seeding them here filled every game page with rows nobody signed. The
+admin panel offers them one at a time from `/jobs/suggestions`, and a job
+already on the list stops being offered.
+
+Anything else is typed in: a tournament gate, a hotel wrangler, a driver.
+Those post without a `sort`, so they land after the standard set in creation
+order rather than all colliding on the same number.
+
+Dropping a job drops it from **every** game — `game_jobs` cascades on the
+foreign key — so the delete counts the assignments first and returns
+`assignments_removed`, which is what the panel warns with. There is no gentler
+retire yet: `job_types.active` exists and `/jobs/{game_id}` filters on it, but
+nothing flips it on a job that already exists, so dropping is the only way out
+of the list today.
+
+The panel is covered twice: the contracts above in `test_api.py`, and the
+browser half by `node tools/test_jobs_ui.mjs` — adding an offered job,
+inventing one, the confirm before a drop, and both views refreshing together.
+
 ## Team chat
 
 `/chat` uses existing team logins, including parents, players and viewers. It

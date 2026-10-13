@@ -147,7 +147,9 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
   CHECK (role IN ('admin', 'parent', 'player', 'viewer'));
 
--- The reusable list of jobs: 50/50, scoresheet, timekeeper, jerseys…
+-- The reusable list of jobs. Seeded with the three a night really needs
+-- (50/50, scoresheet, timekeeper); the rest is whatever the admin adds —
+-- jerseys, snacks, or a gate for one tournament weekend.
 CREATE TABLE IF NOT EXISTS job_types (
   id          BIGSERIAL PRIMARY KEY,
   name        TEXT NOT NULL UNIQUE,

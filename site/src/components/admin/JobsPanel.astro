@@ -37,6 +37,35 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     <button type="button" id="jp-save">Save assignments</button>
   </div>
 
+  <details class="jp-list">
+    <summary>The job list <span class="dim">— add a job, or drop one the team does not run</span></summary>
+
+    <p class="dim jp-note">
+      Changing this list changes it for every game. The standard three are the
+      ones most nights need; add the rest only when the team actually runs them.
+    </p>
+
+    <ul id="jp-types" class="jp-types"></ul>
+
+    <div id="jp-sugg" class="jp-sugg" hidden>
+      <h4>Jobs we know about</h4>
+      <div id="jp-sugg-btns" class="jp-chips"></div>
+    </div>
+
+    <form id="jp-new" class="jp-new">
+      <h4>Something else — a tournament door, a hotel wrangler, a driver</h4>
+      <label>Job
+        <input id="jp-new-name" maxlength="60" required placeholder="Gate at the tournament" />
+      </label>
+      <label>What it involves <span class="dim">(optional)</span>
+        <input id="jp-new-desc" maxlength="140" placeholder="Take admission at the door, Saturday only" />
+      </label>
+      <button type="submit">Add this job</button>
+    </form>
+
+    <p id="jp-list-status" class="dim" role="status"></p>
+  </details>
+
   <datalist id="jp-players">
     {players.map((p: any) => <option value={p.id}>{p.number} — {p.firstName} {p.lastName}</option>)}
   </datalist>
@@ -50,6 +79,9 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
   };
   const say = (m: string) => ($("#jp-status").textContent = m);
+  const sayList = (m: string) => ($("#jp-list-status").textContent = m);
+  const esc = (t: string) => t.replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
 
   // built once from the roster already on the page
   const PLAYERS = [...document.querySelectorAll("#jp-players option")].map((o: any) => ({
@@ -71,7 +103,7 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
         `<option value="${p.id}"${p.id === j.player_id ? " selected" : ""}>${p.label}</option>`).join("");
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="l"><strong>${j.name}</strong>${j.description ? `<br><span class="dim jp-desc">${j.description}</span>` : ""}</td>
+        <td class="l"><strong>${esc(j.name)}</strong>${j.description ? `<br><span class="dim jp-desc">${esc(j.description)}</span>` : ""}</td>
         <td class="l">
           <select data-job="${j.job_type_id}">
             <option value="">— unassigned —</option>${opts}
@@ -94,14 +126,71 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     if (ok) { await load(); setTimeout(() => say(""), 2500); }
   }
 
+  async function loadTypes() {
+    const [types, sugg] = await Promise.all([api("/jobs/types"), api("/jobs/suggestions")]);
+    const ul = $("#jp-types");
+    const list = Array.isArray(types.body) ? types.body : [];
+    ul.innerHTML = !types.ok ? `<li class="dim">Could not load the job list.</li>`
+      : !list.length ? `<li class="dim">No jobs yet.</li>`
+      : list.map((t: any) => `
+          <li>
+            <span><strong>${esc(t.name)}</strong>${t.description
+              ? `<br><span class="dim jp-desc">${esc(t.description)}</span>` : ""}</span>
+            <button type="button" class="link danger jp-del" data-id="${t.id}"
+                    data-name="${esc(t.name)}" aria-label="Remove ${esc(t.name)}">Remove</button>
+          </li>`).join("");
+
+    const extras = sugg.ok && Array.isArray(sugg.body) ? sugg.body : [];
+    $("#jp-sugg").hidden = !extras.length;
+    $("#jp-sugg-btns").innerHTML = extras.map((e: any, i: number) =>
+      `<button type="button" class="ghost jp-add" data-i="${i}">+ ${esc(e.name)}</button>`).join("");
+    $("#jp-sugg-btns").dataset.extras = JSON.stringify(extras);
+  }
+
+  // adding or removing a job changes every game's table, so both views reload
+  async function addType(job: any) {
+    sayList(`Adding ${job.name}…`);
+    const { ok, body } = await api("/jobs/types", { method: "POST", body: JSON.stringify(job) });
+    sayList(ok ? `${job.name} added.` : body?.detail ?? "Could not add that job.");
+    if (ok) await Promise.all([loadTypes(), load()]);
+  }
+
+  $("#jp-sugg-btns").addEventListener("click", (e: any) => {
+    const b = e.target.closest(".jp-add");
+    if (b) addType(JSON.parse($("#jp-sugg-btns").dataset.extras)[Number(b.dataset.i)]);
+  });
+
+  $("#jp-new").addEventListener("submit", async (e: any) => {
+    e.preventDefault();
+    const name = $("#jp-new-name").value.trim();
+    if (!name) return;
+    await addType({ name, description: $("#jp-new-desc").value.trim() || null });
+    $("#jp-new-name").value = $("#jp-new-desc").value = "";
+  });
+
+  $("#jp-types").addEventListener("click", async (e: any) => {
+    const b = e.target.closest(".jp-del");
+    if (!b) return;
+    const name = b.dataset.name;
+    if (!confirm(`Remove “${name}” from every game? Anyone assigned to it loses the job.`)) return;
+    sayList(`Removing ${name}…`);
+    const { ok, body } = await api(`/jobs/types/${b.dataset.id}`, { method: "DELETE" });
+    const n = body?.assignments_removed ?? 0;
+    sayList(!ok ? body?.detail ?? "Could not remove that job."
+      : `${name} removed${n ? ` — ${n} game assignment${n === 1 ? "" : "s"} with it` : ""}.`);
+    if (ok) await Promise.all([loadTypes(), load()]);
+  });
+
   $("#jp-seed").addEventListener("click", async () => {
     const { ok, body } = await api("/jobs/seed-defaults", { method: "POST" });
     say(ok ? `${body.added} job(s) added.` : "Could not add.");
     load();
+    loadTypes();
   });
   $("#jp-game").addEventListener("change", load);
   $("#jp-save").addEventListener("click", save);
   load();
+  loadTypes();
 </script>
 
 <style>
@@ -117,4 +206,26 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     color: var(--text); background: var(--bg-sunken);
     border: 1px solid var(--hairline-sv); border-radius: var(--r-md); min-width: 14rem; }
   :global(.jp-desc) { font-size: var(--t-xs); }
+  /* the reusable list — occasional work, so it stays folded away */
+  .jp-list { margin-top: var(--s-6); border-top: 1px solid var(--hairline); padding-top: var(--s-4); }
+  .jp-list summary { cursor: pointer; font-family: var(--font-ui); font-weight: 700;
+    font-size: var(--t-sm); letter-spacing: var(--track-label); text-transform: uppercase; }
+  .jp-list summary span { text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .jp-list h4 { font-size: var(--t-xs); color: var(--text-dim); font-family: var(--font-ui);
+    letter-spacing: var(--track-label); text-transform: uppercase; margin-bottom: var(--s-3); }
+  .jp-types { list-style: none; padding: 0; display: grid; gap: var(--s-2); }
+  :global(.jp-types li) { display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-4); background: var(--surface);
+    border: 1px solid var(--hairline); border-radius: var(--r-md); }
+  :global(.jp-types li .jp-del) { margin-left: auto; white-space: nowrap; }
+  .jp-sugg { margin-top: var(--s-5); }
+  .jp-chips { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+  .jp-new { margin-top: var(--s-5); display: grid; gap: var(--s-4);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto; align-items: end; }
+  .jp-new h4 { grid-column: 1 / -1; margin-bottom: 0; }
+  #jp-list-status { margin-top: var(--s-4); font-size: var(--t-sm); }
+  @media (max-width: 600px) {
+    .jp-new { grid-template-columns: 1fr; }
+  }
+
 </style>
