@@ -21,6 +21,20 @@ const gcal =
     location: event.venue.name,
     details: `https://lvlnb.ca/schedule/${event.id}`,
   }).toString();
+// Personal Outlook and Microsoft 365 use separate calendar hosts, with the
+// same compose parameters. Explicit UTC offsets preserve the rink's start time.
+const microsoftParams = new URLSearchParams({
+  path: "/calendar/action/compose",
+  rru: "addevent",
+  subject: title,
+  startdt: new Date(event.startsAt).toISOString(),
+  enddt: new Date(end).toISOString(),
+  location: event.venue.name,
+  body: `https://lvlnb.ca/schedule/${event.id}`,
+  allday: "false",
+}).toString();
+const outlook = `https://outlook.live.com/calendar/0/deeplink/compose?${microsoftParams}`;
+const microsoft365 = `https://outlook.office.com/calendar/deeplink/compose?${microsoftParams}`;
 ---
 <div class:list={["atc", compact && "atc--compact"]}>
   <a class="atc-btn" href={`/schedule/${event.id}.ics`} download>
@@ -29,11 +43,15 @@ const gcal =
     </svg>
     Add to calendar
   </a>
-  <a class="atc-alt" href={gcal} target="_blank" rel="noopener">Google</a>
+  <div class="atc-alternatives" role="group" aria-label="Add this event with your calendar provider">
+    <a class="atc-alt" href={gcal} target="_blank" rel="noopener">Google</a>
+    <a class="atc-alt" href={outlook} target="_blank" rel="noopener">Outlook.com</a>
+    <a class="atc-alt" href={microsoft365} target="_blank" rel="noopener">Microsoft 365</a>
+  </div>
 </div>
 
 <style>
-  .atc { display: inline-flex; align-items: center; gap: var(--s-4); }
+  .atc { display: inline-flex; flex-direction: column; align-items: center; gap: var(--s-2); max-width: 100%; }
   .atc-btn {
     display: inline-flex; align-items: center; gap: var(--s-2);
     padding: var(--s-3) var(--s-5);
@@ -47,10 +65,17 @@ const gcal =
     border-color: var(--volt-500); background: var(--surface);
     transform: translateY(-1px);
   }
+  .atc-alternatives {
+    display: flex; justify-content: center; flex-wrap: wrap;
+    column-gap: var(--s-3); row-gap: var(--s-1);
+  }
   .atc-alt {
-    font-size: var(--t-sm); font-weight: 700; letter-spacing: .06em;
-    text-transform: uppercase; color: var(--text-dim); text-decoration: none;
+    font-size: var(--t-xs); font-weight: 600; letter-spacing: .02em;
+    color: var(--text-muted); text-decoration: underline;
+    text-decoration-color: currentColor; text-underline-offset: 3px;
+    white-space: nowrap;
   }
   .atc-alt:hover { color: var(--accent-text); }
   .atc--compact .atc-btn { padding: var(--s-2) var(--s-4); font-size: var(--t-micro); }
+  .atc--compact .atc-alt { font-size: .625rem; }
 </style>
