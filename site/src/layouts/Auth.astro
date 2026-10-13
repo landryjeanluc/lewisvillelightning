@@ -38,6 +38,18 @@ const { title } = Astro.props;
         width: min(100%, 25rem); padding: var(--s-6);
         display: grid; gap: var(--s-4); margin-top: var(--s-5);
       }
+      /* The card's gap only separates ITS children, and each auth page puts a
+         single <form> inside it — so nothing was spacing the form's own rows.
+         Labels sat against the input above them and the submit button ran into
+         the "forgot your password" link. */
+      :global(.auth-card form) {
+        display: grid;
+        gap: var(--s-4);
+      }
+      /* The button is a grid item now, so it would stretch the full width;
+         keep it to its own size and centre the link under it. */
+      :global(.auth-card form > button) { justify-self: stretch; margin-top: var(--s-1); }
+      :global(.auth-card form > p)      { margin: 0; }
       .auth-slogan {
         margin-top: var(--s-6); font-family: var(--font-display); font-style: italic;
         font-weight: 900; font-size: var(--t-sm); text-transform: uppercase;
