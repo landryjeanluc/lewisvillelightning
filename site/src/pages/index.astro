@@ -11,7 +11,7 @@ import PlayerCard from "../components/PlayerCard.astro";
 import HomeGoals from "../components/HomeGoals.astro";
 import NewsFeed from "../components/NewsFeed.astro";
 import InstallApp from "../components/InstallApp.astro";
-import { team, nextGame, nextPractice, upcoming, results, sides, spotlightFor, spotlightProgress } from "../lib/data";
+import { displayName, team, nextGame, nextPractice, upcoming, results, sides, spotlightFor, spotlightProgress } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
 const g = nextGame();
@@ -73,7 +73,7 @@ const rot = spotlightProgress();
       <div class="sh-card"><PlayerCard player={star} size="lg" /></div>
       <div class="sh-text">
         <span class="eyebrow">Player spotlight</span>
-        <h2 class="sh-name">{star.firstName}<br /><span class="sh-last">{star.lastName}</span></h2>
+        <h2 class="sh-name">{displayName(star)}</h2>
         <p class="sh-meta">
           <span class="sh-num num">#{star.number}</span>
           {star.position === "G" ? "Goaltender" : star.position === "D" ? "Defence" : "Forward"}
@@ -82,7 +82,7 @@ const rot = spotlightProgress();
           On the banner for {s!.weAreHome ? "the game against" : "the game at"} {s!.them.short}.
           Every player gets a turn before anyone repeats — {rot.featured.length} of {rot.featured.length + rot.remaining} so far this season.
         </p>
-        <a class="sh-link" href={`/players/${star.id}`}>See {star.firstName}'s page →</a>
+        <a class="sh-link" href={`/players/${star.id}`}>See {displayName(star)}'s page →</a>
       </div>
     </section>
   )}

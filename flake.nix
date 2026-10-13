@@ -12,6 +12,9 @@
         default = pkgs.mkShell {
           packages = with pkgs; [
             nodejs_22          # Astro site build
+            python312
+            postgresql
+            uv
             imagemagick        # crest extraction, poster crops
             chromium           # headless poster rendering
           ];

@@ -206,6 +206,8 @@ def build_roster(src: dict, overrides: dict) -> dict:
             flagged.append(display)
         pid = f"pl-{p['jersey_number']:02d}"
         was = prior.get(pid, {})
+        if was and key(f"{was['firstName']} {was['lastName']}") != key(display):
+            raise ValueError(f"Roster identity changed for {pid}; review family links, history and artwork before reusing a jersey number")
         # discovered art wins; otherwise keep whatever was already recorded, so
         # re-running the sync never blanks a card someone added by hand
         card = art.get(key(display)) or was.get("cardArt")
@@ -231,11 +233,11 @@ def build_roster(src: dict, overrides: dict) -> dict:
             "fetchedAt": src["captured_at"].replace("Z", "+00:00"),
             "note": f"Adapted from {src.get('source_capture','capture')} by tools/spordle/to_data.py",
         },
-        "privacy": {
-            "publicNameFormat": "full",
+        "privacy": (json.loads((DATA / "roster.json").read_text()).get("privacy", {})
+                    if (DATA / "roster.json").exists() else {}) or {
+            "publicNameFormat": "first-initial-last",
             "publishBirthYear": False,
-            "publishPhotos": True,
-            "note": "JL 2026-10-12: full names and photo cards, site served behind a login.",
+            "publishPhotos": False,
         },
         "players": players,
         "staff": [
@@ -254,9 +256,9 @@ def build_schedule(src: dict) -> dict:
             "startsAt": to_iso(g["date"], g["time_local"]),
             "endsAt": None,
             "venue": {"name": g["venue_display"], "surface": None, "address": None, "mapUrl": None},
-            "home": {"teamId": home, "score": g.get("score")},
-            "away": {"teamId": away, "score": g.get("score")},
-            "status": "final" if g.get("score") else "scheduled",
+            "home": {"teamId": home, "score": g.get("home_score")},
+            "away": {"teamId": away, "score": g.get("away_score")},
+            "status": "final" if g.get("home_score") is not None and g.get("away_score") is not None else "scheduled",
             "gameType": {"EXHIBITION": "exhibition", "REGULAR": "regular",
                          "PLAYOFF": "playoff", "TOURNAMENT": "tournament"}.get(
                              g.get("event_type", "").upper(), "regular"),
@@ -277,7 +279,9 @@ def build_schedule(src: dict) -> dict:
     }
 
 def write(path: Path, obj) -> None:
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n")
+    pending = path.with_suffix(path.suffix + ".tmp")
+    pending.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n")
+    pending.replace(path)
     print(f"  wrote {path.relative_to(ROOT)}")
 
 def main() -> None:
@@ -287,10 +291,18 @@ def main() -> None:
 
     roster_src = json.loads((NORM / "roster.json").read_text())
     roster, flagged = build_roster(roster_src, overrides)
-    write(DATA / "roster.json", roster)
-
     sched_src = json.loads((NORM / "schedule.json").read_text())
     schedule = build_schedule(sched_src)     # may discover new opponents
+    # Partial windows must never erase the games referenced by stats and jobs.
+    if sched_src.get("status") == "partial_view" and (DATA / "schedule.json").exists():
+        previous = json.loads((DATA / "schedule.json").read_text())
+        merged = {e["id"]: e for e in previous["events"]}
+        merged.update({e["id"]: e for e in schedule["events"]})
+        schedule["events"] = sorted(merged.values(), key=lambda e: e["startsAt"])
+    ids = [e["id"] for e in schedule["events"]]
+    if len(set(ids)) != len(ids):
+        raise ValueError("Schedule contains duplicate IDs; resolve same-day games before importing")
+    write(DATA / "roster.json", roster)
     merge_new_teams()                        # ...so merge before writing
     write(DATA / "schedule.json", schedule)
 

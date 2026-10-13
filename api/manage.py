@@ -24,6 +24,7 @@ import json
 import os
 import secrets
 import sys
+from security import valid_password
 from pathlib import Path
 
 import asyncpg
@@ -52,11 +53,9 @@ DATA_DIR = Path(os.environ.get("DATA_DIR") or (HERE.parent / "data"))
 # which is gitignored; on the box they sit beside the service, readable only
 # by it.
 HANDOUT_DIR = Path(os.environ.get("HANDOUT_DIR") or (HERE / "private/family-logins"))
-WORDS = ["bolt", "ice", "rink", "puck", "slapshot", "crease", "zamboni",
-         "overtime", "faceoff", "blueline", "hattrick", "backcheck"]
 
 def readable_password() -> str:
-    return f"{secrets.choice(WORDS)}-{secrets.choice(WORDS)}-{secrets.randbelow(90) + 10}"
+    return secrets.token_urlsafe(18)  # 144 bits; printable and independently random
 
 def slugify(s: str) -> str:
     import re, unicodedata
@@ -89,12 +88,16 @@ def load_roster() -> list[dict]:
 
 def write_handout(player: dict, logins: list[tuple[str, str, str]]) -> Path:
     """One file per family — never one list with everyone's credentials on it."""
-    HANDOUT_DIR.mkdir(parents=True, exist_ok=True)
+    HANDOUT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    HANDOUT_DIR.chmod(0o700)
     name = f"{player['firstName']} {player['lastName']}"
     f = HANDOUT_DIR / f"{slugify(name)}.md"
     rows = "\n".join(f"| {rel} | `{handle}` | `{pw}` |" for rel, handle, pw in logins)
     has_player = any(rel == "Player" for rel, _, _ in logins)
-    f.write_text(f"""# Lewisville Lightning — sign-in for {name}'s family
+    fd = os.open(f, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handout:
+        handout.write(f"""# Lewisville Lightning — sign-in for {name}'s family
 
 The team site is **https://lvlnb.ca** — schedule, roster, player cards, stats
 and game-day info. It is private: nothing is visible without signing in.
@@ -115,7 +118,7 @@ driving? Ask JL and he will add one; there is no limit.
 Jobs (50/50, scoresheet, timekeeper, jerseys) are assigned to **{player['firstName']}'s
 family**, not to one parent. Whoever is free that night claims it on the game
 page so the rest of the team can see it is covered.
-""", encoding="utf-8")
+""")
     return f
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql:///lvlnb")
@@ -132,8 +135,10 @@ def read_password(confirm: bool = True) -> str:
         return pw
     while True:
         pw = getpass.getpass("  password: ")
-        if len(pw) < MIN_PASSWORD:
-            print(f"  must be at least {MIN_PASSWORD} characters")
+        try:
+            valid_password(pw)
+        except ValueError as exc:
+            print(f"  {exc}")
             continue
         if confirm and pw != getpass.getpass("  again: "):
             print("  they did not match")
@@ -142,7 +147,7 @@ def read_password(confirm: bool = True) -> str:
 
 
 def hash_password(raw: str) -> str:
-    return bcrypt.hashpw(raw.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(valid_password(raw).encode(), bcrypt.gensalt()).decode()
 
 
 async def main() -> int:
@@ -183,6 +188,11 @@ async def main() -> int:
 
     args = ap.parse_args()
     conn = await asyncpg.connect(DATABASE_URL)
+    # Share the API's account-administration lock; CLI changes must not race
+    # its last-admin guard. A failure rolls back the whole management command.
+    transaction = conn.transaction()
+    await transaction.start()
+    await conn.execute("SELECT pg_advisory_xact_lock(71001)")
     try:
         if args.cmd == "list":
             rows = await conn.fetch(
@@ -243,8 +253,10 @@ async def main() -> int:
             if not await conn.fetchval("SELECT 1 FROM users WHERE lower(email) = $1", email):
                 print(f"no account for {email}"); return 1
             pw = read_password()
-            await conn.execute("UPDATE users SET password_hash=$1 WHERE lower(email)=$2",
-                               hash_password(pw), email)
+            async with conn.transaction():
+                uid = await conn.fetchval("UPDATE users SET password_hash=$1, session_epoch=session_epoch+1"
+                                         " WHERE lower(email)=$2 RETURNING id", hash_password(pw), email)
+                await conn.execute("UPDATE password_resets SET used_at=now() WHERE user_id=$1 AND used_at IS NULL", uid)
             print(f"  password reset for {email}")
             return 0
 
@@ -284,6 +296,7 @@ async def main() -> int:
                         await conn.execute(
                             "UPDATE users SET password_hash=$1, session_epoch=session_epoch+1"
                             " WHERE id=$2", hash_password(pw), existing)
+                        await conn.execute("UPDATE password_resets SET used_at=now() WHERE user_id=$1 AND used_at IS NULL", existing)
                     else:
                         await conn.execute(
                             "INSERT INTO users (email, display_name, password_hash, role,"
@@ -379,7 +392,15 @@ async def main() -> int:
             await conn.execute("DELETE FROM users WHERE id=$1", row["id"])
             print(f"  removed {email} (their entries are kept, authorship cleared)")
             return 0
+    except BaseException:
+        await transaction.rollback()
+        raise
+    else:
+        await transaction.commit()
     finally:
+        # Returns in the try block also need a commit.
+        if conn.is_in_transaction():
+            await transaction.commit()
         await conn.close()
     return 0
 

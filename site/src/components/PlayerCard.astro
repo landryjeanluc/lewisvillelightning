@@ -12,11 +12,11 @@ const photo = showPhotos() && p.photo ? toPublic(p.photo) : null;
 // Real card art is a finished card — crest, name, number, position are already
 // on it. When present it IS the card; the generated chrome would only repeat
 // what the artwork says.
-const art = p.cardArt ? toPublic(p.cardArt) : null;
+const art = showPhotos() && p.cardArt ? toPublic(p.cardArt) : null;
 const artWebp = art ? art.replace(/\.(jpe?g|png)$/i, ".webp") : null;
 const Tag = href ? "a" : "div";
 ---
-<Tag class:list={["pcard", `pcard--${size}`, art && "pcard--art", !art && p.position === "G" && "pcard--goalie"]} href={href}>
+<Tag data-player-card={p.id} data-allow-photo={showPhotos() ? "true" : "false"} class:list={["pcard", `pcard--${size}`, art && "pcard--art", !art && p.position === "G" && "pcard--goalie"]} href={href}>
   <div class="holo" aria-hidden="true"></div>
   <div class="glare" aria-hidden="true"></div>
   <div class="foil" aria-hidden="true"></div>
@@ -184,7 +184,7 @@ const Tag = href ? "a" : "div";
     opacity: .07; filter: grayscale(.55) contrast(1.2);
     transform: rotate(-9deg) translateY(4%);
   }
-  .pc-photo { position: relative; width: 100%; height: 100%; object-fit: cover; }
+  .pc-art :global(.pc-photo) { position: relative; width: 100%; height: 100%; object-fit: cover; }
   .pc-number {
     position: relative; z-index: 1;
     font-family: var(--font-display); font-style: italic; font-weight: 900;
@@ -241,7 +241,9 @@ const Tag = href ? "a" : "div";
      card of a different shape letterboxes instead of losing its own name. */
   .pcard--art { aspect-ratio: 3 / 4; }
   .pcard--art picture { display: block; width: 100%; height: 100%; }
-  .pcard--art .pc-photo { width: 100%; height: 100%; object-fit: contain; }
+  .pcard--art .pc-art :global(.pc-photo) { width: 100%; height: 100%; object-fit: contain; }
 
   .pcard--goalie { background: linear-gradient(160deg, var(--steel-400) 0%, var(--navy-800) 28%, var(--navy-950) 62%, var(--blue-600) 100%); }
 </style>
+
+<script>import "../scripts/player-profiles";</script>

@@ -303,3 +303,46 @@ CREATE TABLE IF NOT EXISTS goal_entries (
   UNIQUE (created_by, client_id)
 );
 CREATE INDEX IF NOT EXISTS goal_entries_goal_idx ON goal_entries (goal_id, id DESC);
+
+-- Shared authentication throttles, independent from account existence.
+CREATE TABLE IF NOT EXISTS auth_limits (
+  key TEXT PRIMARY KEY,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  attempts INT NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS auth_limits_started_idx ON auth_limits (started_at);
+
+-- Login comparison is case-insensitive; uniqueness must be too. Existing
+-- duplicates fail this migration explicitly instead of choosing an account.
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_normalized_idx ON users (lower(email));
+
+-- Erase an account without deleting team records or breaking foreign keys.
+ALTER TABLE goal_entries ALTER COLUMN created_by DROP NOT NULL;
+ALTER TABLE game_results DROP CONSTRAINT IF EXISTS game_results_updated_by_fkey;
+ALTER TABLE game_results ADD CONSTRAINT game_results_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE game_stats DROP CONSTRAINT IF EXISTS game_stats_updated_by_fkey;
+ALTER TABLE game_stats ADD CONSTRAINT game_stats_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE audit_log DROP CONSTRAINT IF EXISTS audit_log_user_id_fkey;
+ALTER TABLE audit_log ADD CONSTRAINT audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE news_posts DROP CONSTRAINT IF EXISTS news_posts_author_id_fkey;
+ALTER TABLE news_posts ADD CONSTRAINT news_posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE player_profiles DROP CONSTRAINT IF EXISTS player_profiles_updated_by_fkey;
+ALTER TABLE player_profiles ADD CONSTRAINT player_profiles_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE game_notes DROP CONSTRAINT IF EXISTS game_notes_author_id_fkey;
+ALTER TABLE game_notes ADD CONSTRAINT game_notes_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE uploads DROP CONSTRAINT IF EXISTS uploads_uploaded_by_fkey;
+ALTER TABLE uploads ADD CONSTRAINT uploads_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE game_jobs DROP CONSTRAINT IF EXISTS game_jobs_claimed_by_fkey;
+ALTER TABLE game_jobs ADD CONSTRAINT game_jobs_claimed_by_fkey FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE game_jobs DROP CONSTRAINT IF EXISTS game_jobs_updated_by_fkey;
+ALTER TABLE game_jobs ADD CONSTRAINT game_jobs_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE plays DROP CONSTRAINT IF EXISTS plays_author_id_fkey;
+ALTER TABLE plays ADD CONSTRAINT plays_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE flagged_content DROP CONSTRAINT IF EXISTS flagged_content_reviewed_by_fkey;
+ALTER TABLE flagged_content ADD CONSTRAINT flagged_content_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE training_goals DROP CONSTRAINT IF EXISTS training_goals_created_by_fkey;
+ALTER TABLE training_goals ADD CONSTRAINT training_goals_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE goal_entries DROP CONSTRAINT IF EXISTS goal_entries_created_by_fkey;
+ALTER TABLE goal_entries ADD CONSTRAINT goal_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE goal_entries DROP CONSTRAINT IF EXISTS goal_entries_removed_by_fkey;
+ALTER TABLE goal_entries ADD CONSTRAINT goal_entries_removed_by_fkey FOREIGN KEY (removed_by) REFERENCES users(id) ON DELETE SET NULL;

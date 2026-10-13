@@ -17,6 +17,7 @@ async def run_chat_tests(app, pool, ok):
     for name, role in (("Chat parent", "parent"), ("Chat player", "player"), ("Chat admin", "admin")):
         ids.append(await pool.fetchval("""INSERT INTO users (email,display_name,password_hash,role)
             VALUES ($1,$2,'unused',$3) RETURNING id""", f"chat-{uuid4()}", name, role))
+    await pool.execute("UPDATE users SET player_id='pl-02' WHERE id=ANY($1::bigint[])", ids[:2])
     transport = httpx.ASGITransport(app=app)
     clients = [httpx.AsyncClient(transport=transport, base_url="http://t/api",
                cookies={"lvlnb_session": signer.dumps([uid, 1])}) for uid in ids]

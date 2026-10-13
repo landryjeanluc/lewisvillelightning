@@ -7,14 +7,26 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node ../tools/check_public_assets.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "validate": "astro build --silent",
-    "render": "node ../render/render.mjs"
+    "validate": "npm run check && npm run test && npm run build",
+    "render": "node ../render/render.mjs",
+    "check": "astro check",
+    "test": "node --import tsx --test src/lib/*.test.ts"
   },
   "dependencies": {
     "astro": "^7.3.8",
-    "marked": "^18.1.1"
+    "marked": "^18.1.1",
+    "sanitize-html": "^2.18.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/node": "^26.6.5",
+    "@types/sanitize-html": "^2.16.2",
+    "playwright-core": "^1.64.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3"
   }
 }

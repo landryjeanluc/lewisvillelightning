@@ -1,0 +1,46 @@
+---
+interface Props { playerId?: string }
+const { playerId } = Astro.props;
+---
+<section class="section card live-stats" data-live-stats={playerId ?? "team"}>
+  <h2>Coach-entered statistics</h2>
+  <p role="status" data-stats-status>Loading recorded scoresheets…</p>
+  <p data-stats-record></p>
+  <div class="tablewrap" tabindex="0" role="region" aria-label="Recorded player statistics" hidden>
+    <table><thead><tr><th>Player</th><th>GP</th><th>G</th><th>A</th><th>PTS</th><th>PIM</th><th>+/−</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+<script>
+  import { api } from "../scripts/api-client";
+  for (const section of document.querySelectorAll<HTMLElement>('[data-live-stats]')) {
+    void (async () => {
+      const result = await api('/stats/season');
+      const status = section.querySelector<HTMLElement>('[data-stats-status]')!;
+      if (!result.ok) { status.textContent = 'Recorded statistics could not load. Please reload to try again.'; return; }
+      const data = result.body;
+      const pid = section.dataset.liveStats;
+      const rows = (data.skaters || []).filter((row: any) => pid === 'team' || row.player_id === pid);
+      status.textContent = rows.length ? 'From completed scoresheets entered by the team.' : 'No completed scoresheets recorded yet.';
+      if (pid === 'team' && data.team.gp) {
+        section.querySelector('[data-stats-record]')!.textContent = `${data.team.gp} games · ${data.team.w} wins · ${data.team.l} losses · ${data.team.t} ties · ${data.team.gf} goals for · ${data.team.ga} against`;
+        document.querySelector<HTMLElement>('[data-imported-empty]')?.setAttribute('hidden', '');
+      }
+      const body = section.querySelector('tbody')!;
+      for (const row of rows) {
+        const tr = document.createElement('tr');
+        for (const value of [row.display_name ?? `${row.firstName ?? ''} ${row.lastName ?? ''}`.trim(), row.gp, row.g, row.a, row.pts, row.pim, row.plus_minus]) {
+          const td = document.createElement('td'); td.textContent = String(value); tr.append(td);
+        }
+        body.append(tr);
+      }
+      section.querySelector<HTMLElement>('.tablewrap')!.hidden = rows.length === 0;
+    })();
+  }
+</script>
+<style>
+  .live-stats { padding: var(--s-5); margin-block: var(--s-5); }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; }
+  table :global(td), th { padding: var(--s-2); text-align: right; white-space: nowrap; }
+  table :global(td:first-child), th:first-child { text-align: left; }
+</style>

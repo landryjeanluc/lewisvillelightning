@@ -114,15 +114,23 @@ const gameList = games.map((g: any) => {
         <h3>Add someone</h3>
         <div class="fields">
           <label>Name<input name="display_name" required autocomplete="off" /></label>
-          <label>Email<input name="email" type="email" required autocomplete="off" /></label>
+          <label>Email or handle<input name="email" required maxlength="254" autocomplete="off" /></label>
           <label>Password<input name="password" type="password" required minlength="8" autocomplete="new-password" /></label>
           <label>Role
             <select name="role">
               <option value="viewer">Viewer — can read</option>
-              <option value="admin">Admin — can record stats</option>
+              <option value="parent">Parent or guardian</option>
+              <option value="player">Player</option>
+              <option value="admin">Admin — manages the team</option>
             </select>
           </label>
         </div>
+        <label>Linked player
+          <select name="player_id"><option value="">No family link</option>
+            {roster.players.map(p => <option value={p.id}>#{p.number} — {p.firstName} {p.lastName}</option>)}
+          </select>
+        </label>
+        <label>Relationship (for example, Mom or Guardian)<input name="relationship" maxlength="50" /></label>
         <div class="actions">
           <span id="peoplestatus" class="dim"></span>
           <button type="submit">Add account</button>
@@ -133,18 +141,11 @@ const gameList = games.map((g: any) => {
 </Base>
 
 <script>
+  import { escapeHtml as esc } from "../lib/security";
   const $ = (s: string) => document.querySelector(s) as any;
-  const API = "/api";
   let dirty = false;
 
-  const api = async (path: string, opts: any = {}) => {
-    const r = await fetch(API + path, {
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      ...opts,
-    });
-    return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
-  };
+  import { api } from "../scripts/api-client";
 
   function show(which: "gate" | "viewer" | "editor", user?: any) {
     for (const id of ["gate", "viewer", "editor"]) $("#" + id).hidden = id !== which;
@@ -156,8 +157,8 @@ const gameList = games.map((g: any) => {
   }
 
   async function boot() {
-    const { body: user } = await api("/auth/me");
-    if (!user) return show("gate");
+    const { ok, body: user } = await api("/auth/me");
+    if (!ok || !user) return show("gate");
     if (user.role !== "admin") return show("viewer", user);
     show("editor", user);
     await loadGame();
@@ -231,18 +232,20 @@ const gameList = games.map((g: any) => {
     for (const u of body) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="l">${u.display_name}${u.id === meId ? ' <span class="pill">you</span>' : ""}</td>
-        <td class="l dim">${u.email}</td>
+        <td class="l">${esc(u.display_name)}${u.id === meId ? ' <span class="pill">you</span>' : ""}</td>
+        <td class="l dim">${esc(u.email)}</td>
         <td>
           <select data-role="${u.id}">
             <option value="viewer"${u.role === "viewer" ? " selected" : ""}>Viewer</option>
+            <option value="parent"${u.role === "parent" ? " selected" : ""}>Parent</option>
+            <option value="player"${u.role === "player" ? " selected" : ""}>Player</option>
             <option value="admin"${u.role === "admin" ? " selected" : ""}>Admin</option>
           </select>
         </td>
         <td class="dim">${fmtDate(u.last_login_at)}</td>
         <td class="row-actions">
           <button type="button" class="link" data-pw="${u.id}">Reset password</button>
-          <button type="button" class="link danger" data-del="${u.id}" data-name="${u.display_name}">Remove</button>
+          <button type="button" class="link danger" data-del="${u.id}" data-name="${esc(u.display_name)}">Remove</button>
         </td>`;
       tb.appendChild(tr);
     }
@@ -290,6 +293,7 @@ const gameList = games.map((g: any) => {
       body: JSON.stringify({
         display_name: f.get("display_name"), email: f.get("email"),
         password: f.get("password"), role: f.get("role"),
+        player_id: f.get("player_id") || null, relationship: f.get("relationship") || null,
       }),
     });
     if (!ok) {
@@ -327,7 +331,13 @@ const gameList = games.map((g: any) => {
   });
 
   document.querySelectorAll("[data-logout]").forEach((b) =>
-    b.addEventListener("click", async () => { await api("/auth/logout", { method: "POST" }); show("gate"); }));
+    b.addEventListener("click", async () => {
+      const result = await api("/auth/logout", { method: "POST" });
+      if (result.ok) {
+        try { sessionStorage.removeItem("lvlnb.play-draft.v1"); } catch { /* storage unavailable */ }
+        location.replace("/login");
+      }
+    }));
 
   $("#game").addEventListener("change", () => {
     if (dirty && !confirm("You have unsaved changes. Discard them?")) return;

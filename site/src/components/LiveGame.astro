@@ -1,0 +1,17 @@
+---
+interface Props { gameId: string }
+const { gameId } = Astro.props;
+---
+<section class="section card game-updates" data-game-updates={gameId}>
+  <h2>Game updates</h2>
+  <p data-game-status role="status">Loading scores, coach notes and family jobs…</p>
+  <p data-game-score hidden></p>
+  <div data-game-notes></div>
+  <section data-game-jobs hidden><h3>Family jobs</h3><ul></ul></section>
+</section>
+<script>import "../scripts/game-updates";</script>
+<style>
+  .game-updates { padding: var(--s-5); margin-top: var(--s-5); }
+  [data-game-score] { font-size: var(--t-lg); font-weight: 700; }
+  ul { display: grid; gap: var(--s-4); padding-left: var(--s-4); }
+</style>

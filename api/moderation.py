@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from pathlib import Path
 
 TERMS_FILE = Path(__file__).parent / "moderation-terms.json"
@@ -30,7 +31,9 @@ PATTERNS: list[tuple[str, str, str]] = [
     ("high", "threat",
      r"\b(?:i(?:'m| am)? ?(?:gonna|going to)|i'?ll)\s+(?:kill|hurt|beat|jump|end)\s+(?:you|him|her|them|u)\b"),
     ("high", "threat", r"\b(?:kill|hang|shoot)\s+your ?self\b"),
-    ("high", "self-harm", r"\b(?:kill myself|end it all|want to die|cut myself)\b"),
+    ("high", "self-harm", r"\b(?:kill myself|end it all|want to die|cut myself|je veux mourir|me suicider)\b"),
+    ("high", "sexual-solicitation", r"\b(?:send|show|envoie|montre)[\s\w]{0,30}\b(?:nudes|naked|nue?s|naked pictures)\b"),
+    ("high", "threat", r"\b(?:je vais te tuer|va te tuer|tue[ -]toi)\b"),
     ("low",  "personal-info", r"\b(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b"),
     ("low",  "personal-info", r"\b\d{1,5}\s+[A-Z][a-z]+\s+(?:St|Street|Ave|Avenue|Rd|Road|Dr|Drive|Cres|Crescent)\b"),
     ("low",  "personal-info", r"\b[\w.+-]+@[\w-]+\.[\w.]{2,}\b"),
@@ -38,9 +41,16 @@ PATTERNS: list[tuple[str, str, str]] = [
 
 
 def _load_terms() -> dict[str, dict[str, list[str]]]:
-    if TERMS_FILE.exists():
-        return json.loads(TERMS_FILE.read_text(encoding="utf-8"))
-    return {}
+    terms = json.loads(TERMS_FILE.read_text(encoding="utf-8"))
+    if not isinstance(terms, dict) or set(terms) != {"high", "medium", "low"}:
+        raise ValueError("moderation terms must define high, medium and low severity")
+    for categories in terms.values():
+        if not isinstance(categories, dict):
+            raise ValueError("invalid moderation categories")
+        for words in categories.values():
+            if not isinstance(words, list) or any(not isinstance(w, str) or not w.strip() or len(w)>100 or w.startswith("[") for w in words):
+                raise ValueError("moderation terms must be real, nonempty words or phrases")
+    return terms
 
 
 _TERMS = _load_terms()
@@ -54,7 +64,7 @@ def reload_terms() -> None:
 
 def _normalise(text: str) -> str:
     """Fold the usual evasions: f*ck, f u c k, fuuuck, f4ck."""
-    t = text.lower()
+    t = "".join(c for c in unicodedata.normalize("NFKD", text.casefold()) if not unicodedata.combining(c))
     t = t.translate(str.maketrans({"4": "a", "3": "e", "1": "i", "0": "o", "5": "s", "7": "t", "@": "a", "$": "s"}))
     t = re.sub(r"[^a-z\s]", "", t)          # strip punctuation used to break words
     t = re.sub(r"(.)\1+", r"\1", t)        # fuuuuck -> fuck; terms are folded the
@@ -85,6 +95,7 @@ def scan(text: str) -> list[dict]:
     """Return every reason this text might need a human look. Empty is clean."""
     if not text or not text.strip():
         return []
+    text = "".join(c for c in unicodedata.normalize("NFKC", text) if unicodedata.category(c) != "Cf").replace("’", "'")
     findings: list[dict] = []
     norm = _normalise(text)
 

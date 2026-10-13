@@ -1,6 +1,6 @@
 ---
 import PlayerCard from "./PlayerCard.astro";
-import type { Player } from "../lib/data";
+import { displayName, type Player } from "../lib/data";
 
 interface Props { player: Player; size?: "sm" | "md"; label?: string }
 const { player, size = "sm", label = "Player Spotlight" } = Astro.props;
@@ -12,7 +12,7 @@ const POS: Record<string, string> = {
   <PlayerCard player={player} size={size} />
   <div class="spot-text">
     <span class="spot-label">{label}</span>
-    <span class="spot-name">{player.firstName} {player.lastName}</span>
+    <span class="spot-name">{displayName(player)}</span>
     <span class="spot-meta">
       <span class="spot-num">#{player.number}</span>
       {POS[player.position] ?? player.position}

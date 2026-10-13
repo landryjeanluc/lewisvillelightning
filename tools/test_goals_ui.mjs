@@ -57,7 +57,7 @@ function serve() {
         if (f.endsWith("/")) f += "index.html";
         if (!path.extname(f)) f += "/index.html";
         const file = path.join(DIST, f);
-        if (!file.startsWith(DIST)) { res.writeHead(403).end(); return; }
+        if (!file.startsWith(DIST + path.sep)) { res.writeHead(403).end(); return; }
         const buf = await readFile(file);
         res.writeHead(200, { "content-type": MIME[path.extname(file)] ?? "application/octet-stream" });
         res.end(buf);
@@ -219,7 +219,7 @@ try {
   await click('#goal-editor [data-close]');
   await click('[data-tab="sheet-tab"]');
   await click('#editor [data-logout]');
-  ok('signing out hides the header link immediately', await test(`document.querySelector('#admin-nav-item').hidden && document.querySelector('#editor').hidden`));
+  ok('signing out returns to sign-in and removes the admin interface', await test(`location.pathname === '/login' && !document.querySelector('#editor')`));
 
 
   /* ------------------------------------- the two goal bars on the home page -- */

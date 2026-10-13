@@ -1,14 +1,67 @@
 {
   "high": {
-    "hate-slur": ["[add slurs here]"],
-    "sexual": ["[add terms here]"],
-    "violence": ["kill you", "beat you up", "jump you", "shoot up"]
+    "hate-slur": [
+      "nigger",
+      "nigga",
+      "faggot",
+      "kike",
+      "chink"
+    ],
+    "sexual": [
+      "porn",
+      "pornography",
+      "send nudes",
+      "dick pic",
+      "naked pictures"
+    ],
+    "violence": [
+      "kill you",
+      "beat you up",
+      "jump you",
+      "shoot up"
+    ]
   },
   "medium": {
-    "profanity": ["fuck", "shit", "bitch", "asshole", "bastard", "dickhead", "piss off", "cunt", "wanker", "slut", "whore"],
-    "insult": ["loser", "idiot", "stupid", "retard", "fat ass", "ugly", "pathetic", "you suck", "trash", "garbage player"]
+    "profanity": [
+      "fuck",
+      "shit",
+      "bitch",
+      "asshole",
+      "bastard",
+      "dickhead",
+      "piss off",
+      "cunt",
+      "wanker",
+      "slut",
+      "whore",
+      "tabarnak",
+      "calisse",
+      "câlisse",
+      "osti",
+      "putain",
+      "merde"
+    ],
+    "insult": [
+      "loser",
+      "idiot",
+      "stupid",
+      "retard",
+      "fat ass",
+      "ugly",
+      "pathetic",
+      "you suck",
+      "trash",
+      "garbage player",
+      "imbécile",
+      "connard",
+      "salope"
+    ]
   },
   "low": {
-    "mild": ["crap", "damn", "sucks"]
+    "mild": [
+      "crap",
+      "damn",
+      "sucks"
+    ]
   }
 }

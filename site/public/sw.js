@@ -20,7 +20,7 @@
  * to /login; `response.redirected` below is what stops the login page being
  * cached in place of the font or the page it was redirected from.
  */
-const CACHE = "lvlnb-static-v1";
+const CACHE = "lvlnb-static-v2";
 
 // Hashed build output and vendored assets — the same bytes for the life of a
 // build, and nothing team-specific in any of them.
@@ -31,7 +31,7 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     for (const key of await caches.keys()) {
-      if (key !== CACHE) await caches.delete(key);
+      if (key.startsWith("lvlnb-static-") && key !== CACHE) await caches.delete(key);
     }
     await self.clients.claim();
   })());
@@ -43,19 +43,23 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (!STATIC.some((re) => re.test(url.pathname))) return;
-  event.respondWith(staleWhileRevalidate(req));
+  event.respondWith(staleWhileRevalidate(req, event));
 });
 
 // Cache first so it is fast, refresh behind the answer so an unhashed asset —
 // a replaced crest, a new icon — is at most one visit out of date.
-async function staleWhileRevalidate(req) {
+async function staleWhileRevalidate(req, event) {
   const cache = await caches.open(CACHE);
   const hit = await cache.match(req);
   const live = fetch(req)
-    .then((res) => {
-      if (res.ok && !res.redirected && res.type === "basic") cache.put(req, res.clone());
+    .then(async (res) => {
+      if (res.ok && !res.redirected && res.type === "basic" &&
+          !/no-store|private/i.test(res.headers.get("cache-control") || "")) {
+        await cache.put(req, res.clone());
+      }
       return res;
     })
-    .catch(() => hit);
+    .catch(() => hit || Response.error());
+  event.waitUntil(live.then(() => undefined));
   return hit || live;
 }

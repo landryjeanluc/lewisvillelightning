@@ -16,9 +16,11 @@ const isoOffset = z
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/,
     "must be ISO-8601 with an explicit UTC offset (e.g. 2026-10-13T17:30:00-03:00)",
   )
-  .refine((s) => !Number.isNaN(Date.parse(s)), "not a real date");
+  .refine((s) => z.iso.datetime({ offset: true }).safeParse(s).success, "not a real date");
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
+const isoDate = z.iso.date();
+const safeId = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,99}$/, "must be a safe stable identifier");
+const webUrl = z.url({ protocol: /^https?$/ });
 
 const source = z.object({
   provider: z.string(),
@@ -31,7 +33,7 @@ const venue = z.object({
   name: z.string().min(1),
   surface: z.string().nullable(),
   address: z.string().nullable(),
-  mapUrl: z.string().url().nullable(),
+  mapUrl: webUrl.nullable(),
 });
 
 /* ---------------------------------------------------------------- opponents */
@@ -42,15 +44,15 @@ export const opponentsSchema = z.object({
   teams: z
     .array(
       z.object({
-        id: z.string().min(1),
+        id: safeId,
         name: z.string().min(1),
         short: z.string().min(1),
         town: z.string().nullable(),
         crest: z.string().nullable(),
         colours: z.object({
-          primary: z.string(),
-          secondary: z.string(),
-          accent: z.string().optional(),
+          primary: z.string().regex(/^#[0-9a-f]{6}$/i),
+          secondary: z.string().regex(/^#[0-9a-f]{6}$/i),
+          accent: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
         }),
       }),
     )
@@ -60,7 +62,7 @@ export const opponentsSchema = z.object({
 /* ----------------------------------------------------------------- schedule */
 
 const gameEvent = z.object({
-  id: z.string().min(1),
+  id: safeId,
   type: z.literal("game"),
   startsAt: isoOffset,
   endsAt: isoOffset.nullable(),
@@ -75,7 +77,7 @@ const gameEvent = z.object({
 });
 
 const practiceEvent = z.object({
-  id: z.string().min(1),
+  id: safeId,
   type: z.literal("practice"),
   startsAt: isoOffset,
   endsAt: isoOffset.nullable(),
@@ -88,7 +90,17 @@ const practiceEvent = z.object({
 export const scheduleSchema = z.object({
   version: z.literal(1),
   source,
-  events: z.array(z.discriminatedUnion("type", [gameEvent, practiceEvent])),
+  events: z.array(z.discriminatedUnion("type", [gameEvent, practiceEvent])).superRefine((events, ctx) => {
+    const seen = new Set<string>();
+    events.forEach((event, i) => {
+      if (seen.has(event.id)) ctx.addIssue({ code: "custom", path: [i, "id"], message: "duplicate event id" });
+      seen.add(event.id);
+      if (event.endsAt && Date.parse(event.endsAt) <= Date.parse(event.startsAt))
+        ctx.addIssue({ code: "custom", path: [i, "endsAt"], message: "end must be after start" });
+      if (event.type === "game" && event.home.teamId === event.away.teamId)
+        ctx.addIssue({ code: "custom", path: [i], message: "a team cannot play itself" });
+    });
+  }),
 });
 
 /* ------------------------------------------------------------------- roster */
@@ -104,7 +116,7 @@ export const rosterSchema = z.object({
   }),
   players: z.array(
     z.object({
-      id: z.string().min(1),
+      id: safeId,
       number: z.number().int().min(0).max(99),
       firstName: z.string().min(1),
       lastName: z.string().min(1),
@@ -175,7 +187,7 @@ export const newsSchema = z.object({
   source,
   articles: z.array(
     z.object({
-      id: z.string().min(1),
+      id: safeId,
       title: z.string().min(1),
       slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must be url-safe kebab-case"),
       publishedAt: isoOffset,

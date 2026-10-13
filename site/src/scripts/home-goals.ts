@@ -1,3 +1,4 @@
+export {};
 type TeamGoal = {
   id: number; title: string; scope: string; target: number; total: number;
   unit: string; starts_on: string; ends_on: string; archived: boolean;

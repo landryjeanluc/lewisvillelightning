@@ -33,6 +33,10 @@ async def main():
     # them — and both their surnames start with L, so an initial would not fix
     # it either. This is the whole reason the label carries the full name.
     run("seed-families")
+    from pathlib import Path
+    handout_dir = Path(os.environ["HANDOUT_DIR"])
+    ok("handout directory is owner-only", handout_dir.stat().st_mode & 0o777 == 0o700)
+    ok("every credential handout is owner-only", all(f.stat().st_mode & 0o777 == 0o600 for f in handout_dir.glob("*.md")))
     n = await names(pool)
     ok("a parent label carries the surname",
        n["mom.olivier-landry"] == "Mom to Olivier Landry", n.get("mom.olivier-landry"))
@@ -104,6 +108,13 @@ async def main():
 
     out = run("rename-families")
     ok("running it twice is a no-op", "0 login(s) renamed" in out, out.strip())
+
+    uid = await pool.fetchval("SELECT id FROM users WHERE email='mom.olivier-landry'")
+    epoch = await pool.fetchval("SELECT session_epoch FROM users WHERE id=$1", uid)
+    await pool.execute("INSERT INTO password_resets(user_id,token_hash,expires_at) VALUES($1,'cli-test-token',now()+interval '1 hour')", uid)
+    run("set-password", "mom.olivier-landry")
+    ok("CLI password resets revoke sessions", await pool.fetchval("SELECT session_epoch FROM users WHERE id=$1",uid)==epoch+1)
+    ok("CLI password resets invalidate reset links", await pool.fetchval("SELECT used_at IS NOT NULL FROM password_resets WHERE token_hash='cli-test-token'"))
 
     print(f"\n{sum(results)}/{len(results)} passed")
     await pool.close()

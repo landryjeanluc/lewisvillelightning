@@ -4,16 +4,17 @@ import Auth from "../layouts/Auth.astro";
 <Auth title="Reset your password">
   <form id="f">
     <p class="dim" style="font-size:var(--t-sm)">
-      Enter your email and we'll send you a link to choose a new password.
+      Enter your email to request a password reset. If you sign in with a family handle instead of an email, ask a team admin to reset it.
     </p>
     <label>Email<input name="email" type="email" required autocomplete="username" /></label>
     <button type="submit">Send reset link</button>
-    <p id="msg" class="auth-msg" hidden></p>
+    <p id="msg" class="auth-msg" role="status" hidden></p>
     <a class="auth-link" href="/login">Back to sign in</a>
   </form>
 </Auth>
 
 <script>
+  import { postAuth } from "../scripts/auth-form";
   const f = document.getElementById("f") as HTMLFormElement;
   const msg = document.getElementById("msg") as HTMLElement;
   f.addEventListener("submit", async (e) => {
@@ -21,16 +22,11 @@ import Auth from "../layouts/Auth.astro";
     const btn = f.querySelector("button") as HTMLButtonElement;
     btn.disabled = true;
     const d = new FormData(f);
-    const r = await fetch("/api/auth/forgot", {
-      method: "POST", credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: d.get("email") }),
-    });
-    const body = await r.json().catch(() => null);
+    const body = await postAuth("forgot", { email: d.get("email") });
     // Deliberately the same message either way — this must not reveal who has
     // an account.
     msg.textContent = body?.detail ?? "If that address has an account, a reset link is on its way.";
-    msg.className = "auth-msg ok";
+    msg.className = body.ok ? "auth-msg ok" : "auth-msg err";
     msg.hidden = false;
     btn.disabled = false;
   });

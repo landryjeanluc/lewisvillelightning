@@ -1,6 +1,7 @@
 import {
   opponentsSchema, scheduleSchema, rosterSchema, statsSchema, newsSchema, spotlightSchema,
   type GameEvent, type PracticeEvent, type Player, type Team,
+  type Opponents, type Schedule, type Roster, type Stats, type News, type Spotlight,
 } from "./schema";
 
 import opponentsRaw from "../../../data/opponents.json";
@@ -25,12 +26,12 @@ function parse<T>(schema: { safeParse: (v: unknown) => any }, raw: unknown, file
   return r.data as T;
 }
 
-export const opponents = parse<any>(opponentsSchema, opponentsRaw, "opponents.json");
-export const schedule  = parse<any>(scheduleSchema,  scheduleRaw,  "schedule.json");
-export const roster    = parse<any>(rosterSchema,    rosterRaw,    "roster.json");
-export const stats     = parse<any>(statsSchema,     statsRaw,     "stats.json");
-export const news      = parse<any>(newsSchema,      newsRaw,      "news.json");
-export const spotlight = parse<any>(spotlightSchema, spotlightRaw, "spotlight.json");
+export const opponents = parse<Opponents>(opponentsSchema, opponentsRaw, "opponents.json");
+export const schedule  = parse<Schedule>(scheduleSchema,  scheduleRaw,  "schedule.json");
+export const roster    = parse<Roster>(rosterSchema,    rosterRaw,    "roster.json");
+export const stats     = parse<Stats>(statsSchema,     statsRaw,     "stats.json");
+export const news      = parse<News>(newsSchema,      newsRaw,      "news.json");
+export const spotlight = parse<Spotlight>(spotlightSchema, spotlightRaw, "spotlight.json");
 export const team = teamRaw as {
   name: string; division: string; level: string; home_arena: string;
   association_website: string;
@@ -54,8 +55,18 @@ const playersById = new Map<string, Player>(roster.players.map((p: Player) => [p
 
 {
   const bad: string[] = [];
+  for (const [file, ids] of [
+    ["opponents.json", opponents.teams.map(t => t.id)],
+    ["roster.json", roster.players.map(p => p.id)],
+    ["news.json", news.articles.map(a => a.slug)],
+    ["stats.skaters", stats.skaters.map(s => s.playerId)],
+    ["stats.goalies", stats.goalies.map(s => s.playerId)],
+  ] as const) {
+    if (new Set(ids).size !== ids.length) bad.push(`${file}: duplicate identifiers`);
+  }
   for (const e of schedule.events) {
     if (e.type !== "game") continue;
+    if (e.home.teamId !== US && e.away.teamId !== US) bad.push(`schedule.json: ${e.id} does not involve our team`);
     for (const side of ["home", "away"] as const) {
       const id = (e as GameEvent)[side].teamId;
       if (!teamsById.has(id)) bad.push(`schedule.json → event ${e.id}: ${side}.teamId "${id}" is not in opponents.json`);
@@ -86,7 +97,7 @@ export const allEvents = [...schedule.events].sort((a: any, b: any) =>
 );
 
 const isUpcoming = (e: { startsAt: string; status: string }, now: Date) =>
-  new Date(e.startsAt) >= now && e.status !== "cancelled";
+  new Date(e.startsAt) >= now && ["scheduled", "in_progress"].includes(e.status);
 
 export function nextGame(now = new Date()): GameEvent | undefined {
   return games.find((g) => isUpcoming(g, now));
@@ -97,9 +108,9 @@ export function nextPractice(now = new Date()): PracticeEvent | undefined {
 export function upcoming(now = new Date(), limit = 8) {
   return allEvents.filter((e: any) => isUpcoming(e, now)).slice(0, limit);
 }
-export function results(now = new Date(), limit = 8): GameEvent[] {
+export function results(_now = new Date(), limit = 8): GameEvent[] {
   return games
-    .filter((g) => g.status === "final" || new Date(g.startsAt) < now)
+    .filter((g) => g.status === "final")
     .reverse()
     .slice(0, limit);
 }
@@ -188,3 +199,5 @@ export function spotlightProgress() {
 }
 export const hasBeenFeatured = (id: string) =>
   (Object.values(spotlight.assignments) as string[]).includes(id);
+
+export type { GameEvent, PracticeEvent, Player, Team } from "./schema";

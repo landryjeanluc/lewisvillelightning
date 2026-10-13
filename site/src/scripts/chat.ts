@@ -1,3 +1,4 @@
+export {};
 type Member = { id: number; display_name: string };
 type User = Member & { role: string };
 type Room = { id: number; kind: 'team' | 'direct'; name: string; last_message: string | null; last_deleted: boolean; unread: number };
@@ -41,6 +42,11 @@ function signedOut() {
   login.hidden = false;
   messagesEl.replaceChildren();
   threads.clear();
+  rendered.clear();
+  rooms = [];
+  roomsEl.replaceChildren();
+  memberSelect.replaceChildren();
+  composer.value = "";
 }
 async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -119,6 +125,19 @@ function messageNode(message: Message): HTMLLIElement {
     });
     node.append(remove);
   }
+  if (!message.deleted_at && !own) {
+    const report = document.createElement('button');
+    report.type = 'button'; report.className = 'link chat-report'; report.textContent = 'Report';
+    report.addEventListener('click', async () => {
+      if (!window.confirm('Share this message with team admins for review? For urgent help, speak to a trusted adult.')) return;
+      report.disabled = true;
+      try {
+        await api(`/chat/conversations/${message.conversation_id}/messages/${message.id}/report`, 'POST');
+        report.textContent = 'Reported';
+      } catch (e) { error((e as Error).message); report.disabled = false; }
+    });
+    node.append(report);
+  }
   return node;
 }
 function renderMessages() {
@@ -158,7 +177,7 @@ async function selectRoom(id: number) {
   const room = rooms.find(r => r.id === id)!;
   rendered.clear(); messagesEl.replaceChildren();
   el('chat-title').textContent = room.name;
-  el('chat-audience').textContent = room.kind === 'team' ? 'Everyone with a team account can join in.' : 'Only you and this team member can read this conversation.';
+  el('chat-audience').textContent = room.kind === 'team' ? 'Everyone with a team account can join in.' : 'Private conversation. Flagged or reported messages may be reviewed by team admins.';
   el('chat-empty').textContent = room.kind === 'team' ? 'No messages yet. Say hello to the team!' : 'Start the conversation with a hello.';
   composer.placeholder = room.kind === 'team' ? 'Write to the team…' : `Message ${room.name}…`;
   error(); latest.hidden = true; older.hidden = true;

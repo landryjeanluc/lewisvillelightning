@@ -14,6 +14,8 @@ import InstallApp from "../components/InstallApp.astro";
 </Auth>
 
 <script>
+  import { safeNext } from "../lib/security";
+  import { postAuth } from "../scripts/auth-form";
   const f = document.getElementById("f") as HTMLFormElement;
   const msg = document.getElementById("msg") as HTMLElement;
   // nginx sends us here with ?next=<the page they wanted>
@@ -23,16 +25,12 @@ import InstallApp from "../components/InstallApp.astro";
     const btn = f.querySelector("button") as HTMLButtonElement;
     btn.disabled = true;
     const d = new FormData(f);
-    const r = await fetch("/api/auth/login", {
-      method: "POST", credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email: d.get("email"), password: d.get("password") }),
-    });
-    const body = await r.json().catch(() => null);
+    const body = await postAuth("login", { email: d.get("email"), password: d.get("password") });
+    const r = body;
     btn.disabled = false;
     if (r.ok) {
       // only follow same-origin paths, never an absolute URL from the query
-      location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+      location.href = safeNext(next, location.origin);
       return;
     }
     msg.textContent = body?.detail ?? "Sign in failed.";

@@ -20,7 +20,7 @@ import "../../styles/goals.css";
   const button = document.querySelector<HTMLButtonElement>("#goal-new")!;
   async function api(path: string, method = "GET", body?: unknown) {
     const response = await fetch("/api/goals" + path, {
-      method, credentials: "same-origin", cache: "no-store",
+      method, signal: AbortSignal.timeout(15000), credentials: "same-origin", cache: "no-store",
       headers: body ? { "content-type": "application/json" } : {},
       body: body ? JSON.stringify(body) : undefined,
     });

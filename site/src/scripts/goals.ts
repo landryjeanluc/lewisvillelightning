@@ -33,7 +33,7 @@ function action(text: string, fn: () => void, className = 'ghost') {
 }
 function message(text: string) { $('#goals-message').textContent = text; }
 async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const response = await fetch('/api/goals' + path, { method, credentials: 'same-origin', cache: 'no-store',
+  const response = await fetch('/api/goals' + path, { method, signal: AbortSignal.timeout(15000), credentials: 'same-origin', cache: 'no-store',
     headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
   const data = await response.json().catch(() => null);
   if (response.status === 401) {

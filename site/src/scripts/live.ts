@@ -7,7 +7,7 @@
  */
 export async function api<T>(path: string): Promise<T | null> {
   try {
-    const r = await fetch("/api" + path, { credentials: "same-origin" });
+    const r = await fetch("/api" + path, { credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(15000) });
     return r.ok ? ((await r.json()) as T) : null;
   } catch {
     return null;
@@ -43,7 +43,7 @@ export function md(src: string): string {
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/(^|\W)\*([^*]+)\*/g, "$1<em>$2</em>")
       // only http(s) links, and never javascript: — this text came from a form
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" rel="noopener">$1</a>');
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" rel="noopener noreferrer">$1</a>');
   }
 }
 

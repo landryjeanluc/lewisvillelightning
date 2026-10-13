@@ -27,6 +27,7 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
+    <meta name="referrer" content="no-referrer" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
@@ -68,6 +69,7 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
                 <a href={n.href} aria-current={isActive(n.href) ? "page" : undefined}>{n.label}</a>
               </li>
             ))}
+            <li><a href="/account" aria-current={isActive("/account") ? "page" : undefined}>Account</a></li>
             <li id="admin-nav-item" hidden>
               <a href="/admin" aria-current={isActive("/admin") ? "page" : undefined}>Admin</a>
             </li>
@@ -78,8 +80,8 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
 
     {isFixtureData && (
       <div class="fixture-banner" role="status">
-        <strong>Placeholder data.</strong> Schedule, roster and stats are fixtures until the
-        Spordle sync runs — only the Oct&nbsp;13 game is real. Player names shown are not real.
+        <strong>Unverified schedule.</strong> A Spordle sync has not been recorded.
+        Confirm event details with the team before making plans.
       </div>
     )}
 
@@ -223,3 +225,12 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
     </script>
   </body>
 </html>
+
+<script>
+  // A restored back/forward-cache snapshot must recheck the server's login gate.
+  window.addEventListener("pagehide", () => { document.documentElement.style.visibility = "hidden"; });
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) location.reload();
+    else document.documentElement.style.visibility = "";
+  });
+</script>

@@ -1,4 +1,5 @@
 ---
+import { scriptJson } from "../lib/security";
 import Base from "../layouts/Base.astro";
 import { games, sides } from "../lib/data";
 import { shortDate } from "../lib/format";
@@ -77,7 +78,7 @@ const gameLabels = Object.fromEntries(games.map((g: any) => {
     <p class="dim byline" id="pl-d-byline"></p>
   </article>
 
-  <script type="application/json" id="pl-games" set:html={JSON.stringify(gameLabels)} />
+  <script type="application/json" id="pl-games" set:html={scriptJson(gameLabels)} />
   <script>import "../scripts/plays-page";</script>
 </Base>
 

@@ -1,137 +1,148 @@
 # Deploying lvlnb.ca
 
-The site is a static build served by nginx on **arachnea** (192.168.1.20) on
-port **8111**, behind HTTP basic auth, with TLS terminated upstream by NPM.
+The site is an authenticated team application. Astro builds private static HTML
+and media; nginx checks the API session for each private request. FastAPI also
+requires sessions independently. TLS terminates at the upstream proxy; the API
+must listen only on loopback. The old shared-basic-auth setup is obsolete.
 
-## One-time setup — status
+## Validate locally
 
-| step | state |
-|---|---|
-| `hexpi.sites.lvlnb` in `nixos-builds/hosts/arachnea/guests/default.nix` | done, commit `d5bc682` |
-| `/srv/lvlnb` created, `jl:users` | done |
-| `/var/lib/lvlnb/htpasswd` (user `lightning`, bcrypt) | done |
-| site rsynced to `/srv/lvlnb` | done |
-| **`nixos-rebuild switch` on arachnea** | **not run — see below** |
-| NPM proxy-host `lvlnb.ca` → `http://192.168.1.20:8111` | not done (JL, NPM UI) |
-| DNS `lvlnb.ca` → public IP | not done (JL, registrar) |
-
-## The rebuild — what it actually changes
-
-An earlier version of this doc warned that switching would carry a `flake.lock`
-bump to all 51 services on the box. **That was wrong.** Building the new system
-and diffing it against the running one shows:
-
-```
-Added packages:
-[A.]  #1  unit-lvlnb-api.service  <none>
-Closure size: 2075 -> 2076 (25 added, 24 removed, delta +1, disk usage +6.4KiB)
+```sh
+nix develop --command bash tools/check.sh
+nix develop --command ./deploy.sh --check-only
 ```
 
-One added systemd unit. Both systems carry the same nixpkgs revision
-(`25.11.20260630.b6018f8`), so nextcloud, immich, postgres, cdecb, honda and the
-arr stack are untouched. The only restart is nginx picking up the new vhost.
+The first command is the full quality gate, including browser suites. The second
+runs deployment's API/site checks without publishing. No test uses the live
+production database. Tests create and destroy their own PostgreSQL cluster.
 
-Always diff before switching a box like this:
+`site/package-lock.json` and `api/uv.lock` are the dependency sources of truth.
+Use `npm ci` and `uv sync --frozen`, not an unpinned install during deployment.
 
-```
-cd ~/repos/HexPi/nixos-builds
-nixos-rebuild build --flake .#arachnea --build-host arachnea
-ssh arachnea nix run nixpkgs#nvd -- diff /run/current-system ./result
-```
+## Runtime configuration
 
-Then switch:
+Store `/opt/lvlnb/.env` with mode 0600, readable by the service account:
 
-```
-nixos-rebuild switch --flake .#arachnea --target-host arachnea \
-  --build-host arachnea --use-remote-sudo
-```
-
-Rollback: `ssh arachnea 'sudo nixos-rebuild switch --rollback'`.
-
-### Already staged on the box (done)
-
-| | |
-|---|---|
-| `/opt/lvlnb` | API code + `.venv` with all deps, `.env` (0600, secret generated on-box) |
-| `/srv/lvlnb` | the static site build |
-| `/srv/lvlnb-data` | `data/*.json` — the API validates ids against this |
-| `/srv/lvlnb-uploads` | empty, for admin photo uploads |
-
-### After the switch
-
-```
-ssh arachnea 'sudo chown -R lvlnb:lvlnb /opt/lvlnb /srv/lvlnb-uploads'
-ssh arachnea 'sudo systemctl restart lvlnb-api && systemctl is-active lvlnb-api'
-ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py bootstrap'
-curl -s localhost:8112/health   # on the box
+```ini
+DATABASE_URL=postgresql:///lvlnb
+SESSION_SECRET=<at least 32 random bytes, generated on the host>
+DATA_DIR=/srv/lvlnb-data
+UPLOAD_DIR=/srv/lvlnb-uploads
+PUBLIC_BASE_URL=https://lvlnb.ca
+COOKIE_SECURE=1
+CHAT_PLAYER_DMS=peers
 ```
 
-Then the two steps only JL can do: an NPM proxy-host
-`lvlnb.ca -> http://192.168.1.20:8111`, and a DNS record for lvlnb.ca.
+Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` for
+email recovery. Without SMTP, the endpoint gives the same generic response and
+creates no token. Handle-only family accounts use an admin-assisted reset.
 
-## Re-labelling the family logins (one-off, 2026-10-13)
+`CHAT_PLAYER_DMS=peers` allows player-to-player DMs and guardian/child DMs within
+a linked family. `family` disables peer DMs. Neither setting permits unrelated
+adult/child DMs, including admins. Team-room messages remain available to members.
+All messages are screened; flagged and reported messages enter the admin queue.
 
-Parent accounts seeded before this now read "Mom to Olivier" for two different
-Oliviers. `deploy.sh` ships `manage.py`, so after a deploy:
+The service starts with:
 
-```
-ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py rename-families --dry-run'
-ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py rename-families'
-```
-
-Display names only — no passwords, no sessions, nobody is signed out. Safe to
-re-run; the second run reports nothing to do. See `api/README.md`.
-
-## The home-screen app (PWA)
-
-`site/public/manifest.webmanifest`, `site/public/sw.js` and `site/public/icons/`
-ship with the static build, so a plain rsync publishes them. The **nginx side
-needs a rebuild once**: the login gate must stop redirecting those three paths,
-or Chrome never offers the install prompt and the sign-in page cannot install at
-all.
-
-```
-cd ~/repos/HexPi/nixos-builds        # the auth_request off locations are committed here
-nixos-rebuild build --flake .#arachnea --build-host arachnea
-ssh arachnea nix run nixpkgs#nvd -- diff /run/current-system ./result   # expect: nginx config only
-nixos-rebuild switch --flake .#arachnea --target-host arachnea \
-  --build-host arachnea --use-remote-sudo
+```sh
+uv sync --frozen --no-dev
+.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8112
 ```
 
-Verify from outside the gate — all three must answer 200 while signed out:
+For NixOS, the service's `ReadWritePaths` must include `/srv/lvlnb-uploads`;
+`ProtectSystem=strict` otherwise prevents image saves. Keep code read-only to the
+service where practical. uv's native dependencies may need the existing
+`LD_LIBRARY_PATH` configuration. Configure Uvicorn's trusted proxy addresses to
+match the actual proxy chain, never `*`. Authentication uses Uvicorn's resolved
+client address and does not trust raw forwarded headers itself.
 
+## Hosting boundary
+
+`ops/nginx.conf` is a validated reference server block. Integrate its requirements
+into `HexPi/nixos-builds/hosts/arachnea/guests/default.nix`; it is not automatically
+installed by `deploy.sh`.
+
+- Gate HTML, photos, team images, calendars, rendered posters and uploads.
+- Serve `/uploads/` from `/srv/lvlnb-uploads/` behind the same session gate.
+- Let `/login`, `/forgot`, `/reset`, the manifest, worker, icons, fonts and public
+  compiled assets load while signed out. The build checks the compiled bundles
+  for full player names and private asset paths.
+- Return `Cache-Control: no-store` for every private response, including media.
+  Remove the old seven-day `expires` directives for `/photos/` and `/team/`.
+- API authorization failures must remain JSON 401/403 responses, not redirects
+  to an HTML sign-in page. The reference proxy delegates API authorization to the
+  application, which denies by default.
+- Set no-referrer, nosniff, framing protection and a content security policy.
+  Disable reset-query logging at both proxies. Configure HTTPS redirect/HSTS on
+  the TLS terminator and firewall the internal listener from public access.
+- Permit 13 MB request bodies at the proxy for 12 MB image uploads plus multipart
+  overhead. The app independently enforces request size, format and pixel limits.
+
+Never publish `site/dist` to a public static host without a server-side login
+gate. Client-side hiding is not authorization. Privacy flags reduce the content
+rendered but do not make the schedule, artifacts or repository public-safe.
+
+## Publish
+
+```sh
+nix develop --command ./deploy.sh
+# Or backend only / include game posters:
+nix develop --command ./deploy.sh --api-only
+nix develop --command ./deploy.sh --posters
 ```
-for p in /manifest.webmanifest /sw.js /icons/icon-512.png; do
-  curl -sk -o /dev/null -w "$p -> %{http_code}\n" --resolve lvlnb.ca:443:192.168.1.21 "https://lvlnb.ca$p"
-done
+
+The script tests, builds, creates an owner-only on-host database dump, transfers
+site/API/data, synchronizes the frozen production dependencies, restarts the
+API, and verifies health and the external login gate. Failures return nonzero.
+`.env`, the virtual environment, private handouts and logs remain host-owned.
+
+The deployment account needs narrowly scoped permission to create the backup
+directory, run `pg_dump` as `lvlnb`, sync the application directories and restart
+`lvlnb-api`. Provision those permissions before deploying; the script must not
+silently skip a failed backup or dependency sync. The API service must be able to
+read the deployed files and write the upload directory.
+
+Do not run two publishes concurrently. CI's deployment concurrency group covers
+CI runs; coordinate manual deployments separately. Transfers are delayed within
+each rsync, but this is not an atomic release of site, data and API together.
+Use a maintenance window for schema or authorization changes.
+
+After deployment, verify anonymously from the external origin that private
+routes/media redirect or reject, and that login/manifest/worker/icons still work.
+With a test account, check no-store headers, uploads, peer chat, unrelated
+adult/child DM rejection, report removal, password changes and logout.
+
+## Credential transition after the audit
+
+Existing family passwords used a small generator. Reissue them after the updated
+CLI is installed:
+
+```sh
+cd /opt/lvlnb
+sudo -u lvlnb .venv/bin/python manage.py seed-families --force
 ```
 
-A `302` there is the whole bug: the install button goes quiet and nobody reports it.
+This resets seeded accounts and signs out their existing sessions. Distribute
+the new handouts privately and retire the old ones. Manually created guardians
+need individual resets with `manage.py set-password HANDLE` or Admin. Do not put
+passwords in shell arguments or CI output. The CLI displays a generated password
+when no terminal is available; use it only in a private interactive session.
 
-## Publishing a content update
+Invalidate any remaining old reset links and rotate `SESSION_SECRET` during the
+transition to revoke all old sessions. Do not claim this happened merely because
+the generator changed. The audit made no live account changes.
 
-Content changes need no rebuild — only an rsync:
+## Backup and recovery
 
-```
-cd site && npm run build
-rsync -a --delete dist/ arachnea:/srv/lvlnb/
-rsync -a data/ arachnea:/srv/lvlnb-data/     # if the contract changed
-```
+Pre-deploy dumps are in `/var/backups/lvlnb/`, owned by the service account with
+restricted permissions. This is a deployment safeguard, not a complete backup
+policy: separately back up uploads, the data contract, secrets and the deployed
+revision to restricted storage, and test a restore in an isolated database.
 
-## Changing the team password
-
-```
-nix shell nixpkgs#apacheHttpd -c htpasswd -nbB lightning 'NEW-PASSWORD' \
-  | ssh arachnea 'sudo tee /var/lib/lvlnb/htpasswd >/dev/null
-                  && sudo chown nginx:nginx /var/lib/lvlnb/htpasswd
-                  && sudo chmod 640 /var/lib/lvlnb/htpasswd'
-```
-
-No nginx reload is needed — `auth_basic_user_file` is read per request.
-
-## Why basic auth
-
-The roster is nineteen 12-year-olds rendered with full names and photo cards,
-next to the exact arena and time of every game. JL's call (2026-10-12) was full
-detail behind a login. `data/roster.json`'s `privacy` block can still reduce
-what renders if that changes — it is one line, and the site rebuilds from it.
+If a deployment fails, stop publishing, preserve error output without secrets,
+and check `systemctl status lvlnb-api` and the service journal. To roll back code,
+redeploy the previous known-good revision with its lockfiles. Schema changes are
+additive, but inspect compatibility before starting an older binary. If a database
+restore is needed, stop the API and restore the selected dump to a separate
+replacement database, verify it, then switch the connection string. Never overwrite
+the only live database or the only backup as an experiment.

@@ -50,7 +50,7 @@ function serve() {
         if (f.endsWith("/")) f += "index.html";
         if (!path.extname(f)) f += "/index.html";
         const file = path.join(DIST, f);
-        if (!file.startsWith(DIST)) { res.writeHead(403).end(); return; }
+        if (!file.startsWith(DIST + path.sep)) { res.writeHead(403).end(); return; }
         const buf = await readFile(file);
         res.writeHead(200, { "content-type": MIME[path.extname(file)] ?? "application/octet-stream" });
         res.end(buf);
@@ -192,8 +192,11 @@ try {
     await fetch('/roster/');
   })()`);
   await sleep(300);   // stale-while-revalidate fills the cache behind the answer
-  const cached = await cdp.eval(`caches.open('lvlnb-static-v1')
-    .then(c => c.keys()).then(ks => ks.map(r => new URL(r.url).pathname))`);
+  const cached = await cdp.eval(`(async () => {
+    const names = (await caches.keys()).filter(name => name.startsWith('lvlnb-static-'));
+    const requests = await Promise.all(names.map(async name => (await caches.open(name)).keys()));
+    return requests.flat().map(r => new URL(r.url).pathname);
+  })()`);
   ok("a font is cached", cached.some((p) => p.startsWith("/fonts/")), cached.join(" "));
   ok("a player photo is NOT cached", !cached.some((p) => p.startsWith("/photos/")),
      "— the roster is nineteen minors behind a login");

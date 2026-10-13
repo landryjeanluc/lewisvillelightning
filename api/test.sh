@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euo pipefail
 API_DIR=$(cd "$(dirname "$0")" && pwd)
 TEST_ROOT=$(mktemp -d /tmp/lvlnb-test.XXXXXX)
@@ -11,16 +12,17 @@ cleanup() {
 trap cleanup EXIT
 initdb -D "$PGDATA" -U postgres --auth=trust >/dev/null 2>&1
 pg_ctl -D "$PGDATA" -o "-k $PGHOST -h ''" -l "$TEST_ROOT/postgres.log" start >/dev/null 2>&1
-for i in $(seq 1 40); do pg_isready -h "$PGHOST" -q && break; done
+for _ in $(seq 1 40); do pg_isready -h "$PGHOST" -q && break; done
 createdb -h "$PGHOST" -U postgres lvlnb
 echo "postgres up"
 
 export DATABASE_URL="postgresql://postgres@/lvlnb?host=$PGHOST"
 export UPLOAD_DIR="$TEST_ROOT/uploads"; mkdir -p "$UPLOAD_DIR"
-export SESSION_SECRET="test-secret-not-production"
+export SESSION_SECRET="test-secret-not-production-at-least-32-bytes"
 export DATA_DIR="$API_DIR/../data"
 export COOKIE_SECURE=0
 cd "$API_DIR"
+python -m unittest security_unit_test
 python test_api.py
 
 # manage.py seeds whole families, so it gets its own database rather than

@@ -1,3 +1,4 @@
+export {};
 // The roster stays server-rendered; this controller only chooses the scene.
 // User interaction stops the tour until Play is explicitly selected again.
 document.querySelectorAll<HTMLElement>("[data-showcase]").forEach((root) => {

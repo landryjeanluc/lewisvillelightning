@@ -44,13 +44,7 @@ const list = games.map((g: any) => {
 
 <script>
   const $ = (s: string) => document.querySelector(s) as any;
-  const api = async (p: string, o: any = {}) => {
-    const r = await fetch("/api" + p, {
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" }, ...o,
-    });
-    return { ok: r.ok, body: await r.json().catch(() => null) };
-  };
+  import { api } from "../../scripts/api-client";
   const fmt = (s: string) =>
     new Date(s).toLocaleDateString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 

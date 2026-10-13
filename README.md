@@ -3,7 +3,7 @@
 Team website, brand assets and game-day graphics for the Lewisville Lightning
 (Competitive U13 B, Lewisville Minor Hockey Association, New Brunswick).
 
-Everything is driven by five JSON files in `data/`. The website renders them,
+Schedule and roster content are driven by JSON files in `data/`. The website renders them,
 and the poster renderer screenshots the website — so the graphics and the site
 can never drift apart, and no image model ever retypes a date.
 
@@ -30,7 +30,7 @@ direnv allow          # or: nix develop
 cd site && npm install
 npm run dev           # http://localhost:4321
 npm run build
-npm run validate      # checks data/ against the contract; fails loudly
+npm run validate      # type checks, security unit tests, data checks and build
 ```
 
 Game-day graphics (4K poster, 9:16 story, 1:1 square):
@@ -66,9 +66,7 @@ image-model pipeline worth keeping.
 
 ## Data and the Spordle sync
 
-**Read `docs/DATA-CONTRACT.md` before touching `data/`.** Current contents are
-fixtures apart from the 2026-10-13 game; the placeholder player names are not
-real children.
+**Read `docs/DATA-CONTRACT.md` before touching `data/`.** The roster and photo cards contain real children’s information. Treat the repository, generated output and backups as private team data.
 
 Two rules that matter more than the rest:
 
@@ -137,10 +135,7 @@ the name twice.
 
 `/admin → Roster` shows which art each player has. Two things can supply it:
 the repo file above, and an upload made in that panel, which is stored in the
-`player_profiles.card_art` column and wins where both exist. **An upload only
-changes the admin panel.** The public site is built from `data/roster.json`, so
-art uploaded here does not reach a player's page until that path is in the
-contract file — put finished art in `assets/photos/` and re-sync.
+`player_profiles.card_art` column and wins where both exist. Uploaded card art and biographies now load from the authenticated profiles API on team pages. Uploaded card art overrides the build-time card when photos are enabled. The hosting configuration must serve `/uploads/` behind the login gate.
 
 `tools/test_roster_ui.mjs` drives that panel in a real browser: it was written
 for a bug where the panel read the state from the database alone and reported
@@ -153,7 +148,7 @@ their own targets with progress against each, and — for their own family —
 the team goals with the share that player has put in. `PlayerGoals.astro`
 fills it from `/api/goals`, the same board `/goals` uses.
 
-Who sees it is the whole point. A player's page is **public and static**, so
+Who sees it is the whole point. A player's page is **static and served behind the login gate**, so
 nothing about a child's training is rendered into the build: the section ships
 empty and hidden, and only appears if the API answers for a viewer entitled to
 it — an admin, or that player's own family. A parent of another player gets
@@ -273,3 +268,22 @@ featured player. `deploy.sh` always builds first, for that reason.
 
 Full detail, including first-time setup and account creation, in
 `docs/DEPLOY.md`.
+
+
+## Quality and security
+
+Run `nix develop --command bash tools/check.sh` before publishing. This includes
+strict TypeScript checks, unit tests, the real-PostgreSQL API suite, importer
+checks, browser regressions and a check that public bundles contain no roster
+names. See [the audit](docs/SECURITY-AUDIT.md) for findings, fixes, verification
+and deployment requirements, and [deployment](docs/DEPLOY.md) for the current
+session-gated hosting setup.
+
+Account management is available at `/account`. Chat allows players to message
+other players and linked guardians; all messages are screened and members can
+report harmful content. Flagged/reported messages are visible to team admins,
+as stated in the chat interface. The keyword filter complements human review.
+
+Coach-entered scores, notes, family jobs, statistics and profile updates load
+through the API. Roster/schedule imports and build-time next-game selections
+still require a rebuild and publish.

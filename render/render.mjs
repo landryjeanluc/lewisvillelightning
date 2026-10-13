@@ -44,7 +44,7 @@ function serve(dir) {
         if (p.endsWith("/")) p += "index.html";
         if (!path.extname(p)) p += "/index.html";
         const file = path.join(dir, p);
-        if (!file.startsWith(dir)) { res.writeHead(403).end(); return; }
+        if (!file.startsWith(dir + path.sep)) { res.writeHead(403).end(); return; }
         const buf = await readFile(file);
         res.writeHead(200, { "content-type": MIME[path.extname(file)] ?? "application/octet-stream" });
         res.end(buf);

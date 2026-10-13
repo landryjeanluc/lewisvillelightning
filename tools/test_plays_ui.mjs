@@ -130,7 +130,7 @@ function serve() {
         if (f.endsWith("/")) f += "index.html";
         if (!path.extname(f)) f += "/index.html";
         const file = path.join(DIST, f);
-        if (!file.startsWith(DIST)) { res.writeHead(403).end(); return; }
+        if (!file.startsWith(DIST + path.sep)) { res.writeHead(403).end(); return; }
         const buf = await readFile(file);
         res.writeHead(200, { "content-type": MIME[path.extname(file)] ?? "application/octet-stream" });
         res.end(buf);
@@ -452,7 +452,7 @@ try {
   const said = await cdp.eval(`document.querySelector("#pe-status-line").textContent`);
   ok("a rejected save says what the server said", said.includes("400"), said);
   ok("and says the drawing is not gone", /still here/i.test(said), said);
-  const draft = await cdp.eval(`localStorage.getItem("lvlnb.play-draft.v1")`);
+  const draft = await cdp.eval(`sessionStorage.getItem("lvlnb.play-draft.v1")`);
   ok("the work is written to the browser", !!draft && JSON.parse(draft).diagram.tokens.length === drawn,
      `${drawn} pieces`);
 

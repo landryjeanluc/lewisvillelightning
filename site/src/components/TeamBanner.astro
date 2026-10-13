@@ -1,5 +1,5 @@
 ---
-import { team, sloganParts, roster } from "../lib/data";
+import { team, sloganParts, roster, showPhotos } from "../lib/data";
 const parts = sloganParts();
 ---
 <section class="tb">
@@ -7,7 +7,7 @@ const parts = sloganParts();
       it out twice in a row. Keep it for screen readers only. */}
   <h2 class="visually-hidden">{team.slogan}</h2>
 
-  <figure class="tb-fig">
+  {showPhotos() && <figure class="tb-fig">
     <picture>
       <source
         type="image/webp"
@@ -23,7 +23,7 @@ const parts = sloganParts();
     <figcaption class="dim">
       {team.name} · {team.season ?? ""} · {roster.players.length} players
     </figcaption>
-  </figure>
+  </figure>}
 </section>
 
 <style>

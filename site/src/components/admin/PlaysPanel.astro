@@ -1,4 +1,5 @@
 ---
+import { scriptJson } from "../../lib/security";
 import "../../styles/play.css";
 import { roster, games, sides } from "../../lib/data";
 import { shortDate } from "../../lib/format";
@@ -139,7 +140,7 @@ const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
     </aside>
   </div>
 
-  <script type="application/json" id="pe-roster-data" set:html={JSON.stringify(players)} />
+  <script type="application/json" id="pe-roster-data" set:html={scriptJson(players)} />
 </section>
 
 <script>

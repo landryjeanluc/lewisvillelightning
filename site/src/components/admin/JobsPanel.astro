@@ -73,11 +73,7 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
 
 <script>
   const $ = (s: string) => document.querySelector(s) as any;
-  const api = async (p: string, o: any = {}) => {
-    const r = await fetch("/api" + p, {
-      credentials: "same-origin", headers: { "content-type": "application/json" }, ...o });
-    return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
-  };
+  import { api } from "../../scripts/api-client";
   const say = (m: string) => ($("#jp-status").textContent = m);
   const sayList = (m: string) => ($("#jp-list-status").textContent = m);
   const esc = (t: string) => t.replace(/[&<>"]/g, (c) =>
@@ -100,7 +96,7 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
     tb.innerHTML = "";
     for (const j of body) {
       const opts = PLAYERS.map((p) =>
-        `<option value="${p.id}"${p.id === j.player_id ? " selected" : ""}>${p.label}</option>`).join("");
+        `<option value="${esc(p.id)}"${p.id === j.player_id ? " selected" : ""}>${esc(p.label)}</option>`).join("");
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="l"><strong>${esc(j.name)}</strong>${j.description ? `<br><span class="dim jp-desc">${esc(j.description)}</span>` : ""}</td>
@@ -109,7 +105,7 @@ const players = [...roster.players].sort((a: any, b: any) => a.number - b.number
             <option value="">— unassigned —</option>${opts}
           </select>
         </td>
-        <td class="l dim">${j.claimed_by ? `✓ ${j.claimed_by}` : (j.player_id ? "not taken yet" : "—")}</td>`;
+        <td class="l dim">${j.claimed_by ? `✓ ${esc(j.claimed_by)}` : (j.player_id ? "not taken yet" : "—")}</td>`;
       tb.appendChild(tr);
     }
   }

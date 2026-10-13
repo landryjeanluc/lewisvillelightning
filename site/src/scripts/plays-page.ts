@@ -12,10 +12,7 @@ import {
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 
-const api = async (path: string) => {
-  const r = await fetch("/api" + path, { credentials: "same-origin" });
-  return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
-};
+import { api } from "./api-client";
 
 let plays: Play[] = [];
 /** Fixture ids to human labels, baked in at build time. */

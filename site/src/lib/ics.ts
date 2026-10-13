@@ -15,9 +15,9 @@ const DEFAULT_MINUTES = 90;
 function esc(s: string): string {
   return s
     .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\;")
+    .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
+    .replace(/\r\n|\r|\n/g, "\\n");
 }
 
 /** §3.1: lines are folded at 75 octets, continuations begin with one space. */

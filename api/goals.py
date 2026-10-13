@@ -5,6 +5,8 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 import json
 
+from security import DatabaseId
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -108,7 +110,7 @@ def build_router(current_user, require_admin, db, contract):
         return dict(row)
 
     @router.put("/{goal_id}")
-    async def update(goal_id: int, body: GoalIn, actor=Depends(require_admin), pool=Depends(db)):
+    async def update(goal_id: DatabaseId, body: GoalIn, actor=Depends(require_admin), pool=Depends(db)):
         if body.player_id and body.player_id not in contract.players:
             raise HTTPException(400, "Unknown player")
         async with pool.acquire() as c, c.transaction():
@@ -126,18 +128,18 @@ def build_router(current_user, require_admin, db, contract):
         return dict(row)
 
     @router.get("/{goal_id}/entries")
-    async def history(goal_id: int, identity=Depends(member), pool=Depends(db)):
+    async def history(goal_id: DatabaseId, identity=Depends(member), pool=Depends(db)):
         user, family = identity
         await get_goal(pool, goal_id, user, family)
         # Families see their own contribution history, not other children's logs.
         rows = await pool.fetch("""SELECT e.id,e.player_id,e.amount,e.performed_on,e.created_at,
-                u.display_name AS recorded_by FROM goal_entries e JOIN users u ON u.id=e.created_by
+                coalesce(u.display_name, 'Former member') AS recorded_by FROM goal_entries e LEFT JOIN users u ON u.id=e.created_by
                 WHERE e.goal_id=$1 AND e.removed_at IS NULL AND ($2 OR e.player_id=$3)
                 ORDER BY e.id DESC LIMIT 100""", goal_id, user.role == "admin", family)
         return [dict(r) for r in rows]
 
     @router.post("/{goal_id}/entries", status_code=201)
-    async def add_entry(goal_id: int, body: EntryIn, identity=Depends(member), pool=Depends(db)):
+    async def add_entry(goal_id: DatabaseId, body: EntryIn, identity=Depends(member), pool=Depends(db)):
         user, family = identity
         if not can_log(user, family, body.player_id):
             raise HTTPException(403, "You can only record activity for your linked player")
@@ -170,7 +172,7 @@ def build_router(current_user, require_admin, db, contract):
         return {"id": eid, "replayed": False}
 
     @router.delete("/{goal_id}/entries/{entry_id}")
-    async def remove_entry(goal_id: int, entry_id: int, identity=Depends(member), pool=Depends(db)):
+    async def remove_entry(goal_id: DatabaseId, entry_id: DatabaseId, identity=Depends(member), pool=Depends(db)):
         user, family = identity
         async with pool.acquire() as c, c.transaction():
             await get_goal(c, goal_id, user, family, lock=True)

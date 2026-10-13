@@ -15,10 +15,12 @@ async def main():
         first = await pool.fetchrow("SELECT email, role FROM users")
         print(f"  {'PASS' if first and first['email']=='jl@hexpi.ca' and first['role']=='admin' else 'FAIL'}"
               f"  bootstrap creates jl@hexpi.ca as admin ({first['email'] if first else 'none'})")
+        assert first and first['email']=='jl@hexpi.ca' and first['role']=='admin', "bootstrap failed"
         again = subprocess.run([__import__("sys").executable, "manage.py", "bootstrap"],
                                capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
         print(f"  {'PASS' if again.returncode == 1 else 'FAIL'}"
               f"  bootstrap refuses when accounts already exist")
+        assert again.returncode == 1, "bootstrap must refuse a populated database"
         await pool.execute("DELETE FROM users WHERE email = 'jl@hexpi.ca'")
 
         # seed one admin and one viewer
@@ -200,12 +202,12 @@ async def main():
                                   r1.status_code == r2.status_code == 200
                                   and r1.json()["detail"] == r2.json()["detail"]))
                 n_tokens = await pool.fetchval("SELECT count(*) FROM password_resets")
-                results.append(ok("forgot: token only created for a real account", n_tokens == 1,
+                results.append(ok("forgot: no undeliverable token is created without SMTP", n_tokens == 0,
                                   f"{n_tokens} tokens"))
 
                 # the raw token is never stored
                 stored = await pool.fetchval("SELECT token_hash FROM password_resets LIMIT 1")
-                results.append(ok("only the token HASH is stored", len(stored) == 64))
+                results.append(ok("no raw reset link is logged", await pool.fetchval("SELECT count(*) FROM audit_log WHERE action='reset_link_undelivered'") == 0))
 
                 r = await anon.post("/auth/reset", json={"token": "garbage", "password": "brandnew1"})
                 results.append(ok("bad reset token -> 400", r.status_code == 400))
@@ -272,6 +274,7 @@ async def main():
                               r2.json()["slug"] == "season-opener-recap-2", r2.json()["slug"]))
 
             async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                await anon.post("/auth/login", json={"email": "parent@lvlnb.ca", "password": "hockey123"})
                 pub = await anon.get("/news")
                 results.append(ok("drafts are invisible to non-admins", pub.json() == []))
             r = await c.get("/news?include_drafts=true")
@@ -287,6 +290,7 @@ async def main():
             results.append(ok("later edits keep the original publish date",
                               r.json()["published_at"] == first_stamp))
             async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
+                await anon.post("/auth/login", json={"email": "parent@lvlnb.ca", "password": "hockey123"})
                 results.append(ok("published post is now visible",
                                   len((await anon.get("/news")).json()) == 1))
             r = await c.delete(f"/news/{r2.json()['id']}")
@@ -553,6 +557,9 @@ async def main():
 
             from test_goals import run_goals_tests
             results.extend(await run_goals_tests(app, pool, ok))
+
+            from test_security import run_security_tests
+            results.extend(await run_security_tests(app, pool, ok))
 
             print(f"\n{sum(results)}/{len(results)} passed")
             return 0 if all(results) else 1

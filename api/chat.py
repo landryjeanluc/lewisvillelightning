@@ -1,13 +1,16 @@
 """Private, account-only team chat. Existing invited accounts are members."""
+import os
+import json
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field, field_validator
+from security import DatabaseId, rate_limit
 
 
 class DirectChat(BaseModel):
-    user_id: int = Field(gt=0)
+    user_id: int = Field(gt=0, le=2**63-1)
 
 
 class MessageBody(BaseModel):
@@ -24,7 +27,7 @@ class MessageBody(BaseModel):
 
 
 class ReadBody(BaseModel):
-    message_id: int = Field(gt=0)
+    message_id: int = Field(gt=0, le=2**63-1)
 
 
 MESSAGE_SELECT = """SELECT m.id, m.conversation_id, m.sender_id, m.body,
@@ -33,7 +36,22 @@ MESSAGE_SELECT = """SELECT m.id, m.conversation_id, m.sender_id, m.body,
     FROM chat_messages m LEFT JOIN users u ON u.id = m.sender_id"""
 
 
-def chat_router(current_user, db):
+def chat_router(current_user, db, screen):
+    # Child accounts can use the shared room, message teammates and contact
+    # their linked guardians. Adult-child private messages stay family-only.
+    peers = os.environ.get("CHAT_PLAYER_DMS", "peers") == "peers"
+
+    async def allowed_pair(c, uid, other):
+        rows = await c.fetch("SELECT id,role,player_id FROM users WHERE id=ANY($1::bigint[])", [uid, other])
+        if len(rows) != 2:
+            return False
+        a, b = rows
+        if a["role"] != "player" and b["role"] != "player":
+            return True
+        if peers and a["role"] == b["role"] == "player":
+            return True
+        return ({a["role"], b["role"]} == {"parent", "player"}
+                and a["player_id"] is not None and a["player_id"] == b["player_id"])
     async def member(request: Request, response: Response, user=Depends(current_user)):
         response.headers["Cache-Control"] = "no-store"
         if user is None:
@@ -52,18 +70,20 @@ def chat_router(current_user, db):
             + (" FOR UPDATE" if lock else ""), cid, uid)
         if row is None:
             raise HTTPException(404, "conversation not found")
+        if row["kind"] == "direct" and not await allowed_pair(c, row["user_low"], row["user_high"]):
+            raise HTTPException(404, "conversation not found")
         return row
 
     @router.get("/members")
     async def members(user=Depends(member), pool=Depends(db)):
         rows = await pool.fetch(
             "SELECT id, display_name FROM users WHERE id <> $1 ORDER BY lower(display_name), id", user.id)
-        return [dict(r) for r in rows]
+        return [dict(r) for r in rows if await allowed_pair(pool, user.id, r["id"])]
 
     @router.get("/conversations")
     async def conversations(user=Depends(member), pool=Depends(db)):
         rows = await pool.fetch("""
-            SELECT c.id, c.kind,
+            SELECT c.id, c.kind, c.user_low, c.user_high,
                 CASE WHEN c.kind='team' THEN 'Team room' ELSE u.display_name END AS name,
                 last.body AS last_message, last.created_at AS last_message_at,
                 last.deleted_at IS NOT NULL AS last_deleted,
@@ -78,7 +98,8 @@ def chat_router(current_user, db):
             WHERE c.kind='team' OR c.user_low=$1 OR c.user_high=$1
             ORDER BY (c.kind='team') DESC, last.created_at DESC NULLS LAST, c.id
         """, user.id)
-        return [dict(r) for r in rows]
+        return [{k: v for k, v in dict(r).items() if k not in ("user_low", "user_high")}
+                for r in rows if r["kind"] == "team" or await allowed_pair(pool, r["user_low"], r["user_high"])]
 
     @router.post("/direct")
     async def direct(body: DirectChat, user=Depends(member), pool=Depends(db)):
@@ -87,6 +108,8 @@ def chat_router(current_user, db):
         async with pool.acquire() as c, c.transaction():
             if not await c.fetchval("SELECT id FROM users WHERE id=$1 FOR KEY SHARE", body.user_id):
                 raise HTTPException(404, "team member not found")
+            if not await allowed_pair(c, user.id, body.user_id):
+                raise HTTPException(403, "players can privately message other players and their linked guardians; use the team room for other adults")
             low, high = sorted((user.id, body.user_id))
             cid = await c.fetchval("""INSERT INTO chat_conversations (kind, user_low, user_high)
                 VALUES ('direct',$1,$2) ON CONFLICT (user_low,user_high)
@@ -94,9 +117,9 @@ def chat_router(current_user, db):
         return {"id": cid}
 
     @router.get("/conversations/{cid}/messages")
-    async def messages(cid: int,
-                       before: Annotated[int | None, Query(gt=0)] = None,
-                       after: Annotated[int | None, Query(ge=0)] = None,
+    async def messages(cid: DatabaseId,
+                       before: Annotated[int | None, Query(gt=0, le=2**63-1)] = None,
+                       after: Annotated[int | None, Query(ge=0, le=2**63-1)] = None,
                        user=Depends(member), pool=Depends(db)):
         if before is not None and after is not None:
             raise HTTPException(400, "choose history or updates, not both")
@@ -117,7 +140,8 @@ def chat_router(current_user, db):
         return {"messages": [dict(r) for r in page], "cursor": cursor, "has_more": len(rows) > 50}
 
     @router.post("/conversations/{cid}/messages")
-    async def send(cid: int, body: MessageBody, user=Depends(member), pool=Depends(db)):
+    async def send(cid: DatabaseId, body: MessageBody, user=Depends(member), pool=Depends(db)):
+        held = False
         async with pool.acquire() as c, c.transaction():
             # Serialize a sender's rate check and nonce, and a room's revisions.
             await c.execute("SELECT id FROM users WHERE id=$1 FOR NO KEY UPDATE", user.id)
@@ -125,22 +149,48 @@ def chat_router(current_user, db):
             existing = await c.fetchrow(MESSAGE_SELECT + " WHERE m.sender_id=$1 AND m.client_id=$2",
                                        user.id, body.client_id)
             if existing:
-                if existing["conversation_id"] != cid:
-                    raise HTTPException(409, "message already sent to another conversation")
+                if existing["conversation_id"] != cid or (not existing["deleted_at"] and existing["body"] != body.body):
+                    raise HTTPException(409, "this message request was already used")
                 return dict(existing)
             count = await c.fetchval("""SELECT count(*) FROM chat_messages
                 WHERE sender_id=$1 AND created_at > now() - interval '1 minute'""", user.id)
             if count >= 30:
                 raise HTTPException(429, "please wait a minute before sending more messages",
                                     headers={"Retry-After": "60"})
-            mid = await c.fetchval("""INSERT INTO chat_messages
-                (conversation_id,sender_id,client_id,body) VALUES ($1,$2,$3,$4) RETURNING id""",
-                cid, user.id, body.client_id, body.body)
-            row = await c.fetchrow(MESSAGE_SELECT + " WHERE m.id=$1", mid)
+            # Also count rejected content; a sender cannot flood the review queue.
+            await rate_limit(c, "chat-submit", str(user.id), 30, 60)
+            screened = await screen(c, author_id=user.id, surface="chat", ref_id=None, body=body.body)
+            held = screened["held"]
+            if not held:
+                mid = await c.fetchval("""INSERT INTO chat_messages
+                    (conversation_id,sender_id,client_id,body) VALUES ($1,$2,$3,$4) RETURNING id""",
+                    cid, user.id, body.client_id, body.body)
+                if screened["flag_id"]:
+                    await c.execute("UPDATE flagged_content SET ref_id=$1 WHERE id=$2", str(mid), screened["flag_id"])
+                row = await c.fetchrow(MESSAGE_SELECT + " WHERE m.id=$1", mid)
+        # Raise after commit, otherwise the moderation flag would roll back.
+        if held:
+            raise HTTPException(422, "message held for review; please speak to a trusted adult if you need help")
         return dict(row)
 
+    @router.post("/conversations/{cid}/messages/{mid}/report")
+    async def report(cid: DatabaseId, mid: DatabaseId, user=Depends(member), pool=Depends(db)):
+        async with pool.acquire() as c, c.transaction():
+            await conversation(c, cid, user.id)
+            await rate_limit(c, "chat-report", str(user.id), 10, 3600)
+            msg = await c.fetchrow("SELECT sender_id,body FROM chat_messages WHERE id=$1 AND conversation_id=$2 AND deleted_at IS NULL", mid, cid)
+            if msg is None:
+                raise HTTPException(404, "message not found")
+            await c.execute("""INSERT INTO flagged_content
+                (author_id,surface,ref_id,body,severity,findings,held)
+                VALUES ($1,'chat',$2,$3,'high',$4,false)""", msg["sender_id"], str(mid), msg["body"],
+                json.dumps([{"severity": "high", "category": "member-report", "match": "Reported by a team member"}]))
+            await c.execute("INSERT INTO audit_log (user_id,action,payload) VALUES ($1,'chat_report',$2)",
+                            user.id, json.dumps({"message_id": mid}))
+        return {"ok": True}
+
     @router.post("/conversations/{cid}/read")
-    async def read(cid: int, body: ReadBody, user=Depends(member), pool=Depends(db)):
+    async def read(cid: DatabaseId, body: ReadBody, user=Depends(member), pool=Depends(db)):
         async with pool.acquire() as c, c.transaction():
             await conversation(c, cid, user.id)
             if not await c.fetchval("SELECT id FROM chat_messages WHERE id=$1 AND conversation_id=$2",
@@ -153,7 +203,7 @@ def chat_router(current_user, db):
         return {"ok": True}
 
     @router.delete("/conversations/{cid}/messages/{mid}")
-    async def remove(cid: int, mid: int, user=Depends(member), pool=Depends(db)):
+    async def remove(cid: DatabaseId, mid: DatabaseId, user=Depends(member), pool=Depends(db)):
         async with pool.acquire() as c, c.transaction():
             room = await conversation(c, cid, user.id, lock=True)
             msg = await c.fetchrow("SELECT sender_id,deleted_at FROM chat_messages WHERE id=$1 AND conversation_id=$2", mid, cid)

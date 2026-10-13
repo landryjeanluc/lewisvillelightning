@@ -24,6 +24,8 @@ import json
 from datetime import date
 from typing import Annotated, Literal
 
+from security import DatabaseId
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -255,6 +257,7 @@ def plays_router(current_user, require_admin, db, slugify, contract):
         _check_game(body.game_id)
         base = slugify(body.title) or "play"
         async with pool.acquire() as c, c.transaction():
+            await c.execute("SELECT pg_advisory_xact_lock(71004)")
             slug, n = base, 1
             while await c.fetchval("SELECT 1 FROM plays WHERE slug = $1", slug):
                 n += 1
@@ -276,7 +279,7 @@ def plays_router(current_user, require_admin, db, slugify, contract):
         return dict(row)
 
     @router.put("/{play_id}")
-    async def update_play(play_id: int, body: PlayIn,
+    async def update_play(play_id: DatabaseId, body: PlayIn,
                           actor=Depends(require_admin), pool=Depends(db)):
         _check_game(body.game_id)
         async with pool.acquire() as c, c.transaction():
@@ -306,7 +309,7 @@ def plays_router(current_user, require_admin, db, slugify, contract):
         return dict(row)
 
     @router.delete("/{play_id}")
-    async def delete_play(play_id: int, actor=Depends(require_admin), pool=Depends(db)):
+    async def delete_play(play_id: DatabaseId, actor=Depends(require_admin), pool=Depends(db)):
         async with pool.acquire() as c, c.transaction():
             slug = await c.fetchval("DELETE FROM plays WHERE id = $1 RETURNING slug", play_id)
             if slug is None:

@@ -29,14 +29,7 @@ const isPathTool = (t: Tool): t is PathKind => (PATH_TOOLS as readonly string[])
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-const api = async (path: string, opts: RequestInit = {}) => {
-  const r = await fetch("/api" + path, {
-    credentials: "same-origin",
-    headers: { "content-type": "application/json" },
-    ...opts,
-  });
-  return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
-};
+import { api } from "./api-client";
 
 /* ------------------------------------------------------------------ state */
 
@@ -64,13 +57,15 @@ const future: string[] = [];
  * the editor next opens, and cleared only once the play is safely saved.
  */
 const DRAFT_KEY = "lvlnb.play-draft.v1";
+// Remove drafts persisted by the previous version on shared devices.
+try { localStorage.removeItem(DRAFT_KEY); } catch { /* storage unavailable */ }
 let draftTimer = 0;
 
 function keepDraft(now = false) {
   clearTimeout(draftTimer);
   const write = () => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
         at: Date.now(), playId: editing?.id ?? null, ...formToPlay(),
       }));
     } catch { /* private window, or a full quota — never worth breaking over */ }
@@ -80,13 +75,13 @@ function keepDraft(now = false) {
 
 const dropDraft = () => {
   clearTimeout(draftTimer);
-  try { localStorage.removeItem(DRAFT_KEY); } catch { /* as above */ }
+  try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* as above */ }
   $("#pe-draft").hidden = true;
 };
 
 function offerDraft() {
   let draft: any = null;
-  try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); } catch { /* ignore */ }
+  try { draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null"); } catch { /* ignore */ }
   if (!draft?.diagram?.tokens?.length && !draft?.diagram?.paths?.length) return;
 
   const d = normaliseDiagram(draft.diagram);
