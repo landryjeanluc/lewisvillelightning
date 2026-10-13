@@ -177,6 +177,49 @@ cd site && npm run build
 node tools/test_plays_ui.mjs                 # add --shots <dir> to keep the screenshots
 ```
 
+## Installing it on a phone
+
+The team was on Spordle's app. The replacement is not an app: the site installs
+itself. `/` and `/login` carry an **Install app** card, and the whole thing —
+manifest, icons, service worker — lives in `site/public/`.
+
+Two platforms, two different truths behind one button:
+
+| | what the button does |
+|---|---|
+| Android, Chrome, Edge, desktop Chrome | a real install. Chrome fires `beforeinstallprompt`, the card catches it, one tap installs. |
+| iPhone, iPad | iOS has no install API and never has. The button opens the **Share → Add to Home Screen** steps instead of pretending. |
+
+Either way the result is the same: the crest on the home screen, opening full
+screen with no browser bar, pointed at the live site. There is nothing to
+publish to a store and nothing for a parent to update.
+
+Three things that are easy to get wrong here, all of them silent:
+
+- **The gate has to let the manifest through.** nginx answers a signed-out
+  request with `302 /login`; a redirected manifest or worker reads to Chrome as
+  "not installable" and the prompt simply never appears. `/manifest.webmanifest`,
+  `/sw.js` and `/icons/` are `auth_request off` in
+  `nixos-builds/hosts/arachnea/guests/default.nix` for exactly that reason — and
+  that is why installing from the sign-in page works at all.
+- **The worker caches assets, never team data.** `/_astro`, `/fonts`, `/brand`
+  and `/icons` only. Pages, `/api`, `/photos` and `/team` go straight to the
+  network every time: the roster is nineteen minors behind a login, and a cache
+  outlives the session.
+- **The installed app has its own cookie jar.** The first launch asks for a
+  sign-in again even though Safari or Chrome is already signed in. Once.
+
+```
+cd site && npm run build
+node tools/test_pwa.mjs
+```
+
+drives the built site in headless chromium and checks the whole contract: the
+manifest parses, every icon it names exists at the size it claims, the worker
+activates and takes control, the cache holds the font and not the photo, the
+card shows in a browser and hides inside the installed app, and an iPhone UA
+gets the Share-sheet steps.
+
 ## Deploying
 
 ```

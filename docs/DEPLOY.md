@@ -82,6 +82,32 @@ ssh arachnea 'cd /opt/lvlnb && sudo -u lvlnb .venv/bin/python manage.py rename-f
 Display names only — no passwords, no sessions, nobody is signed out. Safe to
 re-run; the second run reports nothing to do. See `api/README.md`.
 
+## The home-screen app (PWA)
+
+`site/public/manifest.webmanifest`, `site/public/sw.js` and `site/public/icons/`
+ship with the static build, so a plain rsync publishes them. The **nginx side
+needs a rebuild once**: the login gate must stop redirecting those three paths,
+or Chrome never offers the install prompt and the sign-in page cannot install at
+all.
+
+```
+cd ~/repos/HexPi/nixos-builds        # the auth_request off locations are committed here
+nixos-rebuild build --flake .#arachnea --build-host arachnea
+ssh arachnea nix run nixpkgs#nvd -- diff /run/current-system ./result   # expect: nginx config only
+nixos-rebuild switch --flake .#arachnea --target-host arachnea \
+  --build-host arachnea --use-remote-sudo
+```
+
+Verify from outside the gate — all three must answer 200 while signed out:
+
+```
+for p in /manifest.webmanifest /sw.js /icons/icon-512.png; do
+  curl -sk -o /dev/null -w "$p -> %{http_code}\n" --resolve lvlnb.ca:443:192.168.1.21 "https://lvlnb.ca$p"
+done
+```
+
+A `302` there is the whole bug: the install button goes quiet and nobody reports it.
+
 ## Publishing a content update
 
 Content changes need no rebuild — only an rsync:

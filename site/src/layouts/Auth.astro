@@ -8,11 +8,21 @@ const { title } = Astro.props;
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{title} · {team.name}</title>
     <meta name="robots" content="noindex" />
     <meta name="theme-color" content="#040814" />
     <link rel="icon" href="/brand/lightning-crest.png" />
+    <!-- The sign-in page is the one page nginx serves while signed out, so it
+         is also the only place a parent can install the app before they have a
+         password. Same head tags as Base.astro, for the same reason. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Lightning" />
+    <meta name="application-name" content="Lightning" />
   </head>
   <body>
     <main class="auth">
@@ -20,22 +30,23 @@ const { title } = Astro.props;
       <h1 class="auth-name">{team.name}</h1>
       <p class="eyebrow">{team.level} {team.division}</p>
       <div class="auth-card card"><slot /></div>
+      <slot name="below" />
       {team.slogan && <p class="auth-slogan">{team.slogan}</p>}
     </main>
     <style>
       .auth {
         min-height: 100dvh; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: var(--s-3);
-        padding: var(--s-6) var(--s-4);
+        padding: max(var(--s-6), env(safe-area-inset-top)) max(var(--s-4), env(safe-area-inset-right)) max(var(--s-6), env(safe-area-inset-bottom)) max(var(--s-4), env(safe-area-inset-left));
       }
       .auth img { width: 96px; }
       .auth-name {
         font-family: var(--font-display); font-style: italic; font-weight: 900;
         font-size: var(--t-xl); text-transform: uppercase; letter-spacing: var(--track-tight);
-        margin-top: var(--s-3);
+        margin-top: var(--s-3); text-align: center;
       }
       .auth-card {
-        width: min(100%, 25rem); padding: var(--s-6);
+        width: min(100%, 25rem); padding: clamp(1rem, 5vw, 2rem);
         display: grid; gap: var(--s-4); margin-top: var(--s-5);
       }
       /* The card's gap only separates ITS children, and each auth page puts a

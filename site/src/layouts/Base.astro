@@ -26,11 +26,20 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <meta name="theme-color" content="#040814" />
     <link rel="icon" href="/brand/lightning-crest.png" />
+    <!-- Home-screen install. The manifest covers Android and desktop Chrome;
+         iOS ignores most of it and reads these apple-* tags instead. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Lightning" />
+    <meta name="application-name" content="Lightning" />
     <link rel="preload" href="/fonts/BarlowCondensed-BlackItalic.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="/fonts/BarlowSemiCondensed-SemiBold.ttf" as="font" type="font/ttf" crossorigin />
     <meta property="og:title" content={pageTitle} />

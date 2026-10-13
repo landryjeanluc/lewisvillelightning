@@ -1,14 +1,16 @@
 ---
 import Auth from "../layouts/Auth.astro";
+import InstallApp from "../components/InstallApp.astro";
 ---
 <Auth title="Sign in">
   <form id="f">
-    <label>Email or username<input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" autofocus /></label>
+    <label>Email or username<input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
     <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
     <button type="submit">Sign in</button>
     <p id="msg" class="auth-msg err" hidden></p>
     <a class="auth-link" href="/forgot">Forgot your password?</a>
   </form>
+  <InstallApp compact slot="below" />
 </Auth>
 
 <script>

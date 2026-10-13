@@ -1,0 +1,218 @@
+---
+/**
+ * "Put the Lightning on your phone" — the install card.
+ *
+ * There is no app to download: the site installs itself. Android and desktop
+ * Chrome hand us a real install prompt (`beforeinstallprompt`) and the button
+ * is one tap. iOS has no such API at all — Safari only installs a site through
+ * Share → Add to Home Screen, which the user has to do by hand — so on iPhones
+ * the same button opens the three steps instead of lying about what it can do.
+ *
+ * The card renders `hidden` and is revealed by script: inside the installed app
+ * `display-mode: standalone` matches, and an install button there is noise.
+ */
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+---
+<section class:list={["ins", compact && "ins--compact"]} data-install hidden>
+  <img src="/icons/icon-192.png" alt="" width="76" height="76" class="ins-icon" />
+  <div class="ins-text">
+    <span class="eyebrow">Team app</span>
+    <p class="ins-title">Put the Lightning on your phone</p>
+    <p class="ins-blurb">
+      Schedule, roster, plays and chat in one icon on your home screen — full screen,
+      no browser bar. No app store, no new account, nothing to update.
+    </p>
+  </div>
+  <button type="button" data-install-button>Install app</button>
+</section>
+
+<dialog class="ins-how" data-install-how>
+  <form method="dialog" class="ins-how-head">
+    <h2 class="ins-how-title">Add it to your home screen</h2>
+    <button class="ghost ins-close" value="close" aria-label="Close">✕</button>
+  </form>
+
+  <ol class="ins-steps" data-steps="ios">
+    <li>Tap the <strong>Share</strong> button at the bottom of Safari — the square with an arrow coming out of it.</li>
+    <li>Scroll down the list and tap <strong>Add to Home Screen</strong>.</li>
+    <li>Tap <strong>Add</strong>. The crest lands on your home screen like any other app.</li>
+  </ol>
+
+  <ol class="ins-steps" data-steps="ios-other">
+    <li>Open <strong>lvlnb.ca</strong> in <strong>Safari</strong> — on iPhone only Safari installs a site reliably.</li>
+    <li>Tap the <strong>Share</strong> button, then <strong>Add to Home Screen</strong>.</li>
+    <li>Tap <strong>Add</strong>.</li>
+  </ol>
+
+  <ol class="ins-steps" data-steps="other">
+    <li>Open your browser's menu — the <strong>⋮</strong> or <strong>☰</strong> button.</li>
+    <li>Choose <strong>Install app</strong>, or <strong>Add to Home screen</strong>.</li>
+    <li>Confirm. The crest lands on your home screen like any other app.</li>
+  </ol>
+
+  <p class="ins-note">
+    The first time you open it you may be asked to sign in again — the installed app keeps
+    its own login, separate from the browser. It only asks once.
+  </p>
+</dialog>
+
+<script>
+  /** The event Chrome fires when it is willing to install us. Not in lib.dom. */
+  type InstallPromptEvent = Event & {
+    prompt(): Promise<void>;
+    userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+  };
+
+  const card = document.querySelector<HTMLElement>("[data-install]");
+  const how = document.querySelector<HTMLDialogElement>("[data-install-how]");
+  const button = card?.querySelector<HTMLButtonElement>("[data-install-button]");
+  const blurb = card?.querySelector<HTMLElement>(".ins-blurb");
+
+  if (card && how && button && blurb) {
+    const ua = navigator.userAgent;
+    // iPadOS reports itself as a Mac; the touch points are what give it away.
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const iosOther = isIOS && /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    const standalone =
+      matchMedia("(display-mode: standalone)").matches ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true;
+
+    how.dataset.how = iosOther ? "ios-other" : isIOS ? "ios" : "other";
+
+    let prompt: InstallPromptEvent | null = null;
+
+    // Chrome fires this a moment after load, once it has checked the manifest
+    // and the worker. Preventing the default keeps its own mini-infobar out of
+    // the way so the only install affordance is the one on the page.
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      prompt = event as InstallPromptEvent;
+      button.textContent = "Install app";
+    });
+
+    window.addEventListener("appinstalled", () => {
+      prompt = null;
+      card.hidden = true;
+    });
+
+    if (!standalone) {
+      if (isIOS) button.textContent = "How to install";
+      card.hidden = false;
+    }
+
+    button.addEventListener("click", async () => {
+      if (!prompt) { how.showModal(); return; }
+      const pending = prompt;
+      prompt = null;              // a prompt event is good for one call only
+      await pending.prompt();
+      const { outcome } = await pending.userChoice;
+      if (outcome === "accepted") {
+        card.hidden = true;
+      } else {
+        // Chrome will not hand us another event this visit, so the button has
+        // to fall back to telling them where the menu item lives.
+        button.textContent = "How to install";
+        blurb.textContent =
+          "No problem — you can install it later from your browser's menu, any time.";
+      }
+    });
+
+    how.addEventListener("click", (event) => {
+      // Clicking the backdrop lands on the dialog itself, never on its contents.
+      if (event.target === how) how.close();
+    });
+  }
+
+  // The worker is what makes the site installable at all (see public/sw.js).
+  // Registering it from the install card keeps the two together: no worker, no
+  // install prompt, and nothing else on the site depends on it.
+  // No protocol check: the browser itself refuses a worker on an insecure
+  // origin, and localhost — where the site is developed and tested — counts as
+  // secure. Guessing at it here only broke the dev server.
+  if ("serviceWorker" in navigator) {
+    addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        /* An unregistrable worker costs the install button, not the site. */
+      });
+    });
+  }
+</script>
+
+<style>
+  .ins {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--s-5);
+    margin-block: var(--s-8) var(--s-6);
+    padding: var(--s-5) var(--s-6);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-xl);
+    background:
+      radial-gradient(80% 140% at 8% 50%, rgb(28 143 232 / .12), transparent 60%),
+      linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
+  }
+  .ins[hidden] { display: none; }
+  .ins-icon { width: 76px; height: auto; border-radius: var(--r-lg); box-shadow: var(--shadow-md); }
+  .ins-title {
+    font-family: var(--font-display); font-weight: 900; font-style: italic;
+    font-size: var(--t-md); text-transform: uppercase;
+    letter-spacing: var(--track-tight); margin-top: var(--s-1);
+  }
+  .ins-blurb { color: var(--text-muted); font-size: var(--t-sm); max-width: 52ch; margin-top: var(--s-2); }
+  .ins button { white-space: nowrap; }
+
+  @media (max-width: 700px) {
+    .ins {
+      grid-template-columns: auto 1fr;
+      gap: var(--s-3) var(--s-4);
+      padding: var(--s-4);
+      text-align: left;
+    }
+    .ins-icon { width: 56px; }
+    .ins button { grid-column: 1 / -1; width: 100%; }
+  }
+
+  /* On the sign-in page the card sits under a 25rem form, so it loses the
+     side-by-side layout and the blurb gets shorter. */
+  .ins--compact {
+    grid-template-columns: auto 1fr;
+    width: min(100%, 25rem);
+    margin-block: var(--s-5) 0;
+    padding: var(--s-4);
+    gap: var(--s-3) var(--s-4);
+  }
+  .ins--compact .ins-icon { width: 48px; }
+  .ins--compact .ins-blurb { display: none; }
+  .ins--compact button { grid-column: 1 / -1; width: 100%; }
+
+  .ins-how {
+    width: min(92vw, 29rem);
+    padding: var(--s-5) var(--s-6) var(--s-6);
+    color: var(--text);
+    background: var(--bg-raised);
+    border: 1px solid var(--hairline-sv);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg);
+  }
+  .ins-how::backdrop { background: rgb(2 5 14 / .72); backdrop-filter: blur(3px); }
+  .ins-how-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
+  .ins-how-title {
+    font-family: var(--font-display); font-weight: 900; font-style: italic;
+    font-size: var(--t-md); text-transform: uppercase; letter-spacing: var(--track-tight);
+  }
+  .ins-close { min-width: 44px; padding: var(--s-2) var(--s-3); }
+
+  .ins-steps { display: none; margin: var(--s-5) 0 0; padding-left: 1.4em; }
+  .ins-how[data-how="ios"]       .ins-steps[data-steps="ios"],
+  .ins-how[data-how="ios-other"] .ins-steps[data-steps="ios-other"],
+  .ins-how[data-how="other"]     .ins-steps[data-steps="other"] { display: block; }
+  .ins-steps li { margin-bottom: var(--s-3); color: var(--text-muted); font-size: var(--t-sm); }
+  .ins-steps strong { color: var(--text); }
+  .ins-note {
+    margin-top: var(--s-4); padding-top: var(--s-4);
+    border-top: 1px solid var(--hairline);
+    color: var(--text-dim); font-size: var(--t-xs);
+  }
+</style>
