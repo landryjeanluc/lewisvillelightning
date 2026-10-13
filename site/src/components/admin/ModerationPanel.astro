@@ -1,0 +1,144 @@
+---
+// Review queue for text the scanner flagged. High severity never reached the
+// site — it was refused on the way in — so this is where you see what was said.
+---
+<section class="mp">
+  <div class="mp-head">
+    <h3>Flagged for review</h3>
+    <div class="mp-filters">
+      <button type="button" class="chip is-on" data-filter="pending">Pending</button>
+      <button type="button" class="chip" data-filter="all">All</button>
+    </div>
+  </div>
+  <p class="dim mp-note">
+    <strong>High</strong> was refused and never published.
+    <strong>Medium</strong> and <strong>low</strong> are live on the site — remove
+    them if they should not be.
+    Personal details (phone, address) flag as low because a child posting where
+    they live is the quiet risk, not the swearing.
+  </p>
+
+  <div id="mp-list" class="mp-list"></div>
+  <p id="mp-status" class="dim"></p>
+</section>
+
+<script>
+  const $ = (s: string) => document.querySelector(s) as any;
+  const api = async (p: string, o: any = {}) => {
+    const r = await fetch("/api" + p, {
+      credentials: "same-origin", headers: { "content-type": "application/json" }, ...o });
+    return { ok: r.ok, status: r.status, body: await r.json().catch(() => null) };
+  };
+  let filter = "pending";
+  const esc = (s: string) => s.replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+  const when = (s: string) => new Date(s).toLocaleString("en-CA",
+    { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  async function load() {
+    const { ok, body } = await api(`/moderation/queue?status_filter=${filter}`);
+    const list = $("#mp-list");
+    if (!ok) { list.innerHTML = `<p class="dim">Could not load the queue.</p>`; return; }
+    if (!body.length) {
+      list.innerHTML = `<div class="mp-empty card"><p class="mp-clear">Nothing to review</p>
+        <p class="dim">Everything written on the site has come back clean.</p></div>`;
+      return;
+    }
+    list.innerHTML = "";
+    for (const f of body) {
+      const cats = (f.findings || []).map((x: any) => x.category);
+      const el = document.createElement("article");
+      el.className = `mp-item card sev-${f.severity}`;
+      el.innerHTML = `
+        <header class="mp-top">
+          <span class="mp-sev">${f.severity}</span>
+          ${f.held ? '<span class="mp-held">held — never published</span>' : ""}
+          <span class="dim mp-meta">${esc(f.author ?? "unknown")}${f.author_role ? ` · ${f.author_role}` : ""} · ${when(f.at)}</span>
+          <span class="dim mp-where">${esc(f.surface)}${f.ref_id ? ` · ${esc(f.ref_id)}` : ""}</span>
+        </header>
+        <blockquote class="mp-body">${esc(f.body)}</blockquote>
+        <p class="dim mp-cats">matched: ${cats.map(esc).join(", ") || "—"}</p>
+        ${f.status === "pending" ? `<div class="mp-actions">
+          <button type="button" class="ghost" data-ok="${f.id}">Looks fine</button>
+          <button type="button" class="danger" data-rm="${f.id}">Remove it</button>
+        </div>` : `<p class="dim mp-done">${esc(f.status)}</p>`}`;
+      list.appendChild(el);
+    }
+  }
+
+  async function review(id: string, action: string) {
+    const { ok, body } = await api(`/moderation/${id}/review`,
+      { method: "POST", body: JSON.stringify({ action }) });
+    $("#mp-status").textContent = ok ? "Reviewed." : body?.detail ?? "Could not record that.";
+    if (ok) { await load(); refreshBadge(); setTimeout(() => ($("#mp-status").textContent = ""), 2000); }
+  }
+
+  // the tab badge, so a flag is visible without opening this panel
+  async function refreshBadge() {
+    const { ok, body } = await api("/moderation/count");
+    const tab = document.querySelector('[data-tab="moderation-tab"]');
+    if (!ok || !tab) return;
+    let b = tab.querySelector(".tab-badge") as HTMLElement | null;
+    if (!body.pending) { b?.remove(); return; }
+    if (!b) { b = document.createElement("span"); b.className = "tab-badge"; tab.appendChild(b); }
+    b.textContent = String(body.pending);
+    b.classList.toggle("urgent", body.held > 0);
+  }
+
+  document.addEventListener("click", (e: any) => {
+    if (e.target.dataset?.ok) review(e.target.dataset.ok, "approve");
+    if (e.target.dataset?.rm) review(e.target.dataset.rm, "remove");
+    const f = e.target.dataset?.filter;
+    if (f && e.target.closest(".mp-filters")) {
+      filter = f;
+      document.querySelectorAll(".mp-filters .chip").forEach((c) => c.classList.remove("is-on"));
+      e.target.classList.add("is-on");
+      load();
+    }
+  });
+
+  load(); refreshBadge();
+  setInterval(refreshBadge, 60_000);
+</script>
+
+<style>
+  .mp h3 { font-size: var(--t-lg); }
+  .mp-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
+  .mp-filters { display: flex; gap: var(--s-2); }
+  .chip { background: none; border: 1px solid var(--hairline); color: var(--text-dim);
+          padding: var(--s-2) var(--s-4); border-radius: 999px; font-size: var(--t-micro); }
+  .chip.is-on { color: var(--text); border-color: var(--volt-500); background: var(--surface-2); }
+  .mp-note { font-size: var(--t-sm); margin-block: var(--s-2) var(--s-5); max-width: 68ch; }
+  .mp-list { display: grid; gap: var(--s-4); }
+
+  :global(.mp-item) { padding: var(--s-4); display: grid; gap: var(--s-3);
+                      border-left: 3px solid var(--steel-600); }
+  :global(.mp-item.sev-high)   { border-left-color: var(--loss); }
+  :global(.mp-item.sev-medium) { border-left-color: #E0A34A; }
+  :global(.mp-item.sev-low)    { border-left-color: var(--volt-500); }
+  :global(.mp-top) { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+  :global(.mp-sev) { font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+                     letter-spacing: var(--track-label); text-transform: uppercase; }
+  :global(.sev-high .mp-sev)   { color: var(--loss); }
+  :global(.sev-medium .mp-sev) { color: #E0A34A; }
+  :global(.sev-low .mp-sev)    { color: var(--volt-300); }
+  :global(.mp-held) { font-size: var(--t-micro); font-weight: 700; text-transform: uppercase;
+                      letter-spacing: .1em; color: var(--loss);
+                      border: 1px solid rgb(224 86 107 / .5); border-radius: 999px; padding: 1px 8px; }
+  :global(.mp-meta), :global(.mp-where) { font-size: var(--t-xs); }
+  :global(.mp-where) { margin-left: auto; }
+  :global(.mp-body) { margin: 0; padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+                      background: var(--bg-sunken); font-size: var(--t-sm);
+                      white-space: pre-wrap; word-break: break-word; }
+  :global(.mp-cats) { font-size: var(--t-xs); }
+  :global(.mp-actions) { display: flex; gap: var(--s-3); justify-content: flex-end; }
+  :global(.mp-item button.danger) { background: linear-gradient(180deg, #E0566B, #9B2233); }
+  :global(.mp-empty) { padding: var(--s-7); text-align: center; }
+  :global(.mp-clear) { font-family: var(--font-display); font-style: italic; font-weight: 900;
+                       font-size: var(--t-lg); text-transform: uppercase; color: var(--win); }
+  :global(.tab-badge) { display: inline-grid; place-items: center; min-width: 18px; height: 18px;
+                        margin-left: var(--s-2); padding: 0 5px; border-radius: 999px;
+                        font-size: 11px; font-weight: 700; color: #fff;
+                        background: var(--steel-600); }
+  :global(.tab-badge.urgent) { background: var(--loss); box-shadow: 0 0 10px rgb(224 86 107 / .8); }
+</style>
