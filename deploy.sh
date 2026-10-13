@@ -126,11 +126,11 @@ echo "==> verifying"
 # the port — checking immediately reports a healthy service as dead.
 # arachnea's login shell is fish, so anything with bash syntax needs wrapping.
 ssh "$HOST" "bash -c '
-  for i in \$(seq 1 20); do
+  for i in \$(seq 1 120); do
     out=\$(curl -fsS --max-time 3 http://127.0.0.1:8112/health 2>/dev/null) && { echo \"\$out\"; exit 0; }
     sleep 0.5
   done
-  echo \"API did not answer within 10s\"; exit 1'" | sed 's/^/    api: /'
+  echo \"API did not answer during the 60s readiness window\"; exit 1'" | sed 's/^/    api: /'
 code=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' --resolve lvlnb.ca:443:192.168.1.21 https://lvlnb.ca/ || true)
 login=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' --resolve lvlnb.ca:443:192.168.1.21 https://lvlnb.ca/login || true)
 echo "    gate: / -> $code (expect 302)   /login -> $login (expect 200)"
