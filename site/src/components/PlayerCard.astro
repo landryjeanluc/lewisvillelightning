@@ -234,8 +234,14 @@ const Tag = href ? "a" : "div";
   }
   .pcard--art .pc-art::before,
   .pcard--art .pc-art::after { display: none; }
-  .pcard--art picture, .pcard--art .pc-photo { width: 100%; height: 100%; }
-  .pcard--art .pc-photo { object-fit: cover; }
+  /* Real card art is a finished design with the name plate hard against the
+     right edge. The frame is 2.5:3.5 but the artwork is 3:4, so object-fit:
+     cover shaved the sides off — "OLIVIER LANDRY / FORWARD" rendered as
+     "LANDR / FORWAR". Match the frame to the art and contain it, so a future
+     card of a different shape letterboxes instead of losing its own name. */
+  .pcard--art { aspect-ratio: 3 / 4; }
+  .pcard--art picture { display: block; width: 100%; height: 100%; }
+  .pcard--art .pc-photo { width: 100%; height: 100%; object-fit: contain; }
 
   .pcard--goalie { background: linear-gradient(160deg, var(--steel-400) 0%, var(--navy-800) 28%, var(--navy-950) 62%, var(--blue-600) 100%); }
 </style>

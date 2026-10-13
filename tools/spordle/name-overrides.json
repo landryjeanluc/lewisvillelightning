@@ -1,4 +1,8 @@
 {
-  "comment": "Spordle stores names in ALL CAPS. to_data.py title-cases them and handles Mac/Mc/Le/La/D'/St- prefixes, but the correct spelling of an Acadian surname is person-specific (LeBlanc vs Leblanc). Put exact display spellings here, keyed by the captured ALL-CAPS name. These win over the automatic rules.",
-  "overrides": {}
+  "comment": "Spordle stores names in ALL CAPS. to_data.py title-cases them and handles Mac/Mc/Le/La/D'/St- prefixes, but the correct spelling of an Acadian surname is person-specific (LeBlanc vs Leblanc). Put exact display spellings here, keyed by the captured ALL-CAPS name. These win over the automatic rules.  Confirmed against the printed card art in assets/photos, which carries the real spelling including accents.",
+  "overrides": {
+    "BENJAMIN DESPRES": "Benjamin Desprès",
+    "LOUIS DEGRACE": "Louis Degrâce",
+    "LOUIS DEGRÂCE": "Louis Degrâce"
+  }
 }

@@ -35,7 +35,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Henry Goguen.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -48,7 +48,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Vincent Lacasse.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -56,12 +56,12 @@
       "id": "pl-05",
       "number": 5,
       "firstName": "Benjamin",
-      "lastName": "Despres",
+      "lastName": "Desprès",
       "position": "F",
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Benjamin Despres.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -74,7 +74,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Hugo Landry.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -87,7 +87,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Olivier Leblanc.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -100,7 +100,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Braven Anhorn.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -113,7 +113,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Nico Rutanga.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -126,7 +126,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Tristan Archambault.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -139,7 +139,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Landon Ayles.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -152,7 +152,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Louis Degrace.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -165,7 +165,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Hunter Davey.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -178,7 +178,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Max Pelletier.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -191,7 +191,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Malek Daigle.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -204,7 +204,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Francis Godin.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -217,7 +217,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Mattis Levesque.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -230,7 +230,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Cameron Brennan.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -243,7 +243,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Samuel Furlotte.jpg",
       "captain": null,
       "affiliate": false
     },
@@ -256,7 +256,7 @@
       "shoots": null,
       "birthYear": null,
       "photo": null,
-      "cardArt": null,
+      "cardArt": "assets/photos/Adele Hebert.jpg",
       "captain": null,
       "affiliate": false
     }
