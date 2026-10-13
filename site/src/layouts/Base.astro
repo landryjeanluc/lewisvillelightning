@@ -16,7 +16,9 @@ const nav = [
   { href: "/schedule", label: "Schedule" },
   { href: "/roster",   label: "Roster" },
   { href: "/stats",    label: "Stats" },
+  { href: "/plays",    label: "Plays" },
   { href: "/news",     label: "News" },
+  { href: "/chat",     label: "Chat" },
 ];
 const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 ---
@@ -129,7 +131,7 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
       }
       @media (max-width: 560px) {
         .head-inner { justify-content: center; }
-        .nav { gap: var(--s-4); }
+        .nav { gap: clamp(.65rem, 3vw, var(--s-4)); }
       }
       @media (max-width: 360px) {
         .nav { gap: var(--s-3); }

@@ -125,6 +125,58 @@ re-render never hands that game to a different player. When all 19 have been
 featured the cycle increments and the pool refills. The card falls back to the
 jersey number until `cardArt` lands in `data/roster.json`.
 
+## Plays of the week
+
+The coach draws a play on a rink in `/admin → Plays`; the team watches it run at
+`/plays`. Pieces are dropped on the ice, lines are dragged out of them in
+standard notation, and each line belongs to a numbered **step** — so a breakout
+plays back as "D1 retrieves" → "rim it to the wall" → "LW chips it out", one
+beat at a time, with the coach's caption under the board.
+
+Unlike everything else on the site, **plays are live**. A play is written in the
+browser and read from the API at page load, so publishing one does not need a
+rebuild or a deploy. That is deliberate: the data contract below is synced from
+Spordle and baked in at build time, but a play of the week is written on a
+Tuesday night and has to be up on Tuesday night.
+
+### The diagram document
+
+One versioned JSON document per play, stored whole in `plays.diagram` and
+replaced whole — a drawing is edited as a drawing, never field by field.
+
+```
+{ v: 1,
+  steps:  [{ id, caption, duration }],              the beats, in order
+  tokens: [{ id, kind, x, y, label, playerId }],    where the pieces start
+  paths:  [{ id, kind, step, tokenId, points[] }],  what moves, and when
+  notes:  [{ id, step, x, y, text }],
+  pen:    [{ id, step, points[] }] }
+```
+
+A path with a `tokenId` is what turns a drawing into an animation: that piece
+travels the line during its step. Without one it is just an arrow.
+
+**Coordinates are feet on a standard 200 × 85 sheet**, origin at the top-left
+corner of the left-end boards. Real units mean the markings sit where they sit
+in an arena — blue lines 64 ft off each goal line, end-zone dots 20 ft off it —
+and the four framings (full sheet, d-zone, neutral zone, o-zone) are a change of
+viewBox only, so a play drawn on the full sheet still reads when cropped.
+
+`site/src/lib/rink.ts` owns the ice, `site/src/lib/play.ts` the document and its
+geometry, `site/src/scripts/playback.ts` the player, `playeditor.ts` the board.
+
+### Testing it
+
+The API half runs with the rest of the suite (`api/test_plays.py`, real
+Postgres). The browser half cannot be unit-tested — it is a drawing tool — so
+there is a harness that drives the built site in headless chromium and plays the
+coach:
+
+```
+cd site && npm run build
+node tools/test_plays_ui.mjs                 # add --shots <dir> to keep the screenshots
+```
+
 ## Deploying
 
 ```

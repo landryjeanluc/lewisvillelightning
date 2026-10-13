@@ -3,6 +3,7 @@ import Base from "../layouts/Base.astro";
 import NewsPanel from "../components/admin/NewsPanel.astro";
 import RosterPanel from "../components/admin/RosterPanel.astro";
 import NotesPanel from "../components/admin/NotesPanel.astro";
+import PlaysPanel from "../components/admin/PlaysPanel.astro";
 import JobsPanel from "../components/admin/JobsPanel.astro";
 import ModerationPanel from "../components/admin/ModerationPanel.astro";
 import { roster, games, sides } from "../lib/data";
@@ -42,6 +43,7 @@ const gameList = games.map((g: any) => {
       <button type="button" class="tab" data-tab="news-tab"   role="tab">News</button>
       <button type="button" class="tab" data-tab="roster-tab" role="tab">Roster</button>
       <button type="button" class="tab" data-tab="notes-tab"  role="tab">Coach's notes</button>
+      <button type="button" class="tab" data-tab="plays-tab"      role="tab">Plays</button>
       <button type="button" class="tab" data-tab="jobs-tab"       role="tab">Game jobs</button>
       <button type="button" class="tab" data-tab="moderation-tab" role="tab">Review</button>
       <button type="button" class="tab" data-tab="people-tab"     role="tab">Team access</button>
@@ -90,6 +92,7 @@ const gameList = games.map((g: any) => {
     <section id="news-tab" hidden><NewsPanel /></section>
     <section id="roster-tab" hidden><RosterPanel /></section>
     <section id="notes-tab" hidden><NotesPanel /></section>
+    <section id="plays-tab" hidden><PlaysPanel /></section>
 
     <section id="jobs-tab" hidden><JobsPanel /></section>
     <section id="moderation-tab" hidden><ModerationPanel /></section>
@@ -300,7 +303,7 @@ const gameList = games.map((g: any) => {
     b.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((x) => x.classList.remove("is-on"));
       b.classList.add("is-on");
-      for (const id of ["sheet-tab", "news-tab", "roster-tab", "notes-tab",
+      for (const id of ["sheet-tab", "news-tab", "roster-tab", "notes-tab", "plays-tab",
                         "jobs-tab", "moderation-tab", "people-tab"])
         $("#" + id).hidden = b.dataset.tab !== id;
       if (b.dataset.tab === "people-tab") loadPeople();

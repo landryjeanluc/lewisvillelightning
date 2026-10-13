@@ -509,6 +509,9 @@ async def main():
             from test_chat import run_chat_tests
             results.extend(await run_chat_tests(app, pool, ok))
 
+            from test_plays import run_plays_tests
+            results.extend(await run_plays_tests(app, pool, ok))
+
             print(f"\n{sum(results)}/{len(results)} passed")
             return 0 if all(results) else 1
 

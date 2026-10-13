@@ -1,0 +1,159 @@
+/* ===========================================================================
+   The coach's board.
+
+   The site is dark, but ice is not — a grey rink reads as a diagram of a rink,
+   and a white one reads as the sheet the kids were standing on an hour ago.
+   So the board keeps its own light palette inside a dark page, and the markings
+   use the real arena colours rather than the brand ones: red lines red, blue
+   lines blue. Our pieces are crest navy, theirs are the away red.
+   ========================================================================= */
+
+.pl-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-inline: auto;            /* a capped board stays centred in its frame */
+  touch-action: none;             /* the editor owns dragging, not the scroller */
+  user-select: none;
+}
+
+/* --- the ice ------------------------------------------------------------- */
+.rk-boards      { fill: none; stroke: #0B1D54; stroke-width: 1.6; }
+.rk-red-line    { stroke: #C8102E; stroke-width: 0.85; fill: none; }
+.rk-blue-line   { stroke: #1E5FA8; stroke-width: 1.15; fill: none; }
+.rk-centre-line { stroke: #C8102E; stroke-width: 1.15; }
+.rk-red-fill    { fill: #C8102E; }
+.rk-blue-fill   { fill: #1E5FA8; }
+.rk-crease      { fill: rgb(126 190 240 / .55); stroke: #C8102E; stroke-width: .5; }
+.rk-goal        { fill: rgb(11 29 84 / .14); stroke: #C8102E; stroke-width: .5; }
+.rk-trapezoid   { stroke: #C8102E; stroke-width: .5; fill: none; }
+.rk-ref-crease  { stroke: #C8102E; stroke-width: .5; fill: none; }
+
+/* --- lines --------------------------------------------------------------- */
+.pl-path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pl-path-skate    { stroke: #0B1D54; stroke-width: 1.15; }
+.pl-path-backward { stroke: #0B1D54; stroke-width: 1.0; }
+.pl-path-pass     { stroke: #1C8FE8; stroke-width: 1.15; stroke-dasharray: 3.2 2.4; }
+.pl-path-shot     { stroke: #C8102E; stroke-width: 1.3; }
+.pl-shot-bar      { stroke: #C8102E; stroke-width: 1.3; stroke-linecap: round; }
+
+.pl-head-skate { fill: #0B1D54; }
+.pl-head-pass  { fill: #1C8FE8; }
+.pl-head-shot  { fill: #C8102E; }
+
+/* The wiper inside each line's mask. Wide enough to clear the arrowhead,
+   square-ended so the line appears from a clean edge rather than a bulge. */
+.pl-reveal {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 8;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+/* Geometry only: the pieces follow this, nobody looks at it. */
+.pl-motion { fill: none; stroke: none; }
+
+.pl-pen {
+  fill: none;
+  stroke: rgb(236 150 36 / .85);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Casing is never inherited into a diagram: a card is a <button>, and the house
+   button style is uppercase and letter-spaced. A coach's note is a sentence. */
+.pl-note, .pl-token-label, .pl-glyph-text {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.pl-note {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 5px;
+  font-weight: 700;
+  fill: #0B1D54;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+/* --- pieces -------------------------------------------------------------- */
+.pl-token { transition: transform .32s var(--ease, ease-out); }
+/* While the animation runs the transform is written every frame; a transition
+   on top of that lags a step behind and the pieces swim. */
+.is-running .pl-token,
+.is-editing .pl-token { transition: none; }
+
+.pl-hit { fill: transparent; }
+.pl-glyph { stroke-linecap: round; }
+
+.pl-us    .pl-glyph { stroke: #0B1D54; stroke-width: 1.5; fill: none; }
+.pl-them  .pl-glyph { stroke: #C8102E; stroke-width: 1.4; fill: none; }
+.pl-puck  .pl-glyph { fill: #101520; stroke: #fff; stroke-width: .45; }
+.pl-cone  .pl-glyph { fill: #F0A23C; stroke: #8A5A12; stroke-width: .4; }
+.pl-goalie     .pl-glyph { stroke: #0B1D54; stroke-width: 1.2; color: #0B1D54; }
+.pl-goalieThem .pl-glyph { stroke: #C8102E; stroke-width: 1.2; color: #C8102E; }
+
+.pl-glyph-text {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 4.2px; font-weight: 700;
+  fill: currentColor; stroke: none; text-anchor: middle;
+}
+.pl-token-label {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 4.4px; font-weight: 700;
+  fill: #0B1D54; text-anchor: middle;
+  paint-order: stroke; stroke: #fff; stroke-width: 1.3; stroke-linejoin: round;
+}
+.pl-them .pl-token-label, .pl-goalieThem .pl-token-label { fill: #9E1327; }
+
+.pl-token.is-selected .pl-hit {
+  fill: rgb(28 143 232 / .22);
+  stroke: #1C8FE8; stroke-width: .6;
+}
+
+/* --- the board frame ----------------------------------------------------- */
+.pl-board {
+  position: relative;
+  /* Sized from the framing being drawn, not from the column: a zone view is
+     nearly square, and a full-width frame around it is mostly empty darkness.
+     The page says how tall a board it wants; PlayStage supplies the ratio. */
+  width: min(100%, calc(var(--pl-board-h, 600px) * var(--pl-ratio, 2.263)));
+  margin-inline: auto;
+  border: 1px solid var(--hairline-sv);
+  border-radius: var(--r-lg);
+  background: #0A1128;
+  padding: var(--s-2);
+  overflow: hidden;
+}
+.pl-board::after {                 /* rink light spilling over the boards */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 60px -20px rgb(28 143 232 / .5);
+}
+
+/* --- legend -------------------------------------------------------------- */
+.pl-legend {
+  display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-4);
+  font-size: var(--t-xs); color: var(--text-dim);
+}
+.pl-legend span { display: inline-flex; align-items: center; gap: var(--s-2); }
+.pl-legend svg { display: block; overflow: visible; }
+
+/* Card thumbnails are a fixed shape so a grid of plays lines up whether each
+   one is drawn on the full sheet or in a zone. The board is positioned rather
+   than flowed: a percentage height needs a definite one to resolve against,
+   and `aspect-ratio` only gives the box one, not the row inside it. */
+.pl-card-art { position: relative; aspect-ratio: 16 / 10; }
+.pl-card-art .pl-svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; max-width: none; margin: 0;
+}

@@ -62,3 +62,71 @@ python3 -c "import bcrypt,sys; print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.
 psql lvlnb -c "INSERT INTO users (email, display_name, password_hash, role)
                VALUES ('you@hexpi.ca', 'JL', '<hash>', 'admin')"
 ```
+
+## Team chat
+
+`/chat` uses existing team logins, including parents, players and viewers. It
+provides a shared team room and one-to-one conversations. The directory returns
+display names and account IDs, never email addresses. Each person needs their
+own account to receive private messages under their own name.
+
+All `/api/chat/*` endpoints require a valid session and return `Cache-Control:
+no-store`. Only the two participants can list, read or write a direct
+conversation, including when another account is an admin. Members can remove
+their own messages; admins can also remove messages in the team room. Removal
+erases the body and leaves a tombstone, with the actor and message ID audited.
+
+| method | path | purpose |
+|---|---|---|
+| GET | `/api/chat/members` | Choose a recipient |
+| GET | `/api/chat/conversations` | Rooms, latest message and unread counts |
+| POST | `/api/chat/direct` | Open/reuse a conversation with `user_id` |
+| GET | `/api/chat/conversations/{id}/messages` | Latest 50; `before` loads older IDs, `after` polls revisions |
+| POST | `/api/chat/conversations/{id}/messages` | Send `body` and a retry-safe UUID `client_id` |
+| POST | `/api/chat/conversations/{id}/read` | Advance to a displayed `message_id` |
+| DELETE | `/api/chat/conversations/{id}/messages/{message_id}` | Remove a message |
+
+Messages are plain text, limited to 2,000 characters and 30 sends per account
+per minute. The browser polls every four seconds while visible; revision
+cursors also deliver removals. History and update pages return `has_more`.
+Unread markers advance only while the conversation is visible at the bottom.
+Drafts stay in memory when switching conversations or retrying a failed send;
+they do not survive a page reload. There are no attachments or push/email
+notifications in this version.
+
+Deployment uses the existing `deploy.sh`: it copies `chat.py` with the API and
+restarts the service, which applies the additive tables in `schema.sql`.
+No extra service or dependency is required. `test_chat.py` runs as part of
+`test_api.py`; `test.sh` creates an isolated temporary database for each run.
+
+## Plays of the week
+
+`/plays` stores the coach's diagrams. Reading needs a session — a scoresheet is
+public record, a breakout is not — and writing needs an admin. Drafts are
+invisible to everyone but admins, and all responses are `Cache-Control: no-store`.
+
+| method | path | auth | |
+|---|---|---|---|
+| GET | `/api/plays` | session | every play the caller may see, newest week first |
+| GET | `/api/plays/{slug}` | session | one play |
+| POST | `/api/plays` | **admin** | create; the title becomes the slug |
+| PUT | `/api/plays/{id}` | **admin** | replace the whole play |
+| DELETE | `/api/plays/{id}` | **admin** | |
+
+Deliberate behaviours:
+
+- **The diagram is validated, not trusted.** It arrives as JSON from a browser
+  and lands in JSONB, so `plays.py` bounds-checks every coordinate against the
+  200 × 85 sheet, caps every collection, and rejects a document that could not
+  be drawn: a line bound to a piece that is not on the ice, a step number past
+  the end of the play, one piece running two lines in the same step, duplicate
+  ids. A silently-dropped movement would leave the coach wondering why his
+  winger never leaves the wall.
+- **Whole-document PUT.** There is no "patch token 7".
+- **Publishing stamps `published_at` once.** Re-saving a published play does not
+  bump it back to the top of the board.
+- **A play with nothing on it is allowed** — the coach saves the name first and
+  draws it at the rink.
+- `week_of` is a real `DATE`; null means evergreen rather than weekly.
+- The list endpoint returns diagrams, so the index can draw a real miniature of
+  each play. A season of documents is a few tens of kilobytes.

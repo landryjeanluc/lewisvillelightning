@@ -1,0 +1,251 @@
+---
+import "../../styles/play.css";
+import { roster, games, sides } from "../../lib/data";
+import { shortDate } from "../../lib/format";
+import { PATH_KINDS, TOKEN_KINDS } from "../../lib/play";
+import { SURFACES } from "../../lib/rink";
+
+// Full names here, not displayName(): this panel is admin-only, and the coach
+// needs to recognise the kid. Nothing from this list is published — binding a
+// piece to a player stores the id, and the diagram only ever draws the short
+// label, so roster.privacy is not in play on the public side.
+const players = [...roster.players]
+  .sort((a: any, b: any) => a.number - b.number)
+  .map((p: any) => ({ id: p.id, number: p.number, name: `${p.firstName} ${p.lastName}` }));
+
+const gameList = games.map((g: any) => {
+  const s = sides(g);
+  return { id: g.id, label: `${shortDate(g.startsAt)} — ${s.weAreHome ? "vs" : "at"} ${s.them.short}` };
+}).reverse();
+
+const surfaces = Object.entries(SURFACES) as [string, { label: string }][];
+---
+<section class="pe">
+  <div class="pe-head">
+    <div>
+      <h3>Plays of the week</h3>
+      <p class="dim pe-blurb">
+        Draw it the way you draw it on the board. Put the pieces down, pick a
+        step, and drag the lines you want them to run — the team sees it animate.
+      </p>
+    </div>
+    <div class="pe-row">
+      <label class="pe-pick">Play
+        <select id="pe-select"><option value="">— new play —</option></select>
+      </label>
+      <button type="button" id="pe-new">New</button>
+      <button type="button" class="danger" id="pe-delete" disabled>Delete</button>
+    </div>
+  </div>
+
+  <div class="pe-grid">
+    <!-- ------------------------------------------------------------ tools -->
+    <aside class="card pe-tools" id="pe-tools">
+      <h4>Pieces</h4>
+      <div class="pe-row">
+        {TOKEN_KINDS.map((k) => (
+          <button type="button" class="pe-tool" data-tool={k.value} title={k.hint}>{k.label}</button>
+        ))}
+      </div>
+
+      <h4>Lines</h4>
+      <div class="pe-row">
+        {PATH_KINDS.map((k) => (
+          <button type="button" class="pe-tool" data-tool={k.value} title={k.hint}>{k.label}</button>
+        ))}
+      </div>
+
+      <h4>Extras</h4>
+      <div class="pe-row">
+        <button type="button" class="pe-tool" data-tool="text" title="Drop a short label on the ice">Label</button>
+        <button type="button" class="pe-tool" data-tool="pen" title="Freehand scribble">Pen</button>
+        <button type="button" class="pe-tool" data-tool="select" title="Move pieces, pick a line">Move</button>
+        <button type="button" class="pe-tool" data-tool="erase" title="Take something off the board">Erase</button>
+      </div>
+
+      <h4>Board</h4>
+      <div class="pe-row">
+        <button type="button" id="pe-undo" disabled>Undo</button>
+        <button type="button" id="pe-redo" disabled>Redo</button>
+        <button type="button" class="danger" id="pe-clear">Clear</button>
+      </div>
+
+      <div class="pe-inspector card" id="pe-inspector"></div>
+    </aside>
+
+    <!-- ------------------------------------------------------------ board -->
+    <div class="pe-stagewrap">
+      <div class="pl-board" id="pe-stage"></div>
+      <p class="dim pe-hint" id="pe-hint"></p>
+
+      <div class="pe-steps-bar">
+        <span class="eyebrow">Steps</span>
+        <div class="pe-chips" id="pe-steps"></div>
+        <button type="button" id="pe-addstep" title="Add a step">+</button>
+        <button type="button" id="pe-delstep" title="Delete this step">−</button>
+        <button type="button" class="pe-go" id="pe-preview">▶ Preview</button>
+      </div>
+
+      <div class="pe-stepedit card">
+        <label class="grow">What happens in this step
+          <input id="pe-caption" maxlength="200"
+                 placeholder="D1 retrieves, centre swings low for the outlet" />
+        </label>
+        <label class="pe-dur">How long
+          <input id="pe-duration" type="range" min="400" max="5000" step="100" value="1400" />
+          <span class="dim" id="pe-durval">1.4s</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- --------------------------------------------------------- the play -->
+    <aside class="card pe-meta">
+      <h4>This play</h4>
+      <label>Name<input id="pe-title" maxlength="120" placeholder="Wheel breakout" /></label>
+      <label>One line about it
+        <input id="pe-subtitle" maxlength="200" placeholder="Getting out clean under forecheck pressure" />
+      </label>
+      <label>Kind<select id="pe-category"></select></label>
+      <label>Which part of the ice
+        <select id="pe-surface">
+          {surfaces.map(([v, s]) => <option value={v}>{s.label}</option>)}
+        </select>
+      </label>
+      <label>Week of<input id="pe-week" type="date" /></label>
+      <label>For a game (optional)
+        <select id="pe-game">
+          <option value="">Not tied to a game</option>
+          {gameList.map((g) => <option value={g.id}>{g.label}</option>)}
+        </select>
+      </label>
+      <label>Visible to the team
+        <select id="pe-status">
+          <option value="draft">Draft — only admins see it</option>
+          <option value="published">Published — the team sees it</option>
+        </select>
+      </label>
+
+      <div class="pe-save">
+        <span class="dim" id="pe-status-line"></span>
+        <button type="button" id="pe-save">Save play</button>
+      </div>
+    </aside>
+  </div>
+
+  <script type="application/json" id="pe-roster-data" set:html={JSON.stringify(players)} />
+</section>
+
+<script>
+  import { mountPlayEditor } from "../../scripts/playeditor";
+
+  // The panel lives in a hidden tab, and an SVG in a `hidden` subtree has no
+  // screen CTM — every coordinate would come back zero. So it mounts the first
+  // time the tab is actually on screen, not on page load.
+  const ready = () => {
+    const tab = document.querySelector("#plays-tab") as HTMLElement | null;
+    if (tab && !tab.hidden) mountPlayEditor();
+  };
+  document.querySelectorAll(".tab").forEach((b) =>
+    b.addEventListener("click", () => requestAnimationFrame(ready)));
+  ready();
+</script>
+
+<style>
+  /* Shorter than the viewer's: the editor has tools and a step strip to fit. */
+  #pe-stage { --pl-board-h: min(58vh, 460px); }
+
+  .pe h3 { font-size: var(--t-lg); }
+  .pe h4 {
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+    margin-bottom: var(--s-2);
+  }
+  .pe-blurb { font-size: var(--t-sm); margin-top: var(--s-2); max-width: 54ch; }
+  .pe-head {
+    display: flex; flex-wrap: wrap; gap: var(--s-4);
+    align-items: flex-end; justify-content: space-between; margin-bottom: var(--s-5);
+  }
+  .pe-pick { min-width: 14rem; }
+
+  .pe-grid {
+    display: grid; gap: var(--s-4);
+    grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr) minmax(13rem, 17rem);
+    align-items: start;
+  }
+  @media (max-width: 1180px) {
+    .pe-grid { grid-template-columns: minmax(0, 1fr); }
+    .pe-stagewrap { order: -1; }
+  }
+
+  .pe-tools, .pe-meta { padding: var(--s-4); display: grid; gap: var(--s-3); }
+  .pe-meta label, .pe-tools label { display: grid; gap: var(--s-2); font-size: var(--t-sm); }
+
+  .pe-row { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: end; }
+  .pe-tool, .pe-row button, .pe-steps-bar button {
+    padding: var(--s-2) var(--s-3); cursor: pointer;
+    background: var(--surface); color: var(--text-muted);
+    border: 1px solid var(--hairline); border-radius: var(--r-md);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600;
+  }
+  .pe-tool:hover, .pe-row button:hover { color: var(--text); border-color: var(--hairline-sv); }
+  .pe-tool.is-on {
+    color: #fff; background: var(--volt-500); border-color: var(--volt-500);
+  }
+  .pe-row button.danger { color: var(--loss); }
+  .pe-row button[disabled] { opacity: .4; cursor: default; }
+
+  .pe-inspector { padding: var(--s-3); display: grid; gap: var(--s-3); margin-top: var(--s-2); }
+  .pe-inspector p { font-size: var(--t-xs); margin: 0; }
+
+  .pe-hint { font-size: var(--t-sm); margin-top: var(--s-3); min-height: 1.4em; }
+
+  .pe-steps-bar {
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-3);
+  }
+  .pe-chips { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+  .pe-go { margin-left: auto; background: var(--volt-500) !important; color: #fff !important;
+           border-color: var(--volt-500) !important; }
+
+  .pe-stepedit {
+    display: flex; gap: var(--s-4); align-items: end; flex-wrap: wrap;
+    padding: var(--s-4); margin-top: var(--s-3);
+  }
+  .pe-stepedit label { display: grid; gap: var(--s-2); font-size: var(--t-sm); }
+  .pe-stepedit .grow { flex: 1 1 20rem; }
+  .pe-dur { min-width: 11rem; }
+  .pe-dur input { width: 100%; }
+
+  .pe-save {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--s-3); margin-top: var(--s-2);
+  }
+  .pe-save span { font-size: var(--t-xs); }
+
+  #pe-stage.is-preview { outline: 2px solid var(--volt-500); outline-offset: 2px; }
+
+  /* Built at runtime with innerHTML, so Astro's scoping never reaches them. */
+  :global(.pe-chip) {
+    min-width: 2.2rem; padding: var(--s-2); cursor: pointer;
+    background: var(--surface); color: var(--text-dim);
+    border: 1px solid var(--hairline); border-radius: var(--r-md);
+    font-family: var(--font-ui); font-weight: 700;
+  }
+  :global(.pe-chip.is-on) { color: #fff; background: var(--volt-500); border-color: var(--volt-500); }
+  :global(.pe-inspector h4) {
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+  }
+  :global(.pe-inspector label) { display: grid; gap: var(--s-2); font-size: var(--t-xs); }
+  :global(.pe-inspector input), :global(.pe-inspector select) { width: 100%; }
+  :global(.pe-mini) {
+    padding: 3px var(--s-2); cursor: pointer; font-size: var(--t-xs); font-weight: 600;
+    background: var(--surface); color: var(--text-dim);
+    border: 1px solid var(--hairline); border-radius: var(--r-sm);
+  }
+  :global(.pe-mini.is-on) { color: #fff; background: var(--volt-500); border-color: var(--volt-500); }
+  :global(.pe-inspector button.link) {
+    background: none; border: 0; padding: 0; cursor: pointer; text-align: left;
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600; color: var(--accent-text);
+  }
+  :global(.pe-inspector button.link.danger) { color: var(--loss); }
+</style>

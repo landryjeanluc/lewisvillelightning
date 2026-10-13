@@ -1,0 +1,204 @@
+---
+import Base from "../layouts/Base.astro";
+import { games, sides } from "../lib/data";
+import { shortDate } from "../lib/format";
+import "../styles/play.css";
+
+// Everything here is live: plays are written in the browser by the coach and
+// must appear the moment he publishes them, not the next time someone runs
+// deploy.sh. So the page ships as a shell and fetches its own content.
+//
+// The fixture list is the exception — it is build-time data like everywhere
+// else on the site, so a play tied to a game can name that game without the
+// API having to join against a contract it only validates against.
+const gameLabels = Object.fromEntries(games.map((g: any) => {
+  const s = sides(g);
+  return [g.id, `${s.weAreHome ? "vs" : "at"} ${s.them.short}, ${shortDate(g.startsAt)}`];
+}));
+---
+<Base title="Plays" wide>
+  <header class="page-head">
+    <span class="eyebrow">Coach's board</span>
+    <h1>Plays of the Week</h1>
+    <p class="muted lede">
+      How we want to play it. Hit play on any diagram and watch it run,
+      step by step, the way it gets drawn on the whiteboard.
+    </p>
+  </header>
+
+  <div id="pl-gate" class="card gate" hidden>
+    <p>Sign in to see the team's plays.</p>
+    <a class="btn" href="/login">Sign in</a>
+  </div>
+
+  <p id="pl-loading" class="dim">Loading the board…</p>
+
+  <section id="pl-index" hidden>
+    <div class="filters" id="pl-filters"></div>
+    <div class="grid" id="pl-grid"></div>
+    <p id="pl-empty" class="dim" hidden>
+      No plays yet. The coach hasn't drawn one up — check back after the next practice.
+    </p>
+  </section>
+
+  <article id="pl-detail" hidden>
+    <a class="back" href="/plays" id="pl-back">← All plays</a>
+
+    <div class="d-head">
+      <span class="eyebrow" id="pl-d-meta"></span>
+      <h2 class="display--italic" id="pl-d-title"></h2>
+      <p class="muted" id="pl-d-sub"></p>
+    </div>
+
+    <div class="pl-board" id="pl-stage"></div>
+
+    <div class="controls">
+      <button type="button" class="ctl" id="pl-prev" aria-label="Previous step">◀◀</button>
+      <button type="button" class="ctl ctl--go" id="pl-play">▶ Play</button>
+      <button type="button" class="ctl" id="pl-next" aria-label="Next step">▶▶</button>
+      <div class="scrub" id="pl-scrub" role="progressbar" aria-label="Play progress"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="scrub-fill" id="pl-scrub-fill"></div>
+      </div>
+      <span class="dim count" id="pl-count"></span>
+    </div>
+
+    <ol class="steps" id="pl-steps"></ol>
+
+    <div class="pl-legend">
+      <span><svg width="34" height="10" viewBox="0 0 34 10"><line class="pl-path pl-path-skate" x1="1" y1="5" x2="27" y2="5" stroke-width="1.6" /><path class="pl-head-skate" d="M27 2 L33 5 L27 8 z" /></svg> Skating</span>
+      <span><svg width="34" height="10" viewBox="0 0 34 10"><line class="pl-path pl-path-pass" x1="1" y1="5" x2="27" y2="5" stroke-width="1.6" stroke-dasharray="4 3" /><path class="pl-head-pass" d="M27 2 L33 5 L27 8 z" /></svg> Pass</span>
+      <span><svg width="34" height="10" viewBox="0 0 34 10"><line class="pl-path pl-path-shot" x1="1" y1="5" x2="27" y2="5" stroke-width="2" /><line class="pl-shot-bar" x1="22" y1="1.5" x2="22" y2="8.5" stroke-width="2" /><path class="pl-head-shot" d="M27 2 L33 5 L27 8 z" /></svg> Shot</span>
+      <span><svg width="34" height="12" viewBox="0 0 34 12"><path class="pl-path pl-path-backward" d="M1 6 q3 -4 6 0 t6 0 t6 0 t6 0" stroke-width="1.5" /><path class="pl-head-skate" d="M27 3 L33 6 L27 9 z" /></svg> Backwards</span>
+      <span class="key key--us">✕ Us</span>
+      <span class="key key--them">◯ Them</span>
+    </div>
+
+    <p class="dim byline" id="pl-d-byline"></p>
+  </article>
+
+  <script type="application/json" id="pl-games" set:html={JSON.stringify(gameLabels)} />
+  <script>import "../scripts/plays-page";</script>
+</Base>
+
+<style>
+  /* How tall the board is allowed to get; PlayStage sizes the width from it. */
+  #pl-stage { --pl-board-h: min(70vh, 660px); }
+
+  .page-head { margin-bottom: var(--s-6); }
+  .page-head h1 { margin-top: var(--s-2); }
+  .lede { max-width: 58ch; margin-top: var(--s-3); }
+
+  .gate { padding: var(--s-5); display: grid; gap: var(--s-4); justify-items: start; max-width: 26rem; }
+  .btn {
+    padding: var(--s-3) var(--s-5); border-radius: var(--r-md);
+    background: var(--volt-500); color: #fff; text-decoration: none;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: var(--t-sm);
+  }
+
+  .filters { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-5); }
+  .grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+
+  .back {
+    display: inline-block; margin-bottom: var(--s-5);
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim); text-decoration: none;
+  }
+  .back:hover { color: var(--text); }
+
+  .d-head { margin-bottom: var(--s-5); }
+  .d-head h2 { font-size: var(--t-xl); margin-top: var(--s-2); }
+  .d-head p:empty { display: none; }
+
+  .controls {
+    display: flex; align-items: center; gap: var(--s-3);
+    margin-top: var(--s-4); flex-wrap: wrap;
+  }
+  .ctl {
+    min-width: 3.2rem; padding: var(--s-3) var(--s-4);
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--hairline-sv); border-radius: var(--r-md);
+    font-family: var(--font-ui); font-weight: 700; cursor: pointer;
+  }
+  .ctl:hover { border-color: var(--volt-500); }
+  .ctl--go { min-width: 7rem; background: var(--volt-500); border-color: var(--volt-500); color: #fff; }
+  .scrub {
+    flex: 1 1 10rem; height: 6px; border-radius: 3px;
+    background: var(--surface-2); overflow: hidden; cursor: pointer;
+  }
+  .scrub-fill { height: 100%; width: 0%; background: var(--volt-500); box-shadow: var(--glow-volt); }
+  .count { font-size: var(--t-sm); white-space: nowrap; }
+
+  .steps { list-style: none; padding: 0; margin-top: var(--s-5); display: grid; gap: var(--s-2); }
+  .byline { font-size: var(--t-xs); margin-top: var(--s-5); }
+
+  .key { font-weight: 700; }
+  .key--us { color: var(--ice-200); }
+  .key--them { color: var(--loss); }
+
+  /* Cards and step rows are built at runtime, so Astro's scoped selectors
+     never reach them — these have to be global. Same reason as the admin
+     people table. */
+  /* A card is a <button>, so it arrives wearing the house button style:
+     uppercase, letter-spaced, pill-shaped, volt gradient. Undo all of it —
+     what's inside is the coach's own words and a rink. */
+  :global(.pl-card) {
+    display: block; text-align: left; width: 100%; cursor: pointer;
+    font-family: var(--font-ui); font-size: var(--t-base); font-weight: 500;
+    text-transform: none; letter-spacing: normal; color: var(--text);
+    padding: 0; overflow: hidden; text-decoration: none;
+    background: var(--bg-raised); border: 1px solid var(--hairline);
+    border-radius: var(--r-lg); transition: border-color .18s var(--ease), transform .18s var(--ease);
+  }
+  :global(.pl-card:hover) { border-color: var(--volt-500); transform: translateY(-2px); }
+  :global(.pl-card-art) { background: #0A1128; padding: var(--s-2); }
+  :global(.pl-card-body) { padding: var(--s-4); display: grid; gap: var(--s-2); }
+  :global(.pl-card-body h3) { font-size: var(--t-md); margin: 0; }
+  :global(.pl-card-body p) { margin: 0; font-size: var(--t-sm); color: var(--text-dim); }
+  :global(.pl-card-tags) { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+
+  :global(.pl-pill) {
+    font-family: var(--font-ui); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase;
+    padding: 2px 7px; border-radius: 999px;
+    color: var(--accent-text); background: rgb(28 143 232 / .12);
+    border: 1px solid rgb(28 143 232 / .3);
+  }
+  :global(.pl-pill--draft) {
+    color: var(--loss); background: rgb(224 86 107 / .1); border-color: rgb(224 86 107 / .35);
+  }
+  :global(.pl-pill--plain) {
+    color: var(--text-dim); background: var(--surface); border-color: var(--hairline);
+  }
+
+  :global(.pl-filter) {
+    padding: var(--s-2) var(--s-4); cursor: pointer;
+    background: none; color: var(--text-dim);
+    border: 1px solid var(--hairline); border-radius: var(--r-md);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600;
+  }
+  :global(.pl-filter.is-on) { color: var(--text); border-color: var(--volt-500); background: var(--surface-2); }
+
+  :global(.pl-step) {
+    display: grid; grid-template-columns: 2rem 1fr; gap: var(--s-3); align-items: baseline;
+    padding: var(--s-3) var(--s-4); cursor: pointer; text-align: left; width: 100%;
+    background: var(--surface); color: var(--text-muted);
+    border: 1px solid var(--hairline); border-radius: var(--r-md);
+    font: inherit; font-size: var(--t-sm);
+    text-transform: none; letter-spacing: normal;   /* captions are sentences */
+  }
+  :global(.pl-step.is-on) {
+    color: var(--text); border-color: var(--volt-500); background: var(--surface-2);
+  }
+  :global(.pl-step b) {
+    font-family: var(--font-display); font-style: italic; font-weight: 900;
+    font-size: var(--t-md); color: var(--accent-text);
+  }
+  :global(.pl-step em) { font-style: normal; color: var(--text-dim); }
+
+  @media (max-width: 520px) {
+    .controls { gap: var(--s-2); }
+    .ctl { flex: 1 1 auto; }
+    .scrub { order: 10; flex-basis: 100%; }
+  }
+</style>
