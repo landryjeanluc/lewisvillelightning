@@ -1,0 +1,38 @@
+---
+import { games, sides } from "../lib/data";
+import TeamCrest from "./TeamCrest.astro";
+interface Props { gameId?: string }
+const { gameId } = Astro.props;
+const fixtures = gameId ? games.filter(g=>g.id===gameId) : games;
+---
+<section class="live-board" data-live-board data-fixed-game={gameId} hidden aria-label="Game scoreboard">
+  <header><span class="eyebrow" data-score-state>Live game</span><h1 data-score-period>1st period</h1></header>
+  {fixtures.map(game => {
+    const s=sides(game);
+    return <div class="live-fixture" data-live-fixture={game.id} data-home={s.weAreHome ? "true" : "false"} hidden>
+      <div class="live-teams" aria-live="polite" aria-atomic="true">
+        <div class="live-team"><span class="eyebrow">Away</span><TeamCrest team={s.left} eager /><h2>{s.left.short}</h2><strong class="live-score num" data-away-score>—</strong></div>
+        <span class="live-divider" aria-hidden="true">–</span>
+        <div class="live-team"><span class="eyebrow">Home</span><TeamCrest team={s.right} eager /><h2>{s.right.short}</h2><strong class="live-score num" data-home-score>—</strong></div>
+      </div>
+      <p class="dim">{game.venue.name}</p>
+      <a href={`/schedule/${game.id}`}>Game details →</a>
+    </div>;
+  })}
+  <p class="dim" data-score-connection role="status"></p>
+  <a href="/admin#live-tab" data-score-admin hidden>Manage live score →</a>
+</section>
+<script>import "../scripts/scoreboard";</script>
+<style>
+  .live-board { padding:var(--s-6); margin-bottom:var(--s-8); border:1px solid var(--blue-400); border-radius:var(--r-xl); text-align:center; background:radial-gradient(ellipse at top,rgb(28 143 232 / .18),transparent 65%),var(--bg-raised); }
+  header h1 { font-size:clamp(2.4rem,6vw,5rem); margin-block:var(--s-2) var(--s-5); }
+  .live-teams { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:var(--s-4); }
+  .live-team { display:grid; justify-items:center; gap:var(--s-3); min-width:0; }
+  .live-team :global(.tc) { --crest-size:clamp(70px,15vw,170px); }
+  .live-team h2 { font-size:clamp(1.3rem,4vw,3rem); overflow-wrap:anywhere; }
+  .live-score { font-size:clamp(4rem,14vw,10rem); line-height:1; color:var(--white); text-shadow:0 0 35px rgb(28 143 232 / .35); }
+  .live-divider { font-size:var(--t-xl); color:var(--text-dim); }
+  [data-score-state] { color:var(--volt-300); }
+  [data-score-admin] { display:inline-block; margin-top:var(--s-3); }
+  @media(max-width:520px) { .live-board { padding:var(--s-4); } .live-teams { gap:var(--s-2); } }
+</style>

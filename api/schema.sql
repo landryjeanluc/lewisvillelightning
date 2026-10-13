@@ -349,3 +349,8 @@ ALTER TABLE goal_entries ADD CONSTRAINT goal_entries_removed_by_fkey FOREIGN KEY
 
 -- Optional private contact detail, never included in roster/chat directory responses.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+
+-- Live scoring has no clock. Revisions detect competing score/scoresheet edits.
+ALTER TABLE game_results ADD COLUMN IF NOT EXISTS period TEXT
+  CHECK (period IN ('1','2','3','OT','SO','INT1','INT2'));
+ALTER TABLE game_results ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 0;

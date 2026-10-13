@@ -29,11 +29,9 @@ const { iso, label = "Puck drops in" } = Astro.props;
     const tick = () => {
       const ms = when - Date.now();
       if (ms <= 0) {
-        // a game runs about 90 minutes; after that stop claiming it is live
-        const liveNow = ms > -90 * 60_000;
-        units.hidden = true; lab.hidden = true;
-        live.hidden = !liveNow;
-        if (!liveNow) cd.hidden = true;
+        // Only the saved game status can announce a live game.
+        units.hidden = true; lab.hidden = true; live.hidden = true;
+        cd.hidden = true;
         return;
       }
       cd.hidden = false;

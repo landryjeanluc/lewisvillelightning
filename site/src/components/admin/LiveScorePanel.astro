@@ -1,0 +1,36 @@
+---
+import { games, sides } from "../../lib/data";
+---
+<section class="live-editor card" aria-labelledby="live-editor-title">
+  <h2 id="live-editor-title">Live scoreboard</h2>
+  <p>Start the game here, then save the score and period as play progresses. The homepage updates automatically. Individual player stats stay in the Scoresheet tab.</p>
+  <form id="live-score-form">
+    <fieldset id="live-score-fields" disabled>
+      <label>Game<select name="game_id">{games.map(g=><option value={g.id} data-opponent={sides(g).them.short} data-start={g.startsAt}>{g.startsAt.slice(0,10)} — {sides(g).weAreHome?'vs':'at'} {sides(g).them.short}</option>)}</select></label>
+      <div class="live-score-inputs">
+        <label>Lightning<input name="our_score" type="number" inputmode="numeric" min="0" max="1000" step="1" required value="0" /></label>
+        <label><span id="live-opponent">Opponent</span><input name="their_score" type="number" inputmode="numeric" min="0" max="1000" step="1" required value="0" /></label>
+        <button type="button" class="ghost" data-goal="our_score">+1 Lightning</button>
+        <button type="button" class="ghost" data-goal="their_score">+1 opponent</button>
+      </div>
+      <div class="live-score-inputs">
+        <label>Game status<select name="status"><option value="scheduled">Not started</option><option value="in_progress">Live</option><option value="final">Final</option><option value="postponed">Postponed</option><option value="cancelled">Cancelled</option></select></label>
+        <label>Period<select name="period"><option value="1">1st period</option><option value="INT1">1st intermission</option><option value="2">2nd period</option><option value="INT2">2nd intermission</option><option value="3">3rd period</option><option value="OT">Overtime</option><option value="SO">Shootout</option></select></label>
+      </div>
+      <div class="live-actions"><button type="button" id="live-start">Start game</button><button type="submit">Save scoreboard</button></div>
+    </fieldset>
+  </form>
+  <p id="live-save-status" role="status" aria-live="polite">Loading game scores…</p>
+  <button type="button" id="live-refresh" class="ghost">Load latest score</button>
+</section>
+<script>import "../../scripts/live-score-editor";</script>
+<style>
+  .live-editor { padding:var(--s-5); }
+  .live-editor h2 { margin-bottom:var(--s-3); }
+  fieldset { border:0; padding:0; margin:0; display:grid; gap:var(--s-4); min-width:0; }
+  label { display:grid; gap:var(--s-2); min-width:0; }
+  input,select { width:100%; min-width:0; min-height:44px; }
+  .live-score-inputs { display:grid; grid-template-columns:1fr 1fr; gap:var(--s-3); }
+  input { font-size:var(--t-xl); font-variant-numeric:tabular-nums; text-align:center; }
+  .live-actions { display:flex; gap:var(--s-3); flex-wrap:wrap; }
+</style>

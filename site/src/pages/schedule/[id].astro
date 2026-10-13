@@ -1,5 +1,6 @@
 ---
 import { practiceLabel } from "../../lib/schedule";
+import LiveScoreboard from "../../components/LiveScoreboard.astro";
 import LiveGame from "../../components/LiveGame.astro";
 import Base from "../../layouts/Base.astro";
 import Matchup from "../../components/Matchup.astro";
@@ -64,6 +65,7 @@ const star = isGame ? spotlightFor(event.id) : undefined;
     {event.status === "cancelled" && <p class="banner banner--bad">This {isGame ? "game" : "practice"} is cancelled.</p>}
     {event.status === "postponed" && <p class="banner">This {isGame ? "game" : "practice"} is postponed.</p>}
   </article>
+  {isGame && <LiveScoreboard gameId={event.id} />}
   {isGame && <LiveGame gameId={event.id} />}
 </Base>
 

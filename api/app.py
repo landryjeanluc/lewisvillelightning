@@ -379,6 +379,7 @@ class PlayerLine(BaseModel):
     plus_minus: int = Field(0, ge=-1000, le=1000, strict=True)          # negative is legitimate
 
 class Scoresheet(BaseModel):
+    expected_revision: int | None = Field(None, ge=0, le=2**53-1, strict=True)
     our_score: int | None = Field(None, ge=0, le=1000, strict=True)
     their_score: int | None = Field(None, ge=0, le=1000, strict=True)
     status: Literal["scheduled", "in_progress", "final", "postponed", "cancelled"] = "final"
@@ -406,7 +407,7 @@ async def game_stats(game_id: str, pool: Annotated[asyncpg.Pool, Depends(db)]):
     if game_id not in contract.games:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown game {game_id}")
     result = await pool.fetchrow(
-        "SELECT our_score, their_score, status, updated_at FROM game_results WHERE game_id = $1",
+        "SELECT our_score, their_score, status, period, revision, updated_at FROM game_results WHERE game_id = $1",
         game_id,
     )
     rows = await pool.fetch(
@@ -433,12 +434,17 @@ async def put_game_stats(
 
     # The whole sheet is written at once so "I fixed row 7" is atomic.
     async with pool.acquire() as c, c.transaction():
+        await c.execute("SELECT pg_advisory_xact_lock(hashtextextended($1, 71004))", game_id)
+        revision = await c.fetchval("SELECT revision FROM game_results WHERE game_id=$1", game_id) or 0
+        if sheet.expected_revision is not None and revision != sheet.expected_revision:
+            raise HTTPException(409, "The score changed. Reload the scoresheet before saving again.")
         await c.execute(
-            """INSERT INTO game_results (game_id, our_score, their_score, status, updated_by, updated_at)
-               VALUES ($1,$2,$3,$4,$5, now())
+            """INSERT INTO game_results (game_id, our_score, their_score, status, updated_by, updated_at, revision)
+               VALUES ($1,$2,$3,$4,$5, now(), 1)
                ON CONFLICT (game_id) DO UPDATE SET
                  our_score=EXCLUDED.our_score, their_score=EXCLUDED.their_score,
-                 status=EXCLUDED.status, updated_by=EXCLUDED.updated_by, updated_at=now()""",
+                 status=EXCLUDED.status, updated_by=EXCLUDED.updated_by, updated_at=now(),
+                 revision=game_results.revision+1""",
             game_id, sheet.our_score, sheet.their_score, sheet.status, user.id,
         )
         await c.execute("DELETE FROM game_stats WHERE game_id = $1", game_id)
@@ -461,7 +467,7 @@ async def put_game_stats(
         warnings.append(
             f"player goals total {goals} but the final score says {sheet.our_score}"
         )
-    return {"ok": True, "saved": len(sheet.lines), "warnings": warnings}
+    return {"ok": True, "saved": len(sheet.lines), "warnings": warnings, "revision": revision + 1}
 
 @app.get("/stats/season")
 async def season(pool: Annotated[asyncpg.Pool, Depends(db)]):
@@ -1311,3 +1317,6 @@ app.include_router(goals_router(current_user, require_admin, db, contract))
 
 from account import build_router as account_router
 app.include_router(account_router(current_user, db, contract, screen))
+
+from scoreboard import build_router as scoreboard_router
+app.include_router(scoreboard_router(require_admin, db, contract))

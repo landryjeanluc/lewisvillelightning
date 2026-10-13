@@ -1,4 +1,5 @@
 ---
+import LiveScoreboard from "../components/LiveScoreboard.astro";
 import Base from "../layouts/Base.astro";
 import Matchup from "../components/Matchup.astro";
 import EventRow from "../components/EventRow.astro";
@@ -25,8 +26,10 @@ const rot = spotlightProgress();
 <Base wide>
   <HomeGoals slot="header-footer" />
 
+  <LiveScoreboard />
+
   {g ? (
-    <section class="hero">
+    <section class="hero" data-upcoming-hero>
       <Lightning />
       <div class="hero-top">
         <span class="eyebrow">{team.level} {team.division} · {g.gameType === "regular" ? "Regular season" : g.gameType === "exhibition" ? "Exhibition" : g.gameType}</span>
@@ -58,7 +61,7 @@ const rot = spotlightProgress();
       </div>
     </section>
   ) : (
-    <section class="hero hero--empty">
+    <section class="hero hero--empty" data-upcoming-hero>
       <h1>No games scheduled</h1>
       <p class="muted">The schedule will fill in once the season data syncs.</p>
     </section>

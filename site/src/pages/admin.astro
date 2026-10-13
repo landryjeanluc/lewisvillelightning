@@ -1,4 +1,5 @@
 ---
+import LiveScorePanel from "../components/admin/LiveScorePanel.astro";
 import Base from "../layouts/Base.astro";
 import NewsPanel from "../components/admin/NewsPanel.astro";
 import RosterPanel from "../components/admin/RosterPanel.astro";
@@ -41,6 +42,7 @@ const gameList = games.map((g: any) => {
   <div id="editor" hidden>
     <nav class="tabs" role="tablist">
       <button type="button" class="tab is-on" data-tab="sheet-tab" role="tab">Scoresheet</button>
+      <button type="button" class="tab" data-tab="live-tab" role="tab">Live score</button>
       <button type="button" class="tab" data-tab="news-tab"   role="tab">News</button>
       <button type="button" class="tab" data-tab="roster-tab" role="tab">Roster</button>
       <button type="button" class="tab" data-tab="notes-tab"  role="tab">Coach's notes</button>
@@ -62,6 +64,7 @@ const gameList = games.map((g: any) => {
         <label>Us<input id="ourScore" type="number" inputmode="numeric" min="0" /></label>
         <label>Them<input id="theirScore" type="number" inputmode="numeric" min="0" /></label>
       </div>
+      <label>Result status<select id="sheet-state"><option value="scheduled">Not started</option><option value="in_progress">Live</option><option value="final">Final</option><option value="postponed">Postponed</option><option value="cancelled">Cancelled</option></select></label>
       <span class="who dim">Signed in as <strong id="adminname"></strong> ·
         <button type="button" class="link" data-logout>Sign out</button></span>
     </div>
@@ -87,10 +90,12 @@ const gameList = games.map((g: any) => {
 
     <div class="actions">
       <span id="status" class="dim"></span>
+      <button id="reload-sheet" type="button" class="ghost">Reload scoresheet</button>
       <button id="save" type="button">Save scoresheet</button>
     </div>
     </section>
 
+    <section id="live-tab" hidden><LiveScorePanel /></section>
     <section id="news-tab" hidden><NewsPanel /></section>
     <section id="roster-tab" hidden><RosterPanel /></section>
     <section id="notes-tab" hidden><NotesPanel /></section>
@@ -144,6 +149,10 @@ const gameList = games.map((g: any) => {
   import { escapeHtml as esc } from "../lib/security";
   const $ = (s: string) => document.querySelector(s) as any;
   let dirty = false;
+  let sheetRevision = 0;
+  let sheetLoad = 0;
+  let loadedSheetGame = "";
+  let sheetSaving = false;
 
   import { api } from "../scripts/api-client";
 
@@ -166,8 +175,16 @@ const gameList = games.map((g: any) => {
 
   async function loadGame() {
     const id = $("#game").value;
+    const load = ++sheetLoad;
     $("#status").textContent = "Loading…";
+    $("#save").disabled = true;
     const { ok, body } = await api(`/stats/game/${id}`);
+    if (load !== sheetLoad) return;
+    if (!ok) { $("#status").textContent = "Could not load scoresheet. Select the game again to retry."; return; }
+    loadedSheetGame = id;
+    sheetRevision = body?.result?.revision ?? 0;
+    $("#sheet-state").value = body?.result?.status ?? "final";
+    $("#save").disabled = false;
     // reset every row first so a game with no sheet doesn't inherit the last one
     document.querySelectorAll("#sheet tbody tr").forEach((tr: any) => {
       tr.querySelectorAll("input").forEach((i: any) => (i.value = "0"));
@@ -191,6 +208,7 @@ const gameList = games.map((g: any) => {
   }
 
   async function save() {
+    if (sheetSaving || !loadedSheetGame) return;
     const lines: any[] = [];
     document.querySelectorAll("#sheet tbody tr").forEach((tr: any) => {
       const n = (f: string) => Number(tr.querySelector(`[data-f="${f}"]`).value || 0);
@@ -199,15 +217,19 @@ const gameList = games.map((g: any) => {
       if (line.g || line.a || line.pim || line.plus_minus) lines.push(line);
     });
     const num = (el: any) => (el.value === "" ? null : Number(el.value));
+    sheetSaving = true;
+    document.querySelectorAll<HTMLInputElement>("#sheet-tab input, #sheet-tab select, #reload-sheet").forEach(el => el.disabled = true);
     $("#save").disabled = true;
     $("#status").textContent = "Saving…";
-    const { ok, status, body } = await api(`/stats/game/${$("#game").value}`, {
+    const { ok, status, body } = await api(`/stats/game/${loadedSheetGame}`, {
       method: "PUT",
       body: JSON.stringify({
         our_score: num($("#ourScore")), their_score: num($("#theirScore")),
-        status: "final", lines,
+        status: $("#sheet-state").value, expected_revision: sheetRevision, lines,
       }),
     });
+    sheetSaving = false;
+    document.querySelectorAll<HTMLInputElement>("#sheet-tab input, #sheet-tab select, #reload-sheet").forEach(el => el.disabled = false);
     $("#save").disabled = false;
     if (!ok) {
       $("#status").textContent = status === 401 ? "Session expired — sign in again."
@@ -215,6 +237,7 @@ const gameList = games.map((g: any) => {
       if (status === 401) show("gate");
       return;
     }
+    sheetRevision = body.revision;
     dirty = false;
     $("#status").textContent = `Saved ${body.saved} player${body.saved === 1 ? "" : "s"}.`
       + (body.warnings?.length ? ` Note: ${body.warnings.join("; ")}` : "");
@@ -311,11 +334,18 @@ const gameList = games.map((g: any) => {
     b.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((x) => x.classList.remove("is-on"));
       b.classList.add("is-on");
-      for (const id of ["sheet-tab", "news-tab", "roster-tab", "notes-tab", "plays-tab",
+      for (const id of ["sheet-tab", "live-tab", "news-tab", "roster-tab", "notes-tab", "plays-tab",
                         "goals-tab", "jobs-tab", "moderation-tab", "people-tab"])
         $("#" + id).hidden = b.dataset.tab !== id;
       if (b.dataset.tab === "people-tab") loadPeople();
     }));
+
+  const openHashTab = () => {
+    const tab = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-tab]")).find(b => `#${b.dataset.tab}` === location.hash);
+    tab?.click();
+  };
+  openHashTab();
+  window.addEventListener("hashchange", openHashTab);
 
   $("#login").addEventListener("submit", async (e: Event) => {
     e.preventDefault();
@@ -340,12 +370,16 @@ const gameList = games.map((g: any) => {
     }));
 
   $("#game").addEventListener("change", () => {
-    if (dirty && !confirm("You have unsaved changes. Discard them?")) return;
+    if (dirty && !confirm("You have unsaved changes. Discard them?")) { $("#game").value = loadedSheetGame; return; }
     loadGame();
   });
+  $("#reload-sheet").addEventListener("click", () => {
+    if (dirty && !confirm("Replace unsaved stats with the latest saved scoresheet?")) return;
+    void loadGame();
+  });
   $("#save").addEventListener("click", save);
-  document.addEventListener("input", (e: any) => { if (e.target.closest("#sheet, .score")) dirty = true; });
-  window.addEventListener("beforeunload", (e) => { if (dirty) e.preventDefault(); });
+  document.addEventListener("input", (e: any) => { if (e.target.closest("#sheet, .score, #sheet-state")) dirty = true; });
+  window.addEventListener("beforeunload", (e) => { if (dirty || sheetSaving) e.preventDefault(); });
 
   boot();
 </script>

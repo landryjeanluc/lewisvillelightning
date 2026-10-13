@@ -1,3 +1,4 @@
+import { periodLabel, type Score } from '../lib/scoreboard';
 import { api } from './api-client';
 import { md } from './live';
 for (const section of document.querySelectorAll<HTMLElement>('[data-game-updates]')) {
@@ -48,5 +49,12 @@ for (const section of document.querySelectorAll<HTMLElement>('[data-game-updates
     }
     status.textContent = result || noteList.childElementCount || jobs.body.length ? '' : 'No updates yet.';
   }
+  document.addEventListener('scoreboard:updated', ((event:CustomEvent<Score[]>) => {
+    const result=event.detail.find(g=>g.game_id===section.dataset.gameUpdates);
+    if(!result) return;
+    const score=section.querySelector<HTMLElement>('[data-game-score]')!;
+    score.hidden=!['in_progress','final'].includes(result.status);
+    score.textContent=`${result.status==='final'?'Final':periodLabel(result.period)} · Lightning ${result.our_score ?? '—'} – Opponent ${result.their_score ?? '—'}`;
+  }) as EventListener);
   void load();
 }
