@@ -221,6 +221,47 @@ try {
   await click('#editor [data-logout]');
   ok('signing out hides the header link immediately', await test(`document.querySelector('#admin-nav-item').hidden && document.querySelector('#editor').hidden`));
 
+
+  /* ------------------------------------- the two goal bars on the home page -- */
+  // Two designs sit side by side on the home page so they can be compared. The
+  // sample-progress preview is the only part that works with no API answering —
+  // which is every local dev run, there being no API to run locally.
+  await cdp.send('Emulation.setDeviceMetricsOverride', {width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false});
+  const bars = () => test(`[...document.querySelectorAll('[data-goal-bar]')].map(b => ({
+    theme: b.dataset.goalBar, title: b.querySelector('[data-goal-title]').textContent,
+    pct: b.querySelector('[data-goal-percent]').textContent,
+    progress: b.style.getPropertyValue('--progress'),
+  }))`);
+  const previewHidden = () => test(`document.querySelector('[data-goals-preview]').hidden`);
+
+  signedOut = false; failLoad = true; await go('/');
+  ok('both bar designs are on the home page', (await bars()).map(b => b.theme).join() === 'hockey,lightning');
+  ok('an unreachable API still offers the design preview', !(await previewHidden()));
+  await click('[data-goals-preview]');
+  ok('the preview fills both designs with the same sample progress',
+     (await bars()).every(b => b.pct === '65' && b.progress === '65%' && b.title === '1,000 shots. One team.'));
+  ok('the preview says the progress is not real',
+     await test(`document.querySelector('[data-goals-notice]').textContent.includes('Design preview only')`));
+
+  // Closing it must not claim there is no goal when the truth is it never loaded.
+  await click('[data-goals-preview]'); await sleep(400);
+  ok('closing the preview goes back to the real state, not a made-up one',
+     await test(`document.querySelector('[data-goals-notice]').textContent.includes('try again')`)
+     && (await bars()).every(b => b.pct === '—'));
+
+  failLoad = false;
+  goals.length = 0;
+  goals.push({ id: 21, title: 'Team off-ice shots', scope: 'team', player_id: null, unit: 'shots',
+               target: 1000, total: 450, family_total: 50,
+               starts_on: '2026-10-12', ends_on: '2026-10-18', archived: false });
+  await go('/');
+  ok('a real team goal drives both bars', (await bars()).every(b => b.pct === '45' && b.title === 'Team off-ice shots'));
+  ok('the design preview is out of the way once there is real progress', await previewHidden());
+
+  signedOut = true; await go('/');
+  ok('a signed-out visitor is asked to sign in, not shown a preview',
+     await previewHidden() && await test(`document.querySelector('[data-goal-target]').textContent.includes('Sign in')`));
+
   console.log(`\n${results.filter(Boolean).length}/${results.length} passed\nScreenshots: ${OUT}`);
   process.exitCode = results.every(Boolean) ? 0 : 1;
 } finally {

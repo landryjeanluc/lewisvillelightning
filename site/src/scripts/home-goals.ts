@@ -15,6 +15,7 @@ const format = new Intl.NumberFormat('en-CA');
 const date = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', timeZone: 'America/Moncton' });
 let goals: TeamGoal[] = [];
 let loading = false;
+let failed = false;
 const text = (bar: HTMLElement, name: string, value: string) => { bar.querySelector<HTMLElement>(`[data-goal-${name}]`)!.textContent = value; };
 
 function paint(goal: TeamGoal | null, message = 'No active team goal', demo = false) {
@@ -43,6 +44,7 @@ function showSelected() {
 async function load() {
   if (loading) return;
   loading = true;
+  failed = false;
   retry.hidden = true;
   try {
     const response = await fetch('/api/goals', { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(10000) });
@@ -79,7 +81,13 @@ async function load() {
       notice.textContent = board.admin ? 'Set your next team challenge in Goals, or preview the two styles below.' : 'Your coach can set the next team challenge. Preview the two styles below.';
     }
   } catch {
-    goals = []; picker.hidden = true; preview.hidden = true; preview.setAttribute('aria-pressed', 'false');
+    // The preview is sample data drawn in the page, so it is the one part of
+    // this that still works with no API answering — which is every local dev
+    // run, and precisely when comparing the two designs is all there is to do.
+    // Hiding it here left the bars dead and the comparison impossible.
+    goals = []; failed = true; picker.hidden = true;
+    preview.hidden = false; preview.setAttribute('aria-pressed', 'false');
+    preview.textContent = 'Preview both styles';
     paint(null, 'Team progress unavailable');
     for (const bar of bars) {
       text(bar, 'target', ' / Progress unavailable');
@@ -96,6 +104,9 @@ preview.addEventListener('click', () => {
   const show = preview.getAttribute('aria-pressed') !== 'true';
   preview.setAttribute('aria-pressed', String(show));
   preview.textContent = show ? 'Close design preview' : 'Preview both styles';
+  // Closing it after a failed load must not claim there is simply no goal —
+  // go back and find out what the real state is.
+  if (!show && failed) { void load(); return; }
   paint(show ? { id: 0, title: '1,000 shots. One team.', scope: 'team', target: 1000, total: 650, unit: 'shots', starts_on: '', ends_on: '', archived: false } : null, undefined, show);
   notice.textContent = show ? 'Design preview only · 650 of 1,000 shots is sample progress.' : 'No active team goal yet. Your next challenge starts in Goals.';
 });
