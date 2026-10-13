@@ -102,7 +102,7 @@ class User(BaseModel):
     id: int
     email: str
     display_name: str
-    role: Literal["admin", "parent", "viewer"]
+    role: Literal["admin", "parent", "player", "viewer"]
 
 async def current_user(
     pool: Annotated[asyncpg.Pool, Depends(db)],
@@ -448,7 +448,7 @@ class NewUser(BaseModel):
     email: str
     display_name: str
     password: str
-    role: Literal["admin", "parent", "viewer"] = "viewer"
+    role: Literal["admin", "parent", "player", "viewer"] = "viewer"
     player_id: str | None = None
     relationship: str | None = None
 
@@ -477,7 +477,7 @@ class NewUser(BaseModel):
 
 class UserPatch(BaseModel):
     display_name: str | None = None
-    role: Literal["admin", "parent", "viewer"] | None = None
+    role: Literal["admin", "parent", "player", "viewer"] | None = None
     player_id: str | None = None
     relationship: str | None = None
     password: str | None = None
@@ -658,6 +658,11 @@ async def list_news(
 @app.post("/news", status_code=status.HTTP_201_CREATED)
 async def create_news(body: NewsIn, actor: Annotated[User, Depends(require_admin)],
                       pool: Annotated[asyncpg.Pool, Depends(db)]):
+    screened = await screen(pool, author_id=actor.id, surface="news",
+                            ref_id=None, body=f"{body.title}\n{body.summary or ''}\n{body.body}")
+    if screened["held"]:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            "that post was held for review")
     base = slugify(body.title)
     async with pool.acquire() as c, c.transaction():
         slug, n = base, 1
@@ -734,6 +739,12 @@ async def put_profile(player_id: str, body: ProfileIn,
                       pool: Annotated[asyncpg.Pool, Depends(db)]):
     if player_id not in contract.players:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown player {player_id}")
+    if body.bio:
+        screened = await screen(pool, author_id=actor.id, surface="bio",
+                                ref_id=player_id, body=body.bio)
+        if screened["held"]:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                "that bio was held for review")
     # Only one captain and two alternates are legal on a hockey team.
     if body.captain == "C":
         other = await pool.fetchval(
@@ -785,6 +796,12 @@ async def put_note(game_id: str, kind: Literal["preview", "recap"], body: NoteIn
     if game_id not in contract.games:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"unknown game {game_id}")
     text = body.body.strip()
+    screened = await screen(pool, author_id=actor.id, surface=f"note:{kind}",
+                            ref_id=game_id, body=text)
+    if screened["held"]:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "that wording was held for review — an admin has been notified")
     async with pool.acquire() as c, c.transaction():
         if not text:                       # clearing a note deletes it
             await c.execute("DELETE FROM game_notes WHERE game_id=$1 AND kind=$2",
@@ -1028,6 +1045,13 @@ async def set_game_jobs(game_id: str, assignments: list[JobAssign],
     bad = [a.player_id for a in assignments if a.player_id and a.player_id not in contract.players]
     if bad:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"unknown player ids: {bad}")
+    for a in assignments:
+        if a.note:
+            s = await screen(pool, author_id=actor.id, surface="job_note",
+                             ref_id=game_id, body=a.note)
+            if s["held"]:
+                raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                    "a note was held for review")
     async with pool.acquire() as c, c.transaction():
         for a in assignments:
             if a.player_id is None and a.note is None:
@@ -1065,6 +1089,10 @@ async def claim_job(game_id: str, job_type_id: int,
         raise HTTPException(status.HTTP_404_NOT_FOUND, "that job is not assigned for this game")
 
     me = await pool.fetchrow("SELECT player_id, role FROM users WHERE id=$1", user.id)
+    if me["role"] == "player":
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "game jobs are for the grown-ups — ask a parent to claim it")
     # Admins can sort out anyone's job; a parent only their own family's.
     if me["role"] != "admin" and me["player_id"] != row["player_id"]:
         raise HTTPException(
@@ -1074,3 +1102,90 @@ async def claim_job(game_id: str, job_type_id: int,
         "UPDATE game_jobs SET claimed_by=$1, updated_at=now() WHERE game_id=$2 AND job_type_id=$3",
         None if release else user.id, game_id, job_type_id)
     return {"ok": True, "claimed": not release}
+
+
+from chat import chat_router
+
+app.include_router(chat_router(current_user, db))
+
+# ------------------------------------------------------------ moderation --
+
+import moderation as _mod
+
+async def screen(pool, *, author_id: int | None, surface: str, ref_id: str | None,
+                 body: str) -> dict:
+    """Scan user text, record anything worth a look, and say whether to hold it.
+
+    Called on the way in, before the text reaches the site. Returns
+    {"held": bool, "severity": str|None} so the caller can refuse to publish
+    high-severity content rather than publishing and apologising.
+    """
+    findings = _mod.scan(body or "")
+    if not findings:
+        return {"held": False, "severity": None, "flag_id": None}
+    severity = _mod.worst(findings)
+    held = _mod.should_hold(findings)
+    flag_id = await pool.fetchval(
+        """INSERT INTO flagged_content (author_id, surface, ref_id, body, severity,
+                                        findings, held)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id""",
+        author_id, surface, ref_id, body, severity, json.dumps(findings), held)
+    log.warning("moderation: %s severity on %s by user %s (flag %s)",
+                severity, surface, author_id, flag_id)
+    return {"held": held, "severity": severity, "flag_id": flag_id}
+
+@app.get("/moderation/queue")
+async def moderation_queue(_: Annotated[User, Depends(require_admin)],
+                           pool: Annotated[asyncpg.Pool, Depends(db)],
+                           status_filter: str = "pending"):
+    rows = await pool.fetch(
+        """SELECT f.id, f.at, f.surface, f.ref_id, f.body, f.severity, f.findings,
+                  f.held, f.status, u.display_name AS author, u.role AS author_role,
+                  u.player_id AS author_player
+             FROM flagged_content f LEFT JOIN users u ON u.id = f.author_id
+            WHERE ($1 = 'all' OR f.status = $1)
+            ORDER BY CASE f.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
+                     f.at DESC
+            LIMIT 200""", status_filter)
+    return [dict(r) for r in rows]
+
+@app.get("/moderation/count")
+async def moderation_count(_: Annotated[User, Depends(require_admin)],
+                           pool: Annotated[asyncpg.Pool, Depends(db)]):
+    """For the badge on the admin tab."""
+    row = await pool.fetchrow(
+        "SELECT count(*) FILTER (WHERE status='pending') AS pending,"
+        " count(*) FILTER (WHERE status='pending' AND held) AS held FROM flagged_content")
+    return dict(row)
+
+class ReviewBody(BaseModel):
+    action: Literal["approve", "remove"]
+
+@app.post("/moderation/{flag_id}/review")
+async def review_flag(flag_id: int, body: ReviewBody,
+                      actor: Annotated[User, Depends(require_admin)],
+                      pool: Annotated[asyncpg.Pool, Depends(db)]):
+    row = await pool.fetchrow(
+        """UPDATE flagged_content SET status=$1, reviewed_by=$2, reviewed_at=now(),
+                  held = CASE WHEN $1 = 'approved' THEN false ELSE held END
+            WHERE id=$3 RETURNING id, surface, ref_id, status""",
+        "approved" if body.action == "approve" else "removed", actor.id, flag_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such flag")
+    await pool.execute(
+        "INSERT INTO audit_log (user_id, action, payload) VALUES ($1,'moderation',$2)",
+        actor.id, json.dumps({"flag": flag_id, "action": body.action}))
+    return dict(row)
+
+@app.post("/moderation/reload-terms")
+async def reload_terms(_: Annotated[User, Depends(require_admin)]):
+    """Pick up edits to moderation-terms.json without restarting the service."""
+    _mod.reload_terms()
+    return {"ok": True}
+
+# ------------------------------------------------------------------ plays --
+# The coach's whiteboard lives in its own module: it is a self-contained
+# document store with its own validation, and app.py is long enough already.
+from plays import plays_router                                    # noqa: E402
+
+app.include_router(plays_router(current_user, require_admin, db, slugify, contract))

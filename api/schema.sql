@@ -145,7 +145,7 @@ CREATE INDEX IF NOT EXISTS users_player_idx ON users (player_id);
 -- role gains 'parent'; the old two-value constraint has to go first
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
-  CHECK (role IN ('admin', 'parent', 'viewer'));
+  CHECK (role IN ('admin', 'parent', 'player', 'viewer'));
 
 -- The reusable list of jobs: 50/50, scoresheet, timekeeper, jerseys…
 CREATE TABLE IF NOT EXISTS job_types (
@@ -209,3 +209,62 @@ CREATE TABLE IF NOT EXISTS chat_reads (
   last_read_id BIGINT NOT NULL DEFAULT 0,
   PRIMARY KEY (conversation_id, user_id)
 );
+
+-- Players get their own login too (JL 2026-10-13): they see everything the
+-- parents do — the point is to give the kids a small community of their own.
+-- Kept a distinct role from 'parent' so adult-only things (claiming game jobs)
+-- stay adult-only, and so anything built for the kids can target them.
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN ('admin', 'parent', 'player', 'viewer'));
+
+-- -------------------------------------------------------- plays of the week --
+-- The coach's whiteboard. `diagram` holds one versioned document describing
+-- the whole play: where the pieces start, the paths they run, and which
+-- numbered step each movement belongs to. It is stored whole and replaced
+-- whole — a diagram is edited as one drawing, never field by field, and
+-- shredding it into rows would buy nothing but joins.
+CREATE TABLE IF NOT EXISTS plays (
+  id           BIGSERIAL PRIMARY KEY,
+  slug         TEXT NOT NULL UNIQUE,
+  title        TEXT NOT NULL,
+  subtitle     TEXT,
+  category     TEXT NOT NULL DEFAULT 'other'
+               CHECK (category IN ('breakout','forecheck','powerplay','penaltykill',
+                                   'faceoff','neutralzone','dzone','drill','other')),
+  surface      TEXT NOT NULL DEFAULT 'full'
+               CHECK (surface IN ('full','ozone','nzone','dzone')),
+  diagram      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status       TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')),
+  -- The Monday of the week this is the play for. Null means "evergreen": a
+  -- systems page the coach wants up all season rather than a weekly feature.
+  week_of      DATE,
+  game_id      TEXT,                            -- optional contract id, if it's for one fixture
+  published_at TIMESTAMPTZ,
+  author_id    BIGINT REFERENCES users(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS plays_board_idx
+  ON plays (status, week_of DESC NULLS LAST, published_at DESC NULLS LAST);
+
+-- ------------------------------------------------------------ moderation --
+-- Anything a parent or a player writes is scanned before it lands. High
+-- severity is held back from the site until an admin clears it; everything
+-- else publishes and is queued for a look.
+CREATE TABLE IF NOT EXISTS flagged_content (
+  id          BIGSERIAL PRIMARY KEY,
+  at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  author_id   BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  surface     TEXT NOT NULL,          -- 'job_note', 'comment', ...
+  ref_id      TEXT,                   -- game id, comment id, whatever it hangs off
+  body        TEXT NOT NULL,
+  severity    TEXT NOT NULL CHECK (severity IN ('high','medium','low')),
+  findings    JSONB NOT NULL,
+  held        BOOLEAN NOT NULL DEFAULT false,
+  status      TEXT NOT NULL DEFAULT 'pending'
+              CHECK (status IN ('pending','approved','removed')),
+  reviewed_by BIGINT REFERENCES users(id),
+  reviewed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS flagged_pending_idx ON flagged_content (status, at DESC);

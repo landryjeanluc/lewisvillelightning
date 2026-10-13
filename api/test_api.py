@@ -1,5 +1,5 @@
 """Exercise the API end to end against a real Postgres, in-process."""
-import asyncio, os, pathlib, bcrypt, asyncpg, httpx
+import asyncio, json, os, pathlib, bcrypt, asyncpg, httpx
 from app import app, signer
 
 async def main():
@@ -462,8 +462,52 @@ async def main():
             results.append(ok("reassigning to another family drops the stale claim",
                               jobs["50/50 tickets"]["claimed_by"] is None))
 
+            # ---------------- moderation ----------------
+            r = await c.put(f"/notes/{gid}/preview", json={"body": "Clean hit, great backcheck."})
+            results.append(ok("clean text saves normally", r.status_code == 200))
+            q = (await c.get("/moderation/queue")).json()
+            results.append(ok("clean text is not flagged", len(q) == 0, f"{len(q)} flags"))
+
+            r = await c.put(f"/notes/{gid}/preview", json={"body": "their goalie is an idiot"})
+            results.append(ok("an insult still saves but is flagged", r.status_code == 200))
+            q = (await c.get("/moderation/queue")).json()
+            results.append(ok("it reaches the review queue",
+                              len(q) == 1 and q[0]["severity"] == "medium", str(len(q))))
+            results.append(ok("the queue names the author",
+                              q[0]["author"] is not None, str(q[0]["author"])))
+
+            r = await c.put(f"/notes/{gid}/recap",
+                            json={"body": "I am gonna kill you after the game"})
+            results.append(ok("a threat is REFUSED, not published -> 422",
+                              r.status_code == 422, f"got {r.status_code}"))
+            q = (await c.get("/moderation/queue")).json()
+            held = [x for x in q if x["held"]]
+            results.append(ok("the held item is queued as high severity",
+                              len(held) == 1 and held[0]["severity"] == "high"))
+            r = await c.get(f"/notes/{gid}")
+            results.append(ok("the held text never reached the site",
+                              "kill you" not in json.dumps(r.json())))
+
+            cnt = (await c.get("/moderation/count")).json()
+            results.append(ok("the badge count is right",
+                              cnt["pending"] == 2 and cnt["held"] == 1, str(cnt)))
+
+            r = await c.post(f"/moderation/{q[0]['id']}/review", json={"action": "approve"})
+            results.append(ok("an admin can clear a flag", r.status_code == 200))
+            cnt = (await c.get("/moderation/count")).json()
+            results.append(ok("clearing it drops the count", cnt["pending"] == 1, str(cnt)))
+
+            async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as mom2:
+                await mom2.post("/auth/login", json={"email": "mom.goguen", "password": "familypass1"})
+                r = await mom2.get("/moderation/queue")
+                results.append(ok("a parent cannot see the moderation queue -> 403",
+                                  r.status_code == 403))
+
             n = await pool.fetchval("SELECT count(*) FROM audit_log")
             results.append(ok("user-management actions are audited too", n >= 3, f"{n} rows"))
+
+            from test_chat import run_chat_tests
+            results.extend(await run_chat_tests(app, pool, ok))
 
             print(f"\n{sum(results)}/{len(results)} passed")
             return 0 if all(results) else 1

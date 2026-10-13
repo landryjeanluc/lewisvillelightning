@@ -53,6 +53,7 @@ def write_handout(player: dict, logins: list[tuple[str, str, str]]) -> Path:
     name = f"{player['firstName']} {player['lastName']}"
     f = HANDOUT_DIR / f"{slugify(name)}.md"
     rows = "\n".join(f"| {rel} | `{handle}` | `{pw}` |" for rel, handle, pw in logins)
+    has_player = any(rel == "Player" for rel, _, _ in logins)
     f.write_text(f"""# Lewisville Lightning — sign-in for {name}'s family
 
 The team site is **https://lvlnb.ca** — schedule, roster, player cards, stats
@@ -69,7 +70,7 @@ Each of you gets your own login, so you can see who has taken which game job.
 Need another login for the family — a step-parent, a grandparent who does the
 driving? Ask JL and he will add one; there is no limit.
 
-## Game jobs
+{"## " + player["firstName"] + "'s own login" + chr(10) + chr(10) + "The row marked **Player** is " + player["firstName"] + "'s. They can see the whole" + chr(10) + "team — schedule, roster, cards and stats — which is the point: it is their" + chr(10) + "team. Game jobs stay with the grown-ups." + chr(10) + chr(10) if has_player else ""}## Game jobs
 
 Jobs (50/50, scoresheet, timekeeper, jerseys) are assigned to **{player['firstName']}'s
 family**, not to one parent. Whoever is free that night claims it on the game
@@ -129,6 +130,8 @@ async def main() -> int:
                     help="comma separated, default Mom,Dad")
     sf.add_argument("--force", action="store_true",
                     help="re-issue passwords for families that already exist")
+    sf.add_argument("--no-players", action="store_true",
+                    help="guardians only; skip the player's own login")
 
     ag = sub.add_parser("add-guardian", help="add another login to one player's family")
     ag.add_argument("player_id"); ag.add_argument("relationship")
@@ -202,13 +205,16 @@ async def main() -> int:
 
         if args.cmd == "seed-families":
             rels = [r.strip() for r in args.relationships.split(",") if r.strip()]
+            if not args.no_players:
+                rels = rels + ["Player"]
             made = skipped = 0
             for p in sorted(load_roster(), key=lambda x: x["number"]):
                 full = f"{p['firstName']} {p['lastName']}"
                 base = slugify(full)
                 logins = []
                 for rel in rels:
-                    handle = f"{slugify(rel)}.{base}"
+                    # the kid's own handle is simply their name
+                    handle = base if rel == "Player" else f"{slugify(rel)}.{base}"
                     existing = await conn.fetchval(
                         "SELECT id FROM users WHERE lower(email) = $1", handle)
                     if existing and not args.force:
@@ -222,8 +228,11 @@ async def main() -> int:
                     else:
                         await conn.execute(
                             "INSERT INTO users (email, display_name, password_hash, role,"
-                            " player_id, relationship) VALUES ($1,$2,$3,'parent',$4,$5)",
-                            handle, f"{rel} to {p['firstName']}", hash_password(pw),
+                            " player_id, relationship) VALUES ($1,$2,$3,$4,$5,$6)",
+                            handle,
+                            full if rel == "Player" else f"{rel} to {p['firstName']}",
+                            hash_password(pw),
+                            "player" if rel == "Player" else "parent",
                             p["id"], rel)
                     logins.append((rel, handle, pw))
                     made += 1
