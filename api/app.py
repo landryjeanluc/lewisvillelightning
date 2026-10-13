@@ -1193,7 +1193,14 @@ async def moderation_queue(_: Annotated[User, Depends(require_admin)],
             ORDER BY CASE f.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
                      f.at DESC
             LIMIT 200""", status_filter)
-    return [dict(r) for r in rows]
+    queue = []
+    for row in rows:
+        flag = dict(row)
+        # asyncpg returns JSONB as text; the review panel needs an array.
+        if isinstance(flag["findings"], str):
+            flag["findings"] = json.loads(flag["findings"])
+        queue.append(flag)
+    return queue
 
 @app.get("/moderation/count")
 async def moderation_count(_: Annotated[User, Depends(require_admin)],

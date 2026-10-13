@@ -36,12 +36,22 @@
     { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   async function load() {
-    const { ok, body } = await api(`/moderation/queue?status_filter=${filter}`);
     const list = $("#mp-list");
-    if (!ok) { list.innerHTML = `<p class="dim">Could not load the queue.</p>`; return; }
+    list.innerHTML = `<p class="dim">Loading review queue…</p>`;
+    try {
+      const { ok, body } = await api(`/moderation/queue?status_filter=${filter}`);
+      if (!ok || !Array.isArray(body)) throw new Error("Could not load the queue");
+      render(body);
+    } catch {
+      list.innerHTML = `<p class="dim">Could not load the queue. Open Review again to retry.</p>`;
+    }
+  }
+
+  function render(body: any[]) {
+    const list = $("#mp-list");
     if (!body.length) {
       list.innerHTML = `<div class="mp-empty card"><p class="mp-clear">Nothing to review</p>
-        <p class="dim">Everything written on the site has come back clean.</p></div>`;
+        <p class="dim">${filter === "pending" ? "No flags are waiting for review." : "No flagged content has been recorded."}</p></div>`;
       return;
     }
     list.innerHTML = "";
@@ -86,6 +96,7 @@
   }
 
   document.addEventListener("click", (e: any) => {
+    if (e.target.closest('[data-tab="moderation-tab"]')) { load(); refreshBadge(); }
     if (e.target.dataset?.ok) review(e.target.dataset.ok, "approve");
     if (e.target.dataset?.rm) review(e.target.dataset.rm, "remove");
     const f = e.target.dataset?.filter;

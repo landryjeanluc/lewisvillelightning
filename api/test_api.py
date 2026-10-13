@@ -509,6 +509,11 @@ async def main():
                               len(q) == 1 and q[0]["severity"] == "medium", str(len(q))))
             results.append(ok("the queue names the author",
                               q[0]["author"] is not None, str(q[0]["author"])))
+            findings = q[0]["findings"]
+            results.append(ok("review findings are an array of objects, not JSON text",
+                              isinstance(findings, list) and len(findings) > 0
+                              and all(isinstance(f, dict) and isinstance(f.get("category"), str)
+                                      for f in findings)))
 
             r = await c.put(f"/notes/{gid}/recap",
                             json={"body": "I am gonna kill you after the game"})
