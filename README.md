@@ -146,6 +146,24 @@ contract file — put finished art in `assets/photos/` and re-sync.
 for a bug where the panel read the state from the database alone and reported
 "no card art" for all nineteen players, every one of whom had art in the repo.
 
+## Training goals on a player's page
+
+A player's page carries their current training goals under the card:
+their own targets with progress against each, and — for their own family —
+the team goals with the share that player has put in. `PlayerGoals.astro`
+fills it from `/api/goals`, the same board `/goals` uses.
+
+Who sees it is the whole point. A player's page is **public and static**, so
+nothing about a child's training is rendered into the build: the section ships
+empty and hidden, and only appears if the API answers for a viewer entitled to
+it — an admin, or that player's own family. A parent of another player gets
+nothing, because `family_total` is always *their* child's work and would be
+shown here under the wrong name. Signed out, or the API down, the section stays
+shut and says nothing either way.
+
+`tools/test_player_goals_ui.mjs` drives those rules in a real browser,
+including that the static HTML carries no goal of the player's.
+
 ## Plays of the week
 
 The coach draws a play on a rink in `/admin → Plays`; the team watches it run at

@@ -1,0 +1,137 @@
+---
+// Training progress for one player, filled in the browser.
+//
+// The page around this is public and static, so nothing about a child's
+// training is rendered into it: the markup ships empty and the section stays
+// hidden unless /api/goals answers for a viewer entitled to see it. The
+// player's name is read from that reply too, never baked into the page —
+// roster.json's privacy block may be hiding it from the public build.
+import "../styles/goals.css";   // the goal card's look, shared with /goals
+
+interface Props { playerId: string }
+const { playerId } = Astro.props;
+---
+<section class="pgoals" data-player-goals={playerId} hidden aria-labelledby="pgoals-title">
+  <header class="pgoals-head">
+    <div>
+      <span class="eyebrow">Putting in the work</span>
+      <h2 id="pgoals-title">Training goals</h2>
+    </div>
+    <a class="pgoals-all" href="/goals">All goals &amp; tools →</a>
+  </header>
+  <div class="pgoals-list" data-pgoals-list></div>
+  <p class="dim" data-pgoals-empty hidden></p>
+</section>
+
+<script>
+  const section = document.querySelector<HTMLElement>("[data-player-goals]");
+
+  type Goal = {
+    id: number; title: string; scope: "team" | "player"; player_id: string | null;
+    unit: string; target: number; starts_on: string; ends_on: string;
+    archived: boolean; total: number; family_total: number;
+  };
+  type Board = {
+    goals: Goal[]; players: { id: string; name: string; number: number }[];
+    admin: boolean; today: string; player_id: string | null;
+  };
+
+  const fmt = (n: number) => n.toLocaleString();
+  const dateLabel = (s: string) =>
+    new Date(s + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  // "Mattis" takes a bare apostrophe; "Hugo" takes 's.
+  const poss = (n: string) => n + (/s$/i.test(n) ? "’" : "’s");
+
+  function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = "", className = "") {
+    const el = document.createElement(tag);
+    el.textContent = text;
+    el.className = className;
+    return el;
+  }
+
+  function card(g: Goal, today: string, name: string) {
+    const complete = g.total >= g.target;
+    const el = node("article", "", "card goal-card" + (complete ? " is-complete" : ""));
+    const top = node("div", "", "goal-card-top");
+    top.append(
+      node("span", g.scope === "team" ? "Together as a team" : "Personal target", "eyebrow"),
+      node("span", complete ? "Goal reached ✓" : g.starts_on > today ? "Upcoming" : "In progress", "goal-status"),
+    );
+    const total = node("div", "", "goal-total");
+    total.append(node("strong", fmt(g.total)), node("span", `/ ${fmt(g.target)} ${g.unit}`, "muted"));
+    const bar = node("progress");
+    bar.max = g.target;
+    bar.value = Math.min(g.total, g.target);
+    bar.setAttribute("aria-label", `${g.title}: ${g.total} of ${g.target} ${g.unit}`);
+    el.append(
+      top,
+      node("h3", g.title),
+      node("p", `${dateLabel(g.starts_on)} – ${dateLabel(g.ends_on)}`, "dim"),
+      total,
+      bar,
+    );
+    // A team goal's bar is the whole team's; what is this player's on it is
+    // the share they put in, so say that rather than let the bar imply it.
+    el.append(node("p",
+      g.scope === "team"
+        ? `${poss(name)} share: ${fmt(g.family_total)} ${g.unit}`
+        : complete ? "Target reached. Keep building on it!" : `${fmt(g.target - g.total)} ${g.unit} to go`,
+      "muted"));
+    return el;
+  }
+
+  async function fill(section: HTMLElement) {
+    const playerId = section.dataset.playerGoals!;
+    let board: Board;
+    try {
+      const r = await fetch("/api/goals", { credentials: "same-origin", cache: "no-store" });
+      // 401 signed out, or the API is down: a public page says nothing either way.
+      if (!r.ok) return;
+      board = await r.json();
+    } catch { return; }
+
+    // Only an admin, or this player's own family, sees their training here.
+    // A parent of another player gets the team board on /goals, not a child
+    // they are not linked to — and their own family_total would be mislabelled
+    // as this player's share.
+    const own = board.player_id === playerId;
+    if (!board.admin && !own) return;
+
+    const name = board.players.find((p) => p.id === playerId)?.name ?? "This player";
+    const current = (g: Goal) => !g.archived && g.ends_on >= board.today;
+    const theirs = board.goals.filter((g) => g.scope === "player" && g.player_id === playerId && current(g));
+    // family_total is the signed-in family's own player, so a team goal's share
+    // is only this player's when they are that player.
+    const shared = own ? board.goals.filter((g) => g.scope === "team" && current(g)) : [];
+
+    const list = section.querySelector<HTMLElement>("[data-pgoals-list]")!;
+    list.replaceChildren(...[...theirs, ...shared].map((g) => card(g, board.today, name)));
+
+    const empty = section.querySelector<HTMLElement>("[data-pgoals-empty]")!;
+    empty.hidden = theirs.length + shared.length > 0;
+    empty.textContent = board.admin
+      ? "No goal is running for them right now — set one in Admin → Goals."
+      : "No goals running right now. Your coach will set the next one.";
+    section.hidden = false;
+  }
+
+  // Settled either way — filled, or deliberately left shut. Tests wait on this
+  // rather than on a timer, and it gives CSS something to hang a state off.
+  if (section) void fill(section).finally(() => { section.dataset.pgoalsDone = ""; });
+</script>
+
+<style>
+  .pgoals { margin-top: var(--s-8); display: grid; gap: var(--s-5); }
+  .pgoals-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap; }
+  .pgoals-head h2 { margin-top: var(--s-2); font-size: var(--t-xl); }
+  .pgoals-all { font-size: var(--t-sm); font-weight: 700; letter-spacing: .06em;
+                text-transform: uppercase; color: var(--text-dim); text-decoration: none; }
+  .pgoals-all:hover { color: var(--text); }
+  /* One column: this sits in a narrower column than the goals board. */
+  .pgoals-list { display: grid; gap: var(--s-4); }
+  .pgoals-list:empty { display: none; }
+  :global(.pgoals-list .goal-card h3) { font-size: var(--t-lg); line-height: 1.05; }
+  @media (min-width: 900px) {
+    .pgoals-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>

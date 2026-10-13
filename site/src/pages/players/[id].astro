@@ -1,6 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import PlayerCard from "../../components/PlayerCard.astro";
+import PlayerGoals from "../../components/PlayerGoals.astro";
 import { roster, stats, displayName, showBirthYear } from "../../lib/data";
 import { svPct, gaa } from "../../lib/format";
 
@@ -57,6 +58,9 @@ const line = skater
       {!skater && !goalie && <p class="dim">No statistics recorded yet this season.</p>}
     </div>
   </div>
+
+  <PlayerGoals playerId={p.id} />
+
   <script>import "../../scripts/cardfx";</script>
 </Base>
 
