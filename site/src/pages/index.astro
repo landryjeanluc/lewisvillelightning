@@ -21,8 +21,6 @@ const star = g ? spotlightFor(g.id) : undefined;
 const rot = spotlightProgress();
 ---
 <Base wide>
-  <TeamShowcase />
-
   {g ? (
     <section class="hero">
       <Lightning />
@@ -61,6 +59,8 @@ const rot = spotlightProgress();
       <p class="muted">The schedule will fill in once the season data syncs.</p>
     </section>
   )}
+
+  <TeamShowcase />
 
   {star && (
     <section class="spot-hero">
@@ -132,6 +132,7 @@ const rot = spotlightProgress();
 <style>
   .hero {
     position: relative;
+    margin-bottom: clamp(2rem, 5vw, 4rem);
     padding: var(--s-7) var(--s-5) var(--s-8);
     border: 1px solid var(--hairline);
     border-radius: var(--r-xl);
