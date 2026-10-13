@@ -1,0 +1,31 @@
+name: CI
+
+# The gate this repo did not have. On 2026-10-13 five sessions' work was found
+# sitting uncommitted in one tree, and the PWA had reached lvlnb.ca straight
+# from a working directory — published before it was ever committed.
+#
+# Every push and every PR now runs the build, the API suite against a real
+# throwaway Postgres, and the six browser suites. Runs on the lvlnb-ci runner
+# on arachnea (nixos-builds hosts/arachnea/guests/lvlnb-ci.nix).
+#
+# Publishing is deliberately NOT here — see deploy.yml.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: lvlnb-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: lvlnb-ci
+    # The browser suites are the slow part, and arachnea is slower than a
+    # workstation — DPT's suite runs 9-12 min there against ~4 on a laptop.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate
+        run: bash .gitea/gate.sh

@@ -1,0 +1,44 @@
+name: Deploy
+
+# Publish to lvlnb.ca: gate first, then the repo's own deploy.sh.
+#
+# MANUAL ON PURPOSE, for now. hexpi-dpt deploys on every push to main, and
+# this should too — but a major refactor is in flight (JL, 2026-10-13) and a
+# half-landed refactor that happens to pass the suite should not reach a site
+# parents are using. To make it automatic once that settles, add:
+#
+#   on:
+#     push:
+#       branches: [main]
+#
+# and nothing else changes — the gate already runs first.
+#
+# deploy.sh is run unmodified, with LVLNB_HOST pointed at the lvlnb-deploy
+# account on this same box. CI therefore takes the identical path JL takes by
+# hand, instead of a second copy of the publish logic living in CI.
+on:
+  workflow_dispatch:
+
+# Never cancel a publish, and never run two at once. DPT learned this the hard
+# way on 2026-09-14: two pushes minutes apart rsynced the same directory while
+# the first job's tests were still running, and only one restart followed.
+concurrency:
+  group: lvlnb-deploy
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: lvlnb-ci
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Gate
+        run: bash .gitea/gate.sh
+
+      - name: Publish
+        # deploy.sh rebuilds, rsyncs site/ data/ and api/, restarts lvlnb-api
+        # and then checks /health and the login gate before calling it done.
+        env:
+          LVLNB_HOST: lvlnb-publish
+        run: ./deploy.sh
