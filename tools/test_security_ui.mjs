@@ -82,6 +82,8 @@ try {
   });
   await check('chat shows monitoring notice, treats messages as text and reports to admins', async() => {
     await page.goto(base+'/chat');await page.locator('#chat-app').waitFor({state:'visible'});
+    await page.locator('.chat-room').first().click();
+    await page.locator('.chat-safety summary').click();
     assert.match(await page.locator('#chat-hint').innerText(), /monitored/);
     await page.locator('.chat-message').waitFor();assert.equal(await page.locator('.chat-message img').count(),0);
     page.once('dialog', dialog => dialog.accept());await page.getByRole('button',{name:'Report',exact:true}).click();

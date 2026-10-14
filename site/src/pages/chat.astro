@@ -13,7 +13,7 @@ import "../styles/chat.css";
   <div id="chat-app" class="chat-shell card" hidden>
     <aside class="chat-sidebar" aria-label="Conversations">
       <div class="chat-sidebar-head"><h2>Conversations</h2><p id="chat-identity" class="dim"></p></div>
-      <div id="chat-rooms" class="chat-rooms"></div>
+
       <details class="chat-start">
       <summary>New conversation</summary>
       <form id="chat-new" class="chat-new">
@@ -22,12 +22,19 @@ import "../styles/chat.css";
         <button type="submit" class="ghost">Start conversation</button>
       </form>
       </details>
+      <p id="chat-list-error" class="chat-error" role="alert" hidden></p>
+      <div id="chat-rooms" class="chat-rooms"></div>
     </aside>
     <section class="chat-thread" aria-labelledby="chat-title">
       <header class="chat-thread-head">
-        <div><h2 id="chat-title">Team room</h2><p id="chat-audience" class="dim">Everyone with a team account can join in.</p></div>
+        <button id="chat-back" class="ghost chat-back" type="button" aria-label="Back to conversations"><span aria-hidden="true">←</span></button>
+        <div><h2 id="chat-title" tabindex="-1">Team room</h2><p id="chat-audience" class="dim">Everyone with a team account can join in.</p></div>
         <span id="chat-connection" class="chat-connection" role="status">Connecting…</span>
       </header>
+      <details class="chat-safety">
+        <summary>Chats are monitored · Safety information</summary>
+        <p id="chat-hint">Keep it kind. Chats are monitored for harmful language; flagged or reported messages are shared with team admins. For urgent help, speak to a trusted adult.</p>
+      </details>
       <div id="chat-scroll" class="chat-scroll" tabindex="0" aria-label="Message history">
         <button id="chat-older" type="button" class="ghost chat-older" hidden>Load earlier messages</button>
         <p id="chat-empty" class="chat-empty" hidden>No messages yet. Say hello to the team!</p>
@@ -37,9 +44,10 @@ import "../styles/chat.css";
       <p id="chat-announcement" class="visually-hidden" role="status" aria-live="polite"></p>
       <p id="chat-error" class="chat-error" role="alert" hidden></p>
       <form id="chat-compose" class="chat-compose">
-        <label for="chat-body">Your message</label>
-        <textarea id="chat-body" rows="3" maxlength="2000" required placeholder="Write to the team…" aria-describedby="chat-hint"></textarea>
-        <div class="chat-compose-bottom"><p id="chat-hint" class="dim">Keep it kind. Chats are monitored for harmful language; flagged or reported messages are shared with team admins. For urgent help, speak to a trusted adult. <span class="chat-keyboard-hint">Enter to send · Shift + Enter for a new line.</span><span class="chat-touch-hint">Tap Send message when you’re ready.</span></p><button id="chat-send" type="submit" disabled>Send message</button></div>
+        <label for="chat-body" class="visually-hidden">Your message</label>
+        <textarea id="chat-body" rows="1" maxlength="2000" required placeholder="Write to the team…" aria-describedby="chat-hint"></textarea>
+        <button id="chat-send" type="submit" aria-label="Send message" disabled><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="m3 3 19 9-19 9 4-9-4-9Zm4 9h15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg><span class="visually-hidden">Send message</span></button>
+        <p class="chat-keyboard-hint dim">Enter to send · Shift + Enter for a new line.</p>
       </form>
     </section>
   </div>

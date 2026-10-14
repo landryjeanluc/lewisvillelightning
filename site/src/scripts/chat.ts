@@ -4,7 +4,7 @@ type User = Member & { role: string };
 type Room = { id: number; kind: 'team' | 'direct'; name: string; last_message: string | null; last_deleted: boolean; unread: number };
 type Message = { id: number; conversation_id: number; sender_id: number | null; sender_name: string; body: string; created_at: string; deleted_at: string | null; revision: number };
 type Page = { messages: Message[]; cursor: number; has_more: boolean };
-type Thread = { messages: Map<number, Message>; cursor: number; loaded: boolean; more: boolean; draft: string; sending: boolean; pending?: { body: string; client_id: string }; loading?: Promise<void>; read: number; reading: boolean };
+type Thread = { messages: Map<number, Message>; cursor: number; loaded: boolean; more: boolean; draft: string; sending: boolean; pending?: { body: string; client_id: string }; loading?: Promise<void>; read: number; reading: boolean; position?: { top: number; following: boolean } };
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const shell = el('chat-app');
 const loading = el('chat-loading');
@@ -25,6 +25,62 @@ let authenticated = true;
 let refreshing = false;
 const threads = new Map<number, Thread>();
 const rendered = new Map<number, { revision: number; node: HTMLLIElement }>();
+const mobile = matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 1024px)');
+document.body.classList.add('chat-page');
+const background = Array.from(document.querySelectorAll<HTMLElement>('.site-head, .site-foot, .chat-intro, .skip'));
+const originalInert = background.map(node => node.inert);
+function threadVisible() { return active !== 0 && authenticated; }
+function syncViewport() {
+  const viewport = window.visualViewport;
+  shell.style.setProperty('--chat-height', `${viewport?.height ?? window.innerHeight}px`);
+  shell.style.setProperty('--chat-top', `${viewport?.offsetTop ?? 0}px`);
+}
+function syncView() {
+  const open = mobile.matches && threadVisible();
+  shell.classList.toggle('is-thread', open);
+  document.body.classList.toggle('chat-thread-open', open);
+  document.documentElement.classList.toggle('chat-thread-open', open);
+  background.forEach((node, index) => { node.inert = open || originalInert[index]; });
+  syncViewport();
+}
+function rememberPosition() {
+  if (active) thread(active).position = { top: scroll.scrollTop, following: nearBottom() };
+}
+function showConversations() {
+  rememberPosition();
+  const previous = active;
+  active = 0; composer.blur(); error(); syncView(); renderRooms();
+  roomsEl.querySelector<HTMLButtonElement>(`[data-id="${previous}"]`)?.focus({preventScroll:true});
+}
+function resizeComposer() {
+  const following = nearBottom();
+  composer.style.height = 'auto';
+  composer.style.height = `${Math.min(composer.scrollHeight, 140)}px`;
+  if (following && threadVisible()) scroll.scrollTop = scroll.scrollHeight;
+}
+function viewportChanged() {
+  const following = nearBottom();
+  syncViewport();
+  if (following && threadVisible()) requestAnimationFrame(bottom);
+}
+window.visualViewport?.addEventListener('resize', viewportChanged);
+window.visualViewport?.addEventListener('scroll', syncViewport);
+window.addEventListener('resize', viewportChanged);
+mobile.addEventListener('change', () => {
+  syncView();
+  if (!mobile.matches && !active && rooms.length) void selectRoom(rooms[0].id, false);
+});
+el('chat-back').addEventListener('click', () => {
+  if (history.state?.chatRoom === active) history.back();
+  else { history.replaceState(null, '', location.pathname + location.search); showConversations(); }
+});
+window.addEventListener('popstate', () => {
+  if (!authenticated || !rooms.length) return;
+  const id = Number(location.hash.match(/^#conversation-(\d+)$/)?.[1]);
+  if (rooms.some(room => room.id === id)) void selectRoom(id, false);
+  else if (mobile.matches) showConversations();
+  else void selectRoom(rooms.find(room => room.kind === 'team')?.id ?? rooms[0].id, false);
+});
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 function thread(id: number): Thread {
@@ -32,11 +88,14 @@ function thread(id: number): Thread {
   return threads.get(id)!;
 }
 function error(message = '') {
-  el('chat-error').textContent = message;
-  el('chat-error').hidden = !message;
+  for (const id of ['chat-error', 'chat-list-error']) {
+    const show = id === (mobile.matches && !active ? 'chat-list-error' : 'chat-error');
+    el(id).textContent = show ? message : ''; el(id).hidden = !show || !message;
+  }
 }
 function signedOut() {
   authenticated = false;
+  active = 0; syncView();
   shell.hidden = true;
   loading.hidden = true;
   login.hidden = false;
@@ -70,9 +129,11 @@ function bottom() {
 function updateComposer() {
   const state = thread(active);
   if (composer.value !== state.draft) composer.value = state.draft;
-  composer.disabled = !state.loaded || state.sending;
+  composer.disabled = !state.loaded;
   send.disabled = !state.loaded || state.sending || !state.draft.trim();
-  send.textContent = state.sending ? 'Sending…' : 'Send message';
+  send.setAttribute('aria-label', state.sending ? 'Sending message' : 'Send message');
+  send.setAttribute('aria-busy', String(state.sending));
+  resizeComposer();
 }
 function renderRooms() {
   // Reuse buttons so background updates preserve keyboard focus.
@@ -172,9 +233,16 @@ async function load(id: number) {
   })().finally(() => { state.loading = undefined; });
   await state.loading;
 }
-async function selectRoom(id: number) {
+async function selectRoom(id: number, navigate = true) {
+  const room = rooms.find(r => r.id === id);
+  if (!room) return;
+  rememberPosition();
   active = id;
-  const room = rooms.find(r => r.id === id)!;
+  if (mobile.matches && navigate && history.state?.chatRoom !== id) {
+    history.pushState({ chatRoom: id }, '', `#conversation-${id}`);
+  }
+  syncView();
+  if (mobile.matches) el('chat-title').focus({preventScroll:true});
   rendered.clear(); messagesEl.replaceChildren();
   el('chat-title').textContent = room.name;
   el('chat-audience').textContent = room.kind === 'team' ? 'Everyone with a team account can join in.' : 'Private conversation. Flagged or reported messages may be reviewed by team admins.';
@@ -185,7 +253,11 @@ async function selectRoom(id: number) {
   try {
     await load(id);
     if (id !== active) return;
-    renderMessages(); updateComposer(); bottom();
+    renderMessages(); updateComposer();
+    const position = thread(id).position;
+    if (position && !position.following) scroll.scrollTop = position.top;
+    else bottom();
+    await updates(id);
   } catch (e) { if (id === active) error((e as Error).message); }
 }
 const updating = new Map<number, Promise<void>>();
@@ -231,7 +303,8 @@ async function refresh() {
   refreshing = true;
   try {
     rooms = await api<Room[]>('/chat/conversations');
-    if (!rooms.some(room => room.id === active)) await selectRoom(rooms.find(room => room.kind === 'team')!.id);
+    if (active && !rooms.some(room => room.id === active)) showConversations();
+    if (!active && !mobile.matches && rooms.length) await selectRoom(rooms.find(room => room.kind === 'team')?.id ?? rooms[0].id, false);
     renderRooms();
     if (active) await updates(active);
     await markRead();
@@ -242,6 +315,7 @@ async function refresh() {
 }
 composer.addEventListener('input', () => {
   const state = thread(active); state.draft = composer.value;
+  resizeComposer();
   send.disabled = !state.loaded || state.sending || !state.draft.trim();
 });
 composer.addEventListener('keydown', event => {
@@ -250,15 +324,18 @@ composer.addEventListener('keydown', event => {
     if (!send.disabled) el<HTMLFormElement>('chat-compose').requestSubmit();
   }
 });
+send.addEventListener('pointerdown', event => {
+  if (document.activeElement === composer) event.preventDefault();
+});
 el('chat-compose').addEventListener('submit', async event => {
   event.preventDefault();
-  const id = active, state = thread(id), text = state.draft.trim();
+  const id = active, state = thread(id), draft = state.draft, text = draft.trim();
   if (!state.loaded || state.sending || !text) return;
   if (!state.pending || state.pending.body !== text) state.pending = { body: text, client_id: crypto.randomUUID() };
   state.sending = true; updateComposer(); error();
   try {
     const message = await api<Message>(`/chat/conversations/${id}/messages`, 'POST', state.pending);
-    merge(state, [message]); state.draft = ''; state.pending = undefined;
+    merge(state, [message]); if (state.draft === draft) state.draft = ''; state.pending = undefined;
     if (id === active) { renderMessages(); bottom(); }
     await refresh();
   } catch (e) { if (id === active) error(`Message not sent. ${(e as Error).message} Your draft is saved here; try Send again.`); }
@@ -273,6 +350,7 @@ el('chat-new').addEventListener('submit', async event => {
     const room = await api<{ id: number }>('/chat/direct', 'POST', { user_id: Number(memberSelect.value) });
     rooms = await api<Room[]>('/chat/conversations');
     await selectRoom(room.id); memberSelect.value = '';
+    (document.querySelector('.chat-start') as HTMLDetailsElement).open = false;
   } catch (e) { error((e as Error).message); }
   finally { button.disabled = false; }
 });
@@ -304,7 +382,10 @@ async function init() {
     for (const member of members) memberSelect.add(new Option(member.display_name, String(member.id)));
     el('chat-identity').textContent = `Signed in as ${me.display_name}`;
     loading.hidden = true; shell.hidden = false;
-    await selectRoom(rooms.find(r => r.kind === 'team')!.id);
+    renderRooms(); syncView();
+    const requested = Number(location.hash.match(/^#conversation-(\d+)$/)?.[1]);
+    if (rooms.some(room => room.id === requested)) await selectRoom(requested, false);
+    else if (!mobile.matches && rooms.length) await selectRoom(rooms.find(r => r.kind === 'team')?.id ?? rooms[0].id, false);
     await refresh();
     window.setInterval(() => void refresh(), 4000);
   } catch (e) {
