@@ -12,6 +12,7 @@
  * dressing room at least as often as on a laptop.
  */
 import { PlayStage } from "./playback";
+import { mountPlayFullscreen } from "./play-fullscreen";
 import { clampToRink, type Surface } from "../lib/rink";
 import {
   CATEGORIES, PATH_KINDS, TOKEN_R, emptyDiagram, normaliseDiagram, pathD,
@@ -602,6 +603,7 @@ let mounted = false;
 export function mountPlayEditor() {
   if (mounted) return;
   mounted = true;
+  mountPlayFullscreen($("#pe-workspace"), $<HTMLButtonElement>("#pe-fullscreen"));
 
   roster = JSON.parse($("#pe-roster-data").textContent || "[]");
   $("#pe-category").innerHTML = CATEGORIES

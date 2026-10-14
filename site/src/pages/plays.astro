@@ -4,6 +4,7 @@ import Base from "../layouts/Base.astro";
 import { games, sides } from "../lib/data";
 import { shortDate } from "../lib/format";
 import "../styles/play.css";
+import PlayFullscreenButton from "../components/PlayFullscreenButton.astro";
 
 // Everything here is live: plays are written in the browser by the coach and
 // must appear the moment he publishes them, not the next time someone runs
@@ -51,20 +52,29 @@ const gameLabels = Object.fromEntries(games.map((g: any) => {
       <p class="muted" id="pl-d-sub"></p>
     </div>
 
-    <div class="pl-board" id="pl-stage"></div>
-
-    <div class="controls">
-      <button type="button" class="ctl" id="pl-prev" aria-label="Previous step">◀◀</button>
-      <button type="button" class="ctl ctl--go" id="pl-play">▶ Play</button>
-      <button type="button" class="ctl" id="pl-next" aria-label="Next step">▶▶</button>
-      <div class="scrub" id="pl-scrub" role="slider" tabindex="0" aria-label="Play progress"
-           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-        <div class="scrub-fill" id="pl-scrub-fill"></div>
+    <section id="pl-workspace" class="play-workspace play-viewer" aria-label="Play viewer">
+      <button type="button" class="play-show-controls visually-hidden">Show play controls</button>
+      <div class="play-screen-bar" data-play-controls>
+        <span class="dim play-screen-hint">Tap the ice to show controls</span>
+        <PlayFullscreenButton id="pl-fullscreen" />
       </div>
-      <span class="dim count" id="pl-count"></span>
-    </div>
+      <div class="play-ice-area"><div class="pl-board" id="pl-stage"></div></div>
 
-    <ol class="steps" id="pl-steps"></ol>
+      <div class="play-viewer-controls" data-play-controls>
+        <div class="controls">
+          <button type="button" class="ctl" id="pl-prev" aria-label="Previous step">◀◀</button>
+          <button type="button" class="ctl ctl--go" id="pl-play">▶ Play</button>
+          <button type="button" class="ctl" id="pl-next" aria-label="Next step">▶▶</button>
+          <div class="scrub" id="pl-scrub" role="slider" tabindex="0" aria-label="Play progress"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="scrub-fill" id="pl-scrub-fill"></div>
+          </div>
+          <span class="dim count" id="pl-count"></span>
+        </div>
+
+        <ol class="steps" id="pl-steps"></ol>
+      </div>
+    </section>
 
     <div class="pl-legend">
       <span><svg width="34" height="10" viewBox="0 0 34 10"><line class="pl-path pl-path-skate" x1="1" y1="5" x2="27" y2="5" stroke-width="1.6" /><path class="pl-head-skate" d="M27 2 L33 5 L27 8 z" /></svg> Skating</span>

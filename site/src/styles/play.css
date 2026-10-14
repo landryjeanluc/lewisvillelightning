@@ -159,3 +159,82 @@
   position: absolute; inset: 0;
   width: 100%; height: 100%; max-width: none; margin: 0;
 }
+
+/* Fullscreen workspaces keep the original SVG alive, including its playback
+   state and pointer handlers. Native fullscreen and the phone fallback share
+   the same layout. Safe-area padding keeps controls clear of camera cutouts. */
+.play-screen-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-block: 8px; min-height: 60px;
+}
+.play-screen-hint { visibility: hidden; font-size: var(--t-xs); }
+.play-show-controls { display: none; }
+.is-play-fullscreen .play-show-controls { display: block; }
+.is-play-fullscreen .play-show-controls:focus-visible {
+  clip-path: none; width: auto; height: auto; z-index: 5; top: 70px; left: 12px;
+}
+.play-fullscreen-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  flex-shrink: 0; min-height: 44px; padding: 8px 12px; cursor: pointer;
+  background: var(--surface); color: var(--text); border: 1px solid var(--hairline-sv);
+  border-radius: var(--r-md); font: inherit; font-size: var(--t-sm);
+}
+.play-collapse-icon, .is-play-fullscreen .play-expand-icon { display: none; }
+.is-play-fullscreen .play-collapse-icon { display: initial; }
+.play-workspace.is-play-fullscreen {
+  position: fixed; inset: var(--play-viewport-top, 0px) 0 auto;
+  width: 100%; max-width: none; height: var(--play-viewport-height, 100dvh);
+  margin: 0; padding: 0; z-index: 1000; isolation: isolate;
+  background: #0a1128; overflow: hidden; overscroll-behavior: contain;
+}
+.is-play-fullscreen > .play-screen-bar {
+  position: relative; z-index: 3; margin: 0;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+  background: rgb(10 17 40 / .95);
+}
+.play-viewer.is-play-fullscreen .play-screen-hint { visibility: visible; }
+.play-viewer.is-play-fullscreen .play-ice-area {
+  position: absolute; inset: 64px 0 180px; display: grid; place-items: center;
+}
+.play-viewer.is-play-fullscreen #pl-stage {
+  width: 100%; height: 100%; padding: 4px; border: 0; border-radius: 0;
+}
+.play-viewer.is-play-fullscreen .pl-svg { width: 100%; height: 100%; }
+.play-viewer.is-play-fullscreen .play-viewer-controls {
+  position: absolute; z-index: 2; bottom: 0; left: 0; right: 0;
+  padding: 8px max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgb(10 17 40 / .95);
+}
+#pl-workspace.is-play-fullscreen .controls { margin: 0; }
+#pl-workspace.is-play-fullscreen .steps {
+  max-height: 84px; overflow-y: auto; margin-top: 8px; overscroll-behavior: contain;
+}
+.is-play-fullscreen [data-play-controls] { transition: opacity .2s ease; }
+.is-play-fullscreen.play-controls-hidden [data-play-controls] {
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+#pe-workspace.is-play-fullscreen { display: flex; flex-direction: column; }
+#pe-workspace.is-play-fullscreen .pe-grid {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  gap: 12px;
+}
+#pe-workspace.is-play-fullscreen .pe-tools {
+  flex: 0 0 auto; flex-wrap: nowrap; overflow-x: auto;
+  max-width: 100%; gap: 16px; padding: 6px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left));
+  margin: 0 0 8px; background: #0a1128;
+}
+#pe-workspace.is-play-fullscreen .pe-toolgroup { flex: 0 0 auto; }
+#pe-workspace.is-play-fullscreen .pe-tools .pe-row { flex-wrap: nowrap; }
+#pe-workspace.is-play-fullscreen .pe-toolgroup h4 { margin-bottom: 4px; }
+#pe-workspace.is-play-fullscreen #pe-stage {
+  --pl-board-h: max(140px, calc(var(--play-viewport-height, 100dvh) - 160px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .play-viewer.is-play-fullscreen .play-ice-area { inset: 0; }
+  #pl-workspace.is-play-fullscreen .steps { max-height: min(84px, 18dvh); }
+  .play-viewer.is-play-fullscreen .play-screen-hint { max-width: 16ch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-play-fullscreen [data-play-controls] { transition: none; }
+}

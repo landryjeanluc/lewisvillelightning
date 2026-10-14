@@ -1,6 +1,7 @@
 ---
 import { scriptJson } from "../../lib/security";
 import "../../styles/play.css";
+import PlayFullscreenButton from "../PlayFullscreenButton.astro";
 import { roster, games, sides } from "../../lib/data";
 import { shortDate } from "../../lib/format";
 import { PATH_KINDS, TOKEN_KINDS } from "../../lib/play";
@@ -50,7 +51,11 @@ const toolGroups = [
     </div>
   </div>
 
-  <div class="pe-grid">
+  <section id="pe-workspace" class="play-workspace play-editor" aria-label="Play editor">
+    <div class="play-screen-bar">
+      <span class="dim">Drawing board</span>
+      <PlayFullscreenButton id="pe-fullscreen" />
+    </div>
     <!-- ------------------------------------------------------------ tools -->
     <div class="card pe-tools" id="pe-tools" role="group" aria-label="Drawing tools">
       {toolGroups.map((group) => (
@@ -77,72 +82,74 @@ const toolGroups = [
     </div>
 
     <!-- ------------------------------------------------------------ board -->
-    <div class="pe-stagewrap">
-      <div class="pe-draft" id="pe-draft" hidden>
-        <p id="pe-draft-what"></p>
-        <div class="pe-row">
-          <button type="button" id="pe-draft-restore">Put it back on the board</button>
-          <button type="button" class="danger" id="pe-draft-discard">Discard</button>
+    <div class="pe-grid">
+      <div class="pe-stagewrap">
+        <div class="pe-draft" id="pe-draft" hidden>
+          <p id="pe-draft-what"></p>
+          <div class="pe-row">
+            <button type="button" id="pe-draft-restore">Put it back on the board</button>
+            <button type="button" class="danger" id="pe-draft-discard">Discard</button>
+          </div>
+        </div>
+        <div class="pl-board" id="pe-stage"></div>
+        <p class="dim pe-hint" id="pe-hint"></p>
+        <div class="pe-inspector card" id="pe-inspector" aria-label="Selected piece or line"></div>
+
+        <div class="pe-steps-bar">
+          <span class="eyebrow">Steps</span>
+          <div class="pe-chips" id="pe-steps"></div>
+          <button type="button" id="pe-addstep" title="Add a step">+</button>
+          <button type="button" id="pe-delstep" title="Delete this step">−</button>
+          <button type="button" class="pe-go" id="pe-preview">▶ Preview</button>
+        </div>
+
+        <div class="pe-stepedit card">
+          <label class="grow">What happens in this step
+            <input id="pe-caption" maxlength="200"
+                   placeholder="D1 retrieves, centre swings low for the outlet" />
+          </label>
+          <label class="pe-dur">How long
+            <input id="pe-duration" type="range" min="400" max="5000" step="100" value="1400" />
+            <span class="dim" id="pe-durval">1.4s</span>
+          </label>
         </div>
       </div>
-      <div class="pl-board" id="pe-stage"></div>
-      <p class="dim pe-hint" id="pe-hint"></p>
-      <div class="pe-inspector card" id="pe-inspector" aria-label="Selected piece or line"></div>
 
-      <div class="pe-steps-bar">
-        <span class="eyebrow">Steps</span>
-        <div class="pe-chips" id="pe-steps"></div>
-        <button type="button" id="pe-addstep" title="Add a step">+</button>
-        <button type="button" id="pe-delstep" title="Delete this step">−</button>
-        <button type="button" class="pe-go" id="pe-preview">▶ Preview</button>
-      </div>
+      <!-- --------------------------------------------------------- the play -->
+      <aside class="card pe-meta">
+        <h4>This play</h4>
+        <label>Name<input id="pe-title" maxlength="120" placeholder="Wheel breakout" /></label>
+        <label>One line about it
+          <input id="pe-subtitle" maxlength="200" placeholder="Getting out clean under forecheck pressure" />
+        </label>
+        <label>Kind<select id="pe-category"></select></label>
+        <label>Which part of the ice
+          <select id="pe-surface">
+            {surfaces.map(([v, s]) => <option value={v}>{s.label}</option>)}
+          </select>
+        </label>
+        <label>Week of<input id="pe-week" type="date" /></label>
+        <label>For a game (optional)
+          <select id="pe-game">
+            <option value="">Not tied to a game</option>
+            {gameList.map((g) => <option value={g.id}>{g.label}</option>)}
+          </select>
+        </label>
+        <label>Visible to the team
+          <select id="pe-status">
+            <option value="draft">Draft — only admins see it</option>
+            <option value="published">Published — the team sees it</option>
+          </select>
+        </label>
 
-      <div class="pe-stepedit card">
-        <label class="grow">What happens in this step
-          <input id="pe-caption" maxlength="200"
-                 placeholder="D1 retrieves, centre swings low for the outlet" />
-        </label>
-        <label class="pe-dur">How long
-          <input id="pe-duration" type="range" min="400" max="5000" step="100" value="1400" />
-          <span class="dim" id="pe-durval">1.4s</span>
-        </label>
-      </div>
+        <div class="pe-save">
+          <span class="dim" id="pe-status-line"></span>
+          <button type="button" id="pe-save">Save play</button>
+        </div>
+      </aside>
     </div>
 
-    <!-- --------------------------------------------------------- the play -->
-    <aside class="card pe-meta">
-      <h4>This play</h4>
-      <label>Name<input id="pe-title" maxlength="120" placeholder="Wheel breakout" /></label>
-      <label>One line about it
-        <input id="pe-subtitle" maxlength="200" placeholder="Getting out clean under forecheck pressure" />
-      </label>
-      <label>Kind<select id="pe-category"></select></label>
-      <label>Which part of the ice
-        <select id="pe-surface">
-          {surfaces.map(([v, s]) => <option value={v}>{s.label}</option>)}
-        </select>
-      </label>
-      <label>Week of<input id="pe-week" type="date" /></label>
-      <label>For a game (optional)
-        <select id="pe-game">
-          <option value="">Not tied to a game</option>
-          {gameList.map((g) => <option value={g.id}>{g.label}</option>)}
-        </select>
-      </label>
-      <label>Visible to the team
-        <select id="pe-status">
-          <option value="draft">Draft — only admins see it</option>
-          <option value="published">Published — the team sees it</option>
-        </select>
-      </label>
-
-      <div class="pe-save">
-        <span class="dim" id="pe-status-line"></span>
-        <button type="button" id="pe-save">Save play</button>
-      </div>
-    </aside>
-  </div>
-
+  </section>
   <script type="application/json" id="pe-roster-data" set:html={scriptJson(players)} />
 </section>
 
@@ -181,10 +188,10 @@ const toolGroups = [
   .pe-grid {
     display: grid; gap: var(--s-4);
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "tools" "stage" "meta";
+    grid-template-areas: "stage" "meta";
     align-items: start;
   }
-  .pe-tools { grid-area: tools; }
+  .pe-tools { margin-bottom: var(--s-4); }
   .pe-stagewrap { grid-area: stage; }
   .pe-meta {
     grid-area: meta;

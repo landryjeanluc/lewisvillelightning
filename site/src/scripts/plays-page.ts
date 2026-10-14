@@ -6,6 +6,7 @@
  * opens on that diagram — while the browser's back button still behaves.
  */
 import { PlayStage, staticPlaySvg } from "./playback";
+import { mountPlayFullscreen } from "./play-fullscreen";
 import {
   categoryLabel, normaliseDiagram, totalDuration, type Diagram, type Play,
 } from "../lib/play";
@@ -25,6 +26,7 @@ let current: Play | null = null;
  *  times a second for the whole length of a play. */
 let currentDiagram: Diagram | null = null;
 let paintedStep = -1;
+let fullscreen: ReturnType<typeof mountPlayFullscreen>;
 
 const weekLabel = (iso: string | null) => {
   if (!iso) return "All season";
@@ -122,6 +124,7 @@ function open(slug: string, push: boolean) {
 }
 
 function showIndex(push: boolean) {
+  fullscreen?.exit();
   stage?.destroy();
   stage = null;
   current = null;
@@ -190,6 +193,7 @@ function scrubTo(fraction: number) {
 /* ------------------------------------------------------------------ boot -- */
 
 function wire() {
+  fullscreen = mountPlayFullscreen($("#pl-workspace"), $<HTMLButtonElement>("#pl-fullscreen"), true);
   $("#pl-play").addEventListener("click", () => stage?.toggle());
   $("#pl-next").addEventListener("click", () => stage?.next());
   $("#pl-prev").addEventListener("click", () => stage?.prev());
@@ -213,7 +217,7 @@ function wire() {
 
   document.addEventListener("keydown", (e) => {
     if (!stage || $("#pl-detail").hidden) return;
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (e.target instanceof Element && e.target.closest('button, input, textarea, select, a, [role="slider"]')) return;
     if (e.key === " ") { e.preventDefault(); stage.toggle(); }
     if (e.key === "ArrowRight") stage.next();
     if (e.key === "ArrowLeft") stage.prev();
