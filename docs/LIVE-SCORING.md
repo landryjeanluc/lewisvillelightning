@@ -1,27 +1,36 @@
-# Live scoring
+# Game scoring
 
-Open **Admin → Live score**, choose the game, and press **Start game**. This saves
-0–0 and the first period unless you have entered different values. The homepage
-hero switches to a scoreboard within five seconds. A game is live only when an
-admin marks it live; reaching its scheduled start time does not invent a result.
+Open **Admin → Game scoring** and choose the game. The score, period, and player
+scoresheet are all in this one editor. Old links to the Live score tab open it
+as well; **Manage game** on a live scoreboard opens the matching game.
 
-Update either score, choose the period, and press **Save scoreboard**. The +1
-buttons change the form; press Save to publish. You can correct a score downward
-in the number field. Intermissions, overtime and shootouts are available. There
-is no game clock. Set the status to **Final** and save after the game; the final
-score remains featured for that game day in Atlantic time. A live game takes
-priority over final results and the build-time upcoming fixture.
+Press **Start game** when play begins. Blank team scores start at 0–0; any scores
+or player entries already typed are retained. Update the score, period, goals,
+assists, penalties, and plus/minus, then press **Save changes**. The +1 buttons
+change the form; Save publishes the changes. The homepage updates within five
+seconds. Reaching puck-drop time alone does not mark a game live.
 
-Families' visible pages poll every five seconds and refresh when returning to a
-background tab. A connection failure retains the last received score with an
-interruption notice. The game detail page also carries the scoreboard.
+Press **Finish game** after the final whistle. It saves the final team score and
+all player entries together, marks the game Final, and publishes season totals
+to `/stats` and player pages. Both team scores are required. This also works for
+a completed game entered afterwards without first starting it live. For later
+corrections, load the final game, edit the entries, and press Save changes.
 
-Live scores update `game_results` only. Player goals, assists and penalties remain
-in the Scoresheet tab. Full scoresheet saves retain the loaded game status rather
-than silently marking a live game final. Both editors share a revision number and
-per-game transaction lock; a stale save returns 409. Use **Load latest score** or
-**Reload scoresheet** to resolve a conflict before making your corrections.
+The status selector also supports Not started, Postponed, and Cancelled. Those
+states preserve saved player entries but exclude the game from season totals.
+The editor explains whether the selected status contributes to the stats pages.
+
+Families' visible scoreboards poll every five seconds and refresh when returning
+to a background tab. A connection failure retains the last received score with
+an interruption notice. Only a live or final game from the current Atlantic
+calendar day can replace the homepage's upcoming matchup. A live game takes
+priority over a final result from that day.
+
+Game saves share a revision number and per-game transaction lock with the
+scoreboard API. A stale save returns 409 and retains the entered values; use
+**Reload scoresheet** to load the latest saved version before correcting it.
 
 The authenticated `/api/scoreboard` feed falls back to schedule data when no result
-exists. Admin-only `PUT /api/scoreboard/{game_id}` requires scores, status and an
-`expected_revision`; live status also requires a valid period. Writes are audited.
+exists. The combined editor writes `/api/stats/game/{game_id}`, including period
+and player lines. The admin-only scoreboard write endpoint remains compatible
+with older clients and does not change player entries. Both paths are audited.

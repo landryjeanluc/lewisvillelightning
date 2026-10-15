@@ -45,6 +45,7 @@ async def run_scoreboard_tests(app, pool, ok):
         check('stale full scoresheet cannot overwrite live score or delete stats',r.status_code==409 and await pool.fetchval('SELECT count(*) FROM game_stats WHERE game_id=$1',gid)==1)
         r=await admin.put(f'/stats/game/{gid}',json={'our_score':3,'their_score':2,'status':'in_progress','expected_revision':2,'lines':[{'player_id':'pl-02','g':3}]})
         check('full scoresheet advances shared revision',(r.status_code,r.json().get('revision'))==(200,3))
+        check('older scoresheet clients retain the live period',await pool.fetchval('SELECT period FROM game_results WHERE game_id=$1',gid)=='INT1')
         check('old live editor detects scoresheet changes',(await admin.put(f'/scoreboard/{gid}',json={**payload,'expected_revision':2})).status_code==409)
         gp=(await parent.get('/stats/season')).json()['team']['gp']
         r=await admin.put(f'/scoreboard/{gid}',json={**payload,'our_score':3,'their_score':2,'status':'final','period':'OT','expected_revision':3})
@@ -53,6 +54,20 @@ async def run_scoreboard_tests(app, pool, ok):
         r=await admin.put(f'/scoreboard/{gid}',json={**payload,'status':'cancelled','expected_revision':4})
         check('cancellation clears period and advances revision',r.status_code==200 and r.json()['period'] is None and r.json()['revision']==5)
         check('score changes are audited',await pool.fetchval("SELECT count(*) FROM audit_log WHERE game_id=$1 AND action='live_score'",gid)==4)
+        lines=[{'player_id':'pl-02','g':2,'a':1,'pim':4,'plus_minus':-1}]
+        sheet={'our_score':2,'their_score':1,'status':'in_progress','period':'2','expected_revision':5,'lines':lines}
+        for client in (parent,player):
+            check('family cannot change the combined game editor',(await client.put(f'/stats/game/{gid}',json=sheet)).status_code==403)
+        check('combined editor rejects an invalid period',(await admin.put(f'/stats/game/{gid}',json={**sheet,'period':'4'})).status_code==422)
+        gp=(await parent.get('/stats/season')).json()['team']['gp']
+        r=await admin.put(f'/stats/game/{gid}',json=sheet)
+        current=(await parent.get(f'/stats/game/{gid}')).json()
+        check('one save records period score and all player stats',r.status_code==200 and current['result']['period']=='2' and current['result']['status']=='in_progress' and current['lines']==lines)
+        check('live player entries do not count as completed stats',(await parent.get('/stats/season')).json()['team']['gp']==gp)
+        r=await admin.put(f'/stats/game/{gid}',json={**sheet,'status':'final','period':'3','expected_revision':6})
+        totals=(await parent.get('/stats/season')).json()
+        check('finish game publishes result and player stats together',r.status_code==200 and totals['team']['gp']==gp+1 and any(p['player_id']=='pl-02' and p['g']>=2 and p['pim']>=4 for p in totals['skaters']))
+        check('finish game keeps the full recorded player line',(await parent.get(f'/stats/game/{gid}')).json()['lines']==lines)
     finally:
         for client in clients.values():
             await client.aclose()

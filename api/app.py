@@ -383,6 +383,7 @@ class Scoresheet(BaseModel):
     our_score: int | None = Field(None, ge=0, le=1000, strict=True)
     their_score: int | None = Field(None, ge=0, le=1000, strict=True)
     status: Literal["scheduled", "in_progress", "final", "postponed", "cancelled"] = "final"
+    period: Literal["1", "2", "3", "OT", "SO", "INT1", "INT2"] | None = None
     lines: list[PlayerLine] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode="after")
@@ -435,17 +436,26 @@ async def put_game_stats(
     # The whole sheet is written at once so "I fixed row 7" is atomic.
     async with pool.acquire() as c, c.transaction():
         await c.execute("SELECT pg_advisory_xact_lock(hashtextextended($1, 71004))", game_id)
-        revision = await c.fetchval("SELECT revision FROM game_results WHERE game_id=$1", game_id) or 0
+        current = await c.fetchrow("SELECT revision,period FROM game_results WHERE game_id=$1", game_id)
+        revision = current["revision"] if current else 0
         if sheet.expected_revision is not None and revision != sheet.expected_revision:
             raise HTTPException(409, "The score changed. Reload the scoresheet before saving again.")
+        # Older open editors do not send a period; preserve it on their saves.
+        period = current["period"] if current else None
+        if "period" in sheet.model_fields_set:
+            period = sheet.period
+        if sheet.status == "in_progress":
+            period = period or "1"
+        elif sheet.status != "final":
+            period = None
         await c.execute(
-            """INSERT INTO game_results (game_id, our_score, their_score, status, updated_by, updated_at, revision)
-               VALUES ($1,$2,$3,$4,$5, now(), 1)
+            """INSERT INTO game_results (game_id, our_score, their_score, status, updated_by, updated_at, revision, period)
+               VALUES ($1,$2,$3,$4,$5, now(), 1, $6)
                ON CONFLICT (game_id) DO UPDATE SET
                  our_score=EXCLUDED.our_score, their_score=EXCLUDED.their_score,
                  status=EXCLUDED.status, updated_by=EXCLUDED.updated_by, updated_at=now(),
-                 revision=game_results.revision+1""",
-            game_id, sheet.our_score, sheet.their_score, sheet.status, user.id,
+                 revision=game_results.revision+1, period=EXCLUDED.period""",
+            game_id, sheet.our_score, sheet.their_score, sheet.status, user.id, period,
         )
         await c.execute("DELETE FROM game_stats WHERE game_id = $1", game_id)
         if sheet.lines:

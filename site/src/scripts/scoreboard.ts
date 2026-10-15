@@ -24,6 +24,7 @@ for(const board of document.querySelectorAll<HTMLElement>('[data-live-board]')) 
     board.hidden=!show;
     if(fallback) fallback.hidden=show;
     if(!score || !fixture) {signature='';return;}
+    board.querySelector<HTMLAnchorElement>('[data-score-admin]')!.href=`/admin?game=${encodeURIComponent(score.game_id)}#sheet-tab`;
     connection.textContent=score.status==='in_progress'?'Scores update automatically.':'Final result';
     const next=JSON.stringify([score.game_id,score.our_score,score.their_score,score.status,score.period]);
     if(next===signature) return;
