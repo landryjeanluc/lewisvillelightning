@@ -54,6 +54,43 @@ const field=name=>admin.locator(`#live-score-form [name=${name}]`);
 const save=()=>admin.locator('#live-score-form button[type=submit]').click();
 const liveFixture=()=>home.locator('[data-live-fixture]:visible');
 try {
+  await check('homepage changes fixtures and spotlight as time passes without rebuilding',async()=>{
+    await home.clock.setFixedTime(new Date('2026-10-13T19:00:00Z'));
+    await home.goto(base+'/');
+    await home.locator(`[data-home-game="${fixtures[0].id}"]`).waitFor({state:'visible'});
+    assert.equal(await home.locator('[data-home-game]:visible h1').textContent(),'Game Day');
+    await home.clock.setFixedTime(new Date('2026-10-14T15:00:00Z'));
+    await home.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+    await home.locator(`[data-home-game="${fixtures[1].id}"]`).waitFor({state:'visible'});
+    assert.equal(await home.locator('[data-home-game]:visible h1').textContent(),'Next Game');
+    await home.clock.setFixedTime(new Date('2026-10-15T15:00:00Z'));
+    await home.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
+    assert.equal(await home.locator('[data-home-game]:visible h1').textContent(),'Game Day');
+    assert.equal(await home.locator('[data-home-spotlight]:visible').getAttribute('data-home-spotlight'),fixtures[1].id);
+    assert.equal(await home.locator('[data-home-event]:visible').count(),0);
+    assert.ok((await home.locator('[data-home-game]:visible .hero-info').textContent()).includes('4:30 PM'));
+    assert.equal(await home.locator('[data-home-game]:visible .cta').getAttribute('href'),`/schedule/${fixtures[1].id}`);
+  });
+  await check('a previous game left in progress does not hide today’s fixture',async()=>{
+    const saved={...scores[0]};
+    Object.assign(scores[0],{status:'in_progress',starts_at:fixtures[0].startsAt,period:'2',our_score:1,their_score:2});
+    await home.reload();
+    await home.locator(`[data-home-game="${fixtures[1].id}"]`).waitFor({state:'visible'});
+    await home.waitForResponse(r=>r.url().endsWith('/api/scoreboard'));
+    assert.equal(await home.locator('[data-live-board]').isVisible(),false);
+    assert.equal(await home.locator('[data-upcoming-hero]').isVisible(),true);
+    Object.assign(scores[0],saved);
+  });
+  await check('cancelled games and exhausted schedules do not leave an old banner',async()=>{
+    const saved={...scores[1]};scores[1].status='cancelled';
+    await home.reload();await home.locator('[data-home-empty]').waitFor({state:'visible'});
+    assert.equal(await home.locator('[data-home-spotlight]:visible').count(),0);
+    Object.assign(scores[1],saved);
+    await home.clock.setFixedTime(new Date('2026-10-16T15:00:00Z'));
+    await home.reload();await home.locator('[data-home-empty]').waitFor({state:'visible'});
+    assert.equal(await home.locator('[data-home-game]:visible').count(),0);
+    await home.clock.setFixedTime(new Date());
+  });
   await check('scheduled game retains the upcoming hero',async()=>{
     await home.goto(base+'/');await home.locator('[data-upcoming-hero]').waitFor({state:'visible'});
     assert.equal(await home.locator('[data-live-board]').isVisible(),false);

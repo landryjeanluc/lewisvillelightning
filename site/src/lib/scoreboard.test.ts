@@ -15,3 +15,10 @@ test('period labels include intermissions and overtime, never a fabricated clock
   assert.equal(periodLabel('2'),'2nd period');assert.equal(periodLabel('INT2'),'2nd intermission');
   assert.equal(periodLabel('OT'),'Overtime');assert.equal(periodLabel(null),'Period not set');
 });
+test('an unfinished old game cannot override the current game day',()=>{
+  assert.equal(featuredScore([game],new Date('2026-10-15T15:00:00Z')),undefined);
+  assert.equal(featuredScore([game],new Date('2026-10-14T02:59:59Z'))?.game_id,'today');
+  assert.equal(featuredScore([game],new Date('2026-10-14T03:00:00Z')),undefined);
+  const current = {...game,game_id:'current',starts_at:'2026-10-15T19:30:00Z'};
+  assert.equal(featuredScore([game,current],new Date('2026-10-15T20:00:00Z'))?.game_id,'current');
+});

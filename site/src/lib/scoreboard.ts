@@ -8,5 +8,6 @@ const day = (date:Date) => new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'nu
 /** A live game wins over the static next fixture, even after a rebuild during play. */
 export function featuredScore(games:Score[], now=new Date()):Score|undefined {
   const newest=[...games].sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at));
-  return newest.find(g=>g.status==='in_progress') ?? newest.find(g=>g.status==='final' && day(new Date(g.starts_at))===day(now));
+  const today = newest.filter(g=>day(new Date(g.starts_at))===day(now));
+  return today.find(g=>g.status==='in_progress') ?? today.find(g=>g.status==='final');
 }

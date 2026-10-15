@@ -7,6 +7,7 @@ interface Props { game: GameEvent; size?: "hero" | "compact" }
 const { game, size = "hero" } = Astro.props;
 const { left, right, weAreHome } = sides(game);
 const showScore = game.status === "final" || game.status === "in_progress";
+const gradientId = `fissure-${game.id}-${size}`;
 ---
 <div class:list={["matchup", `matchup--${size}`]}>
   <div class="side side--left" style={`--team: ${left.colours.primary}; --team-2: ${left.colours.secondary}`}>
@@ -22,9 +23,9 @@ const showScore = game.status === "final" || game.status === "in_progress";
   <div class="vs" aria-hidden="true">
     <svg class="fissure" viewBox="0 0 40 400" preserveAspectRatio="none">
       <path d="M22 0 L14 118 L26 150 L10 268 L22 300 L13 400"
-            fill="none" stroke="url(#fg)" stroke-width="2.5" stroke-linejoin="miter" />
+            fill="none" stroke={`url(#${gradientId})`} stroke-width="2.5" stroke-linejoin="miter" />
       <defs>
-        <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stop-color="#1C8FE8" stop-opacity="0" />
           <stop offset="28%"  stop-color="#6FC0FF" stop-opacity=".9" />
           <stop offset="72%"  stop-color="#6FC0FF" stop-opacity=".9" />

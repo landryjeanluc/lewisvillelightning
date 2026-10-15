@@ -12,28 +12,27 @@ import PlayerCard from "../components/PlayerCard.astro";
 import HomeGoals from "../components/HomeGoals.astro";
 import NewsFeed from "../components/NewsFeed.astro";
 import InstallApp from "../components/InstallApp.astro";
-import { displayName, team, nextGame, nextPractice, upcoming, results, sides, spotlightFor, spotlightProgress } from "../lib/data";
+import { displayName, team, games, practices, allEvents, results, sides, spotlightFor, spotlightProgress } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
-const g = nextGame();
-const p = nextPractice();
-const up = upcoming().filter((e: any) => e.id !== g?.id);
 const recent = results();
-const s = g ? sides(g) : null;
-const star = g ? spotlightFor(g.id) : undefined;
 const rot = spotlightProgress();
+const homeEvents = allEvents.map(({id, type, startsAt, endsAt, status}) => ({id, type, startsAt, endsAt, status}));
 ---
 <Base wide>
   <HomeGoals slot="header-footer" />
 
   <LiveScoreboard />
 
-  {g ? (
-    <section class="hero" data-upcoming-hero>
+  <div data-upcoming-hero>
+  {games.map(g => {
+    const s = sides(g);
+    return (
+    <section class="hero" data-home-game={g.id} hidden>
       <Lightning />
       <div class="hero-top">
         <span class="eyebrow">{team.level} {team.division} · {g.gameType === "regular" ? "Regular season" : g.gameType === "exhibition" ? "Exhibition" : g.gameType}</span>
-        <h1 class="display--italic hero-title">{relativeDay(g.startsAt) === "Today" ? "Game Day" : "Next Game"}</h1>
+        <h1 class="display--italic hero-title" data-home-game-title>{relativeDay(g.startsAt) === "Today" ? "Game Day" : "Next Game"}</h1>
       </div>
 
       <Matchup game={g} />
@@ -60,17 +59,20 @@ const rot = spotlightProgress();
         <AddToCalendar event={g} />
       </div>
     </section>
-  ) : (
-    <section class="hero hero--empty" data-upcoming-hero>
+  ); })}
+    <section class="hero hero--empty" data-home-empty hidden>
       <h1>No games scheduled</h1>
       <p class="muted">The schedule will fill in once the season data syncs.</p>
     </section>
-  )}
+  </div>
 
   <TeamShowcase />
 
-  {star && (
-    <section class="spot-hero">
+  {games.map(g => {
+    const star = spotlightFor(g.id);
+    const s = sides(g);
+    return star && (
+    <section class="spot-hero" data-home-spotlight={g.id} hidden>
       <div class="sh-card"><PlayerCard player={star} size="lg" /></div>
       <div class="sh-text">
         <span class="eyebrow">Player spotlight</span>
@@ -86,7 +88,7 @@ const rot = spotlightProgress();
         <a class="sh-link" href={`/players/${star.id}`}>See {displayName(star)}'s page →</a>
       </div>
     </section>
-  )}
+  ); })}
 
   <section class="section home-news" aria-labelledby="home-news-title">
     <div class="rule-head"><h2 id="home-news-title">Latest news</h2></div>
@@ -97,15 +99,16 @@ const rot = spotlightProgress();
   <div class="cols">
     <section class="section">
       <div class="rule-head"><h2>Up next</h2></div>
-      {p && (
-        <div class="practice card">
+      {practices.map(p => (
+        <div class="practice card" data-home-practice={p.id} hidden>
           <span class="eyebrow">Next practice</span>
           <p class="practice-when">{shortDate(p.startsAt)} · {time(p.startsAt)}</p>
           <p class="dim">{p.venue.name}{p.notes ? ` — ${p.notes}` : ""}</p>
         </div>
-      )}
+      ))}
       <div class="list" style="--flow: var(--s-2)">
-        {up.length ? up.map((e: any) => <EventRow event={e} />) : <p class="dim">Nothing else on the calendar yet.</p>}
+        {allEvents.map(e => <div data-home-event={e.id} hidden><EventRow event={e} /></div>)}
+        <p class="dim" data-home-upcoming-empty hidden>Nothing else on the calendar yet.</p>
       </div>
       <a class="more" href="/schedule">Full schedule →</a>
     </section>
@@ -127,7 +130,8 @@ const rot = spotlightProgress();
 
   <InstallApp />
 
-  <script>import "../scripts/cardfx";</script>
+  <script type="application/json" id="home-events" set:html={JSON.stringify(homeEvents).replace(/</g, "\\u003c")} />
+  <script>import "../scripts/cardfx"; import "../scripts/home-schedule";</script>
 </Base>
 
 <style>
