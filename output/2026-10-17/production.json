@@ -1,0 +1,17 @@
+{
+  "opponent": "Kent Centre Bears",
+  "start_time": "14:10",
+  "start_time_source": "User supplied",
+  "game_date": "2026-10-17",
+  "venue": "Imperial Kent North Centre",
+  "town": "Richibucto, NB",
+  "venue_basis": "User said the game is at the Bears' home rink; MYHockey lists Kent North Imperial Centre in Richibucto as their rink. Municipality and facility sponsor use Imperial Kent North Centre.",
+  "team_and_home_rink_source": "https://myhockeyrankings.com/association-info?a=2408",
+  "venue_name_source": "https://beaurivage.org/receptionist-imperial-kent-north-centre/",
+  "logo_source_page": "https://play.sedmha.com/l/1073/u11-b/teams/schedule/11277/kentcentrebears/",
+  "logo_source_url": "https://play.sedmha.com/img/43180",
+  "logo_cross_check_url": "https://ranktech-cdn.s3.us-east-2.amazonaws.com/myhockey_prod/logos/002bcb_a.png",
+  "game_date_source": "User said this Saturday, resolved from session date October 15, 2026.",
+  "generation": "Built-in image_gen; generation-prompt.txt",
+  "poster": "lightning-vs-bears-master.png"
+}

@@ -34,3 +34,29 @@ The authenticated `/api/scoreboard` feed falls back to schedule data when no res
 exists. The combined editor writes `/api/stats/game/{game_id}`, including period
 and player lines. The admin-only scoreboard write endpoint remains compatible
 with older clients and does not change player entries. Both paths are audited.
+
+## A scoresheet filed under the wrong game
+
+There is no admin control for this: picking the wrong game in the dropdown writes
+real rows under that `game_id`, and re-entering the sheet is the only in-app fix.
+Both tables key on the contract `game_id`, no foreign keys point at it, and
+`updated_at` has no trigger, so the rows can be moved host-side instead. Dump the
+database first, then move `game_results` and `game_stats` together in one
+transaction, holding the writers' per-game advisory lock
+(`pg_advisory_xact_lock(hashtextextended(<game_id>, 71004))`) for **both** ids so
+no admin save interleaves. Guard on the source and destination row counts and
+abort if the destination already holds a sheet — the move must never merge two
+games. Leave `revision` and `updated_at` as they are: the carried revision makes
+any device still holding the old sheet fail with 409 and reload, which is what
+should happen, and the original timestamp is when the game was actually scored.
+
+Leave the earlier `put_scoresheet` audit rows under the old `game_id` and append
+one row describing the move; the log records what was done, not what was meant.
+`game_notes` and `game_jobs` are keyed the same way but are *not* part of the
+scoresheet — volunteer assignments and notes for the other game are usually
+correct, so move them only when they are genuinely misfiled too.
+
+Check `status` afterwards: moving a sheet preserves its status. Set a completed
+game to **Final** so its player entries count toward season statistics. The
+homepage hero only features live or final scores from the current Atlantic
+calendar day; an older game left `in_progress` no longer takes over the hero.

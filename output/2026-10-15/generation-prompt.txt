@@ -1,0 +1,20 @@
+Use case: ads-marketing
+Asset type: polished landscape 16:9 hockey game poster, highest available resolution.
+Primary request: Create the next game poster in the same series as input image 1, matching its premium sports broadcast design, icy typography, cinematic arena, lightning, ice mist, scratched reflective ice, and strong legibility.
+Input image 1: reference for the established poster style and composition. Replace its matchup and event information completely.
+Input image 2: supporting exact Dieppe-Memramcook Aigles crest. Preserve eagle, hockey stick, star, blue/red/gold colours, proportions and all crest lettering faithfully; remove the rectangular dark background around the crest and integrate the cutout cleanly.
+Input image 3: supporting exact Lewisville Lightning crest. Preserve design, proportions, colours, and lettering faithfully; remove white rectangular background.
+Composition: away Lewisville Lightning on LEFT with blue lightning and glow; home Dieppe Aigles on RIGHT with red lightning and glow. Large equal-visual-weight crests, never mirror them. Central VS and lightning fissure. Team-name lines below each crest. Huge GAME DAY headline, small division line above it. Bottom information zone: date left, prominent time centre, venue right with town beneath if useful. Generous safe margins, clean spelling, polished readable type, no cropped text.
+Exact poster text:
+"U13 B • COMPETITIVE HOCKEY"
+"GAME DAY"
+"LEWISVILLE"
+"LIGHTNING"
+"VS"
+"DIEPPE"
+"AIGLES"
+"THURSDAY, OCTOBER 15, 2026"
+"4:30 PM"
+"UNIPLEX • RINK 1"
+"DIEPPE, NB"
+Constraints: no Predators logo or text, no October 13 date, no 5:30 time, no Kay Arena. No players, invented sponsors, home/away labels or extra copy. Crest lettering is permitted in addition to the specified poster text. Keep the original poster's impressive dramatic atmosphere and horizontal 16:9 layout.

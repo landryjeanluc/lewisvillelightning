@@ -1,0 +1,20 @@
+Use case: ads-marketing
+Asset type: landscape 16:9 hockey game poster, highest available native resolution.
+Create the next poster in this series by editing input image 1. Preserve the premium cinematic indoor arena, dramatic lighting, scratched reflective ice, mist, lightning fissure, large icy italic GAME DAY heading, clean typography and generous safe margins.
+Input image 1: edit target / established design. Keep the entire Lewisville Lightning presentation on the LEFT, with its exact crest, lettering, colours and orientation unchanged.
+Input image 2: supporting insert, actual Kent Centre Bears team logo retrieved from the team's tournament listing. Faithfully reproduce this exact symmetrical roaring bear head, black and charcoal-gray fur, light gray/white outer outline, white teeth and red tongue. Enlarge with sharp clean logo edges. Do not invent lettering, a shield or another bear design. Isolate the crest from any rectangular background.
+Replace the entire right-side Aigles logo and team-name block with this Bears logo at matching visual weight, and the labels KENT CENTRE above BEARS. Retain red-and-silver lighting on this side to complement the bear. Lightning remains left, home Bears right. Central VS remains.
+Replace the bottom event information completely. Date at bottom left, very prominent time centre, venue at bottom right. Give the venue sufficient width and use two lines for its full name if needed. Exact date and time are critical.
+Exact poster copy:
+"U13 B • COMPETITIVE HOCKEY"
+"GAME DAY"
+"LEWISVILLE"
+"LIGHTNING"
+"VS"
+"KENT CENTRE"
+"BEARS"
+"SATURDAY, OCTOBER 17, 2026"
+"2:10 PM"
+"IMPERIAL KENT NORTH CENTRE"
+"RICHIBUCTO, NB"
+Preserve Lightning crest lettering as part of its logo. No other copy. Remove all Aigles, Dieppe, October 15, Uniplex and 4:30 information. No players, sponsors, home/away labels, additional logos, borders or cropped text. Clean professional finished game-day poster matching the supplied series.
