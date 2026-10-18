@@ -40,6 +40,30 @@
         "secondary": "#1F3A7A",
         "accent": "#F2B134"
       }
+    },
+    {
+      "id": "moncton",
+      "name": "Moncton Hawks",
+      "short": "Hawks",
+      "town": "Moncton",
+      "crest": "assets/brand/moncton-hawks-crest.png",
+      "colours": {
+        "primary": "#E60012",
+        "secondary": "#111111",
+        "accent": "#FFC20E"
+      }
+    },
+    {
+      "id": "kent-centre",
+      "name": "Kent Centre Bears",
+      "short": "Bears",
+      "town": "Richibucto",
+      "crest": "assets/brand/kent-centre-bears-crest.png",
+      "colours": {
+        "primary": "#1A1A1A",
+        "secondary": "#707277",
+        "accent": "#C8102E"
+      }
     }
   ]
 }

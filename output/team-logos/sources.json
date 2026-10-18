@@ -1,0 +1,34 @@
+{
+  "verifiedAt": "2026-10-18",
+  "lewisville-lightning": {
+    "asset": "assets/brand/lightning-crest-hi.png",
+    "source": "https://www.lewisvillelightning.ca/wp-content/uploads/sites/1379/2022/02/Header@2x.png",
+    "note": "Existing official team crest."
+  },
+  "moncton": {
+    "asset": "assets/brand/moncton-hawks-crest.png",
+    "page": "https://play.sedmha.com/l/1073/U11-B/teams/11280/monctonhawksgallen/",
+    "download": "https://play.sedmha.com/img/43165",
+    "association": "https://monctonminorhockey.ca/news_images/org_1741/files/MMHA%20Operations%20Manual-2021-04-09.pdf",
+    "note": "Moncton association Hawks identity; schedule labels opponent MONCTON, without a coach or squad name. No squad suffix added."
+  },
+  "shediac-cap-pele-predators": {
+    "asset": "assets/brand/predators-crest.png",
+    "page": "https://shcamha.com/shcamha/",
+    "download": "https://cdn-app.teamlinkt.com/media/association_data/31174/site_data/images/1.png?v=1752281007",
+    "note": "Downloaded association crest visually matches existing poster crest."
+  },
+  "dieppe": {
+    "asset": "assets/brand/dieppe-crest.png",
+    "page": "https://hockeydieppememramcook.ca/en/home/",
+    "crossCheck": "https://play.sedmha.com/l/1073/U11-B/teams/11279/dieppememramcookaigles/",
+    "download": "https://play.sedmha.com/img/43135",
+    "note": "Aigles eagle/stick/star identity checked against tournament crest; retained previously approved poster."
+  },
+  "kent-centre": {
+    "asset": "assets/brand/kent-centre-bears-crest.png",
+    "page": "https://play.sedmha.com/l/1073/u11-b/teams/schedule/11277/kentcentrebears/",
+    "download": "https://play.sedmha.com/img/43180",
+    "note": "Previously verified and downloaded bear crest, retained existing approved poster."
+  }
+}

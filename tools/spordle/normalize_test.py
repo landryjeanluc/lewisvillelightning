@@ -40,7 +40,7 @@ class RosterTest(unittest.TestCase):
 
     def test_today_practices_regular_games_and_multiple_events_per_day(self):
         capture = self.capture()
-        capture['data']['visibleText'] = """Next 7 days (Oct 18, 2026 - Oct 24, 2026)
+        capture['data']['visibleText'] = """Season 2026-27 (Sep 12, 2026 - Jan 3, 2027)
 Print Schedule
 Add to Calendar
 TODAY, SUNDAY, OCTOBER 18, 2026
@@ -82,6 +82,7 @@ Previous
 Next"""
         schedule = module.schedule_from_capture(capture)
         self.assertEqual(schedule['status'], 'captured_view')
+        self.assertEqual(schedule['filter_display'], 'Season 2026-27 (Sep 12, 2026 - Jan 3, 2027)')
         self.assertEqual(len(schedule['games']), 2)
         self.assertEqual(len(schedule['practices']), 2)
         self.assertEqual(schedule['practices'][0]['date'], '2026-10-18')

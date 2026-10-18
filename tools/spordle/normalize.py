@@ -80,7 +80,7 @@ def schedule_from_capture(capture):
     day = r'(?:TODAY, |TOMORROW, |YESTERDAY, )?((?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY), [A-Z]+ \d{1,2}, \d{4})'
     pieces = re.split(r'^' + day + r'$', text, flags=re.MULTILINE)
     games, practices, incomplete = [], [], []
-    window = re.search(r'Next \d+ days \([^\n]+\)', text)
+    window = re.search(r'(?:Next \d+ days|Season \d{4}-\d{2}) \([^\n]+\)', text)
     event_pattern = r'(?:EXHIBITION|REGULAR SEASON|REGULAR|PLAYOFF|TOURNAMENT)\s*•\s*\d+|PRACTICE'
     clock_pattern = r'\d{1,2}:\d{2}\s*[AP]\.?M\.?'
 

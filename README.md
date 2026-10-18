@@ -107,8 +107,8 @@ is printed for confirmation and can be pinned in
 
 The extension saves locally on Helios; it does not publish the website. Review
 and commit the imported data, then run `deploy.sh` and push the commit. The latest
-schedule capture covers October 18–24, 2026: two practices and one regular-season
-game. Imports retain earlier events because a displayed window is not a complete
+schedule capture was taken October 18 with a filter through January 3, 2027:
+five games and sixteen practices, with the last listed event on December 30. Imports retain earlier events because a displayed window is not a complete
 season schedule. No player stats or news view has been collected; live player
 statistics come from completed scoresheets entered on the site.
 

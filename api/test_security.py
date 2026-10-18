@@ -26,7 +26,9 @@ async def run_security_tests(app, pool, ok):
     async with httpx.AsyncClient(transport=transport, base_url="http://t/api") as anon:
         admin, parent, player, viewer = (clients[k] for k in ("admin", "parent", "player", "viewer"))
         try:
-            gid = next(iter(contract.games))
+            # Earlier API tests seed this scoresheet; replacing a different game
+            # after importing older fixtures would leave those totals intact.
+            gid = "g-2026-10-13-shediac"
             for path in ("/stats/season", f"/stats/game/{gid}", "/profiles", "/news", f"/notes/{gid}", "/jobs/types", f"/jobs/{gid}", "/goals", "/plays", "/users", "/moderation/queue"):
                 response = await anon.get(path)
                 check(f"unauthenticated {path} denied without caching", response.status_code == 401 and response.headers.get("cache-control") == "no-store")

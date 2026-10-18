@@ -10,7 +10,9 @@ const root=fileURLToPath(new URL('..',import.meta.url));
 const {chromium}=createRequire(path.join(root,'site/package.json'))('playwright-core');
 const dist=path.join(root,'site/dist');
 const schedule=JSON.parse(await readFile(path.join(root,'data/schedule.json'),'utf8')).events;
-const fixtures=schedule.filter(g=>g.type==='game');
+// Keep the known home/away regression games independent of newly imported history.
+const anchors=['g-2026-10-13-shediac','g-2026-10-15-dieppe'];
+const fixtures=[...anchors.map(id=>schedule.find(g=>g.id===id)),...schedule.filter(g=>g.type==='game'&&!anchors.includes(g.id))];
 const scores=fixtures.map(g=>({game_id:g.id,starts_at:new Date().toISOString(),status:'scheduled',period:null,our_score:null,their_score:null,revision:0,updated_at:null}));
 let offline=false, reject=false;
 const user={id:1,role:'admin',display_name:'Coach',email:'coach',player_id:null};
@@ -99,8 +101,9 @@ try {
   await check('cancelled games and exhausted schedules do not leave an old banner',async()=>{
     const saved=scores.map(score=>({...score}));
     scores[1].status='cancelled';
-    if(fixtures.length>2) {
-      await home.reload();await home.locator(`[data-home-game="${fixtures[2].id}"]`).waitFor({state:'visible'});
+    const nextFixture=schedule.find(g=>g.type==='game'&&Date.parse(g.startsAt)>Date.parse(fixtures[1].startsAt));
+    if(nextFixture) {
+      await home.reload();await home.locator(`[data-home-game="${nextFixture.id}"]`).waitFor({state:'visible'});
     }
     scores.forEach(score=>score.status='cancelled');
     await home.reload();await home.locator('[data-home-empty]').waitFor({state:'visible'});
