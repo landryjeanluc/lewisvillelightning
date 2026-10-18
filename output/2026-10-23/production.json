@@ -1,0 +1,13 @@
+{
+  "gameId": "g-2026-10-23-shediac",
+  "startsAt": "2026-10-23T18:15:00-03:00",
+  "venue": "Kay Arena (Main) - Moncton, NB",
+  "awayTeamId": "shediac-cap-pele-predators",
+  "homeTeamId": "lewisville-lightning",
+  "poster": "output/2026-10-23/predators-vs-lightning-home-master.png",
+  "newlyGenerated": true,
+  "prompt": "output/2026-10-23/generation-prompt.txt",
+  "generation": "Built-in image_gen",
+  "referencePoster": "output/2026-10-13/predators-vs-lightning-home-master.png",
+  "logoSources": "output/team-logos/sources.json"
+}

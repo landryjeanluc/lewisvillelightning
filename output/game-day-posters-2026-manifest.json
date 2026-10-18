@@ -1,0 +1,64 @@
+{
+  "asOf": "2026-10-18",
+  "scheduleSource": {
+    "provider": "spordle",
+    "teamId": "223790",
+    "fetchedAt": "2026-10-18T14:01:07.337+00:00",
+    "note": "Rendered schedule view only, not a complete season schedule. filter=Season 2026-27 (Sep 12, 2026 - Jan 3, 2027)"
+  },
+  "style": "Established cinematic landscape game-day poster series; away left, home right.",
+  "generation": "Built-in image_gen; two missing posters created, three previously completed posters retained.",
+  "logoSources": "output/team-logos/sources.json",
+  "posters": [
+    {
+      "gameId": "g-2026-10-11-moncton",
+      "startsAt": "2026-10-11T14:00:00-03:00",
+      "venue": "Kay Arena (Main) - Moncton, NB",
+      "awayTeamId": "moncton",
+      "homeTeamId": "lewisville-lightning",
+      "poster": "output/2026-10-11/hawks-vs-lightning-master.png",
+      "newlyGenerated": true,
+      "prompt": "output/2026-10-11/generation-prompt.txt"
+    },
+    {
+      "gameId": "g-2026-10-13-shediac",
+      "startsAt": "2026-10-13T17:30:00-03:00",
+      "venue": "Kay Arena (Main) - Moncton, NB",
+      "awayTeamId": "shediac-cap-pele-predators",
+      "homeTeamId": "lewisville-lightning",
+      "poster": "output/2026-10-13/predators-vs-lightning-home-master.png",
+      "newlyGenerated": false,
+      "prompt": "output/2026-10-13/home-correction-prompt.txt"
+    },
+    {
+      "gameId": "g-2026-10-15-dieppe",
+      "startsAt": "2026-10-15T16:30:00-03:00",
+      "venue": "Uniplex (Rink 1) - Dieppe, NB",
+      "awayTeamId": "lewisville-lightning",
+      "homeTeamId": "dieppe",
+      "poster": "output/2026-10-15/lightning-vs-aigles-master.png",
+      "newlyGenerated": false,
+      "prompt": "output/2026-10-15/generation-prompt.txt"
+    },
+    {
+      "gameId": "g-2026-10-17-kent",
+      "startsAt": "2026-10-17T14:10:00-03:00",
+      "venue": "Imperial Kent North Centre (1) - Richibucto, NB",
+      "awayTeamId": "lewisville-lightning",
+      "homeTeamId": "kent-centre",
+      "poster": "output/2026-10-17/lightning-vs-bears-master.png",
+      "newlyGenerated": false,
+      "prompt": "output/2026-10-17/generation-prompt.txt"
+    },
+    {
+      "gameId": "g-2026-10-23-shediac",
+      "startsAt": "2026-10-23T18:15:00-03:00",
+      "venue": "Kay Arena (Main) - Moncton, NB",
+      "awayTeamId": "shediac-cap-pele-predators",
+      "homeTeamId": "lewisville-lightning",
+      "poster": "output/2026-10-23/predators-vs-lightning-home-master.png",
+      "newlyGenerated": true,
+      "prompt": "output/2026-10-23/generation-prompt.txt"
+    }
+  ]
+}
