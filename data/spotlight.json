@@ -3,7 +3,8 @@
   "note": "Written by tools/assign_spotlight.py. assignments are permanent once made; cycle restarts when every player has been featured.",
   "assignments": {
     "g-2026-10-13-shediac": "pl-02",
-    "g-2026-10-15-dieppe": "pl-12"
+    "g-2026-10-15-dieppe": "pl-12",
+    "g-2026-10-23-shediac": "pl-07"
   },
   "cycle": 1
 }

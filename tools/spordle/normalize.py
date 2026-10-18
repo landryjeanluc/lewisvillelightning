@@ -77,38 +77,61 @@ def schedule_from_capture(capture):
     text = capture['data']['visibleText']
     if 'Print Schedule' not in text or 'Add to Calendar' not in text:
         raise ValueError('Not a schedule view.')
-    day = r'((?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY), [A-Z]+ \d{1,2}, \d{4})'
+    day = r'(?:TODAY, |TOMORROW, |YESTERDAY, )?((?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY), [A-Z]+ \d{1,2}, \d{4})'
     pieces = re.split(r'^' + day + r'$', text, flags=re.MULTILINE)
-    games, incomplete = [], []
+    games, practices, incomplete = [], [], []
     window = re.search(r'Next \d+ days \([^\n]+\)', text)
+    event_pattern = r'(?:EXHIBITION|REGULAR SEASON|REGULAR|PLAYOFF|TOURNAMENT)\s*•\s*\d+|PRACTICE'
+    clock_pattern = r'\d{1,2}:\d{2}\s*[AP]\.?M\.?'
+
+    def clock(value):
+        return datetime.strptime(value.upper().replace('.', ''), '%I:%M %p').strftime('%H:%M')
+
     for i in range(1, len(pieces), 2):
         date = datetime.strptime(pieces[i].title(), '%A, %B %d, %Y').date().isoformat()
         block = lines(pieces[i + 1])
-        event = next((j for j,line in enumerate(block) if re.fullmatch(r'EXHIBITION\s*•\s*\d+', line)), None)
-        if event is None:
-            incomplete.append({'date': date, 'reason': 'Date heading captured without event details.'})
+        markers = [j for j, line in enumerate(block) if re.fullmatch(event_pattern, line)]
+        if not markers:
+            incomplete.append({'date': date, 'reason': 'Date heading captured without supported event details.'})
             continue
-        time_index = next((j for j,line in enumerate(block) if re.fullmatch(r'\d{1,2}:\d{2}\s*[AP]\.M\.', line)), None)
-        if event < 1 or time_index is None:
-            incomplete.append({'date': date, 'reason': 'Event details incomplete.'})
-            continue
-        before = [line for line in block[event+1:time_index] if line != '?' and not re.match(r'^(?:MON|TUE|WED|THU|FRI|SAT|SUN),', line)]
-        after = [line for line in block[time_index+1:] if line not in {'?', 'Previous', 'Next'}]
-        if len(before) != 2 or len(after) != 2:
-            incomplete.append({'date': date, 'reason': 'Unexpected team layout; requires inspection.'})
-            continue
-        clock = datetime.strptime(block[time_index].replace('.', ''), '%I:%M %p').strftime('%H:%M')
-        games.append({'date': date, 'time_local': clock, 'venue_display': block[event-1],
-                      'event_type': 'EXHIBITION', 'game_number': block[event].split('•')[-1].strip(),
-                      'first_listed_team': before[0], 'first_team_category': before[1],
-                      'second_listed_team': after[0], 'second_team_category': after[1],
-                      'away_team': before[0], 'home_team': after[0],
-                      'home_away_basis': 'Page display order; corroborated by the user-confirmed October 13 home game.',
-                      'score': None})
+        for n, event in enumerate(markers):
+            # Each next event is preceded by its own venue line.
+            stop = markers[n + 1] - 1 if n + 1 < len(markers) else len(block)
+            details = block[event + 1:stop]
+            time_index = next((j for j, line in enumerate(details)
+                               if re.fullmatch(clock_pattern, line, re.IGNORECASE)), None)
+            if event < 1 or time_index is None:
+                incomplete.append({'date': date, 'reason': 'Event details incomplete.'})
+                continue
+            common = {'date': date, 'time_local': clock(details[time_index]),
+                      'venue_display': block[event - 1]}
+            if block[event] == 'PRACTICE':
+                end = next((re.fullmatch(r'to\s*(' + clock_pattern + ')', line, re.IGNORECASE)
+                            for line in details[time_index + 1:] if line.lower().startswith('to')), None)
+                if not end or len(details[:time_index]) != 3:
+                    incomplete.append({'date': date, 'reason': 'Practice details incomplete.'})
+                    continue
+                practices.append(dict(common, end_time_local=clock(end[1])))
+                continue
+            before = [line for line in details[:time_index]
+                      if line != '?' and not re.match(r'^(?:MON|TUE|WED|THU|FRI|SAT|SUN),', line)]
+            after = [line for line in details[time_index + 1:] if line not in {'?', 'Previous', 'Next'}]
+            if len(before) != 2 or len(after) != 2:
+                incomplete.append({'date': date, 'reason': 'Unexpected team layout; requires inspection.'})
+                continue
+            games.append(dict(common, event_type=block[event].split('•')[0].strip(),
+                              game_number=block[event].split('•')[-1].strip(),
+                              first_listed_team=before[0], first_team_category=before[1],
+                              second_listed_team=after[0], second_team_category=after[1],
+                              away_team=before[0], home_team=after[0],
+                              home_away_basis='Page display order; corroborated by the user-confirmed October 13 home game.',
+                              score=None))
+    if not games and not practices:
+        raise ValueError('No supported schedule events found; existing schedule preserved.')
     return {'team_id': '223790', 'captured_at': capture['capturedAt'], 'source_url': capture['sourceUrl'],
             'filter_display': window.group() if window else None,
             'status': 'partial_view' if incomplete else 'captured_view',
-            'games': games, 'incomplete_dates': incomplete,
+            'games': games, 'practices': practices, 'incomplete_dates': incomplete,
             'coverage': 'Rendered schedule view only, not a complete season schedule.'}
 
 
@@ -185,7 +208,7 @@ def main():
         schedule = schedule_from_capture(schedule_capture)
         schedule['source_capture'] = str(schedule_path.relative_to(ROOT))
         write_json(ROOT / 'normalized/schedule.json', schedule)
-        print(f"Schedule: {len(schedule['games'])} rendered games; {len(schedule['incomplete_dates'])} dates need more detail.")
+        print(f"Schedule: {len(schedule['games'])} games, {len(schedule['practices'])} practices; {len(schedule['incomplete_dates'])} dates need more detail.")
     if not roster_views:
         raise SystemExit('No roster view available yet.')
     path, capture = max(roster_views, key=lambda item: item[1]['capturedAt'])

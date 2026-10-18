@@ -21,11 +21,11 @@ DATA = ROOT / "data"
 PHOTOS = ROOT / "assets/photos"
 TZ = ZoneInfo("America/Moncton")
 
-# Spordle's team label -> our stable team id. Unknown labels abort rather than
-# silently inventing a team, because a wrong id flips home/away on the poster.
+# Spordle labels mapped to established team identities and their existing crests.
 TEAM_IDS = {
     "U13-B DAVEY": "lewisville-lightning",
     "SHEDIAC": "shediac-cap-pele-predators",
+    "SHEDIAC CAP-PELÉ U13B": "shediac-cap-pele-predators",
     "DIEPPE": "dieppe",
 }
 
@@ -259,12 +259,26 @@ def build_schedule(src: dict) -> dict:
             "home": {"teamId": home, "score": g.get("home_score")},
             "away": {"teamId": away, "score": g.get("away_score")},
             "status": "final" if g.get("home_score") is not None and g.get("away_score") is not None else "scheduled",
-            "gameType": {"EXHIBITION": "exhibition", "REGULAR": "regular",
+            "gameType": {"EXHIBITION": "exhibition", "REGULAR": "regular", "REGULAR SEASON": "regular",
                          "PLAYOFF": "playoff", "TOURNAMENT": "tournament"}.get(
                              g.get("event_type", "").upper(), "regular"),
             "league": g.get("second_team_category") or None,
             "notes": None,
             "spordleId": g.get("game_number"),
+        })
+    for p in src.get("practices", []):
+        starts_at = to_iso(p["date"], p["time_local"])
+        ends_at = to_iso(p["date"], p["end_time_local"])
+        if ends_at <= starts_at:
+            raise ValueError("Practice end must follow its start; review the captured times")
+        events.append({
+            "id": f"p-{p['date']}-{p['time_local'].replace(':', '')}",
+            "type": "practice",
+            "practiceKind": "on_ice",
+            "startsAt": starts_at,
+            "endsAt": ends_at,
+            "venue": {"name": p["venue_display"], "surface": None, "address": None, "mapUrl": None},
+            "status": "scheduled", "notes": None, "spordleId": None,
         })
     events.sort(key=lambda e: e["startsAt"])
     return {
@@ -277,6 +291,31 @@ def build_schedule(src: dict) -> dict:
         },
         "events": events,
     }
+
+def merge_schedule(previous: dict, incoming: dict) -> dict:
+    """A rendered window never proves an absent event was removed.
+
+    Keep earlier games and their URLs, including when Spordle moves a numbered
+    game to another date. Conflicting incoming IDs require review before writes.
+    """
+    merged = {e["id"]: e for e in previous["events"]}
+    numbered = {(e["type"], e["spordleId"]): e["id"] for e in previous["events"] if e.get("spordleId")}
+    seen = set()
+    for event in incoming["events"]:
+        event = dict(event)
+        key = (event["type"], event.get("spordleId"))
+        if event.get("spordleId") and key in numbered:
+            event["id"] = numbered[key]
+        eid = event["id"]
+        if eid in seen:
+            raise ValueError("Schedule contains duplicate IDs; resolve same-day games before importing")
+        prior = merged.get(eid)
+        if prior and prior.get("spordleId") and event.get("spordleId") != prior["spordleId"]:
+            raise ValueError("Schedule ID belongs to another Spordle game; review before importing")
+        seen.add(eid)
+        merged[eid] = event
+    return dict(incoming, events=sorted(merged.values(), key=lambda e: e["startsAt"]))
+
 
 def write(path: Path, obj) -> None:
     pending = path.with_suffix(path.suffix + ".tmp")
@@ -293,15 +332,8 @@ def main() -> None:
     roster, flagged = build_roster(roster_src, overrides)
     sched_src = json.loads((NORM / "schedule.json").read_text())
     schedule = build_schedule(sched_src)     # may discover new opponents
-    # Partial windows must never erase the games referenced by stats and jobs.
-    if sched_src.get("status") == "partial_view" and (DATA / "schedule.json").exists():
-        previous = json.loads((DATA / "schedule.json").read_text())
-        merged = {e["id"]: e for e in previous["events"]}
-        merged.update({e["id"]: e for e in schedule["events"]})
-        schedule["events"] = sorted(merged.values(), key=lambda e: e["startsAt"])
-    ids = [e["id"] for e in schedule["events"]]
-    if len(set(ids)) != len(ids):
-        raise ValueError("Schedule contains duplicate IDs; resolve same-day games before importing")
+    previous = json.loads((DATA / "schedule.json").read_text()) if (DATA / "schedule.json").exists() else {"events": []}
+    schedule = merge_schedule(previous, schedule)
     write(DATA / "roster.json", roster)
     merge_new_teams()                        # ...so merge before writing
     write(DATA / "schedule.json", schedule)

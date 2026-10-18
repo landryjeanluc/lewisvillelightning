@@ -91,7 +91,10 @@ The collector captures Spordle views into `private/spordle/223790/` (gitignored
 — it holds real minors' data). The adapter maps those onto the contract:
 
 ```
-python3 tools/spordle/to_data.py     # normalized captures -> data/*.json
+python3 tools/spordle/pull_helios.py # retrieve the extension's saved captures
+python3 tools/spordle/normalize.py  # captures -> normalized views
+python3 tools/spordle/to_data.py    # normalized captures -> data/*.json
+python3 tools/assign_spotlight.py   # assign new games without changing prior picks
 cd site && npm run validate
 ```
 
@@ -102,10 +105,12 @@ exact-match table for genuinely internal-capital surnames; everything it guesses
 is printed for confirmation and can be pinned in
 `tools/spordle/name-overrides.json`.
 
-Known gaps in the current capture: the schedule is a **partial view** (next 30
-days, 2 games), two dates were captured without detail, and no stats or news
-view has been collected. Standings exist in a capture but are the whole
-association at zero — the season has not started.
+The extension saves locally on Helios; it does not publish the website. Review
+and commit the imported data, then run `deploy.sh` and push the commit. The latest
+schedule capture covers October 18–24, 2026: two practices and one regular-season
+game. Imports retain earlier events because a displayed window is not a complete
+season schedule. No player stats or news view has been collected; live player
+statistics come from completed scoresheets entered on the site.
 
 ## Player spotlight
 

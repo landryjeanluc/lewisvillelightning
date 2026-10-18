@@ -9,7 +9,8 @@ import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const {chromium}=createRequire(path.join(root,'site/package.json'))('playwright-core');
 const dist=path.join(root,'site/dist');
-const fixtures=JSON.parse(await readFile(path.join(root,'data/schedule.json'),'utf8')).events.filter(g=>g.type==='game');
+const schedule=JSON.parse(await readFile(path.join(root,'data/schedule.json'),'utf8')).events;
+const fixtures=schedule.filter(g=>g.type==='game');
 const scores=fixtures.map(g=>({game_id:g.id,starts_at:new Date().toISOString(),status:'scheduled',period:null,our_score:null,their_score:null,revision:0,updated_at:null}));
 let offline=false, reject=false;
 const user={id:1,role:'admin',display_name:'Coach',email:'coach',player_id:null};
@@ -80,7 +81,8 @@ try {
     await home.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));
     assert.equal(await home.locator('[data-home-game]:visible h1').textContent(),'Game Day');
     assert.equal(await home.locator('[data-home-spotlight]:visible').getAttribute('data-home-spotlight'),fixtures[1].id);
-    assert.equal(await home.locator('[data-home-event]:visible').count(),0);
+    const later=schedule.filter(e=>Date.parse(e.startsAt)>Date.parse(fixtures[1].startsAt)).slice(0,8);
+    assert.deepEqual(await home.locator('[data-home-event]:visible').evaluateAll(rows=>rows.map(row=>row.dataset.homeEvent)),later.map(e=>e.id));
     assert.ok((await home.locator('[data-home-game]:visible .hero-info').textContent()).includes('4:30 PM'));
     assert.equal(await home.locator('[data-home-game]:visible .cta').getAttribute('href'),`/schedule/${fixtures[1].id}`);
   });
@@ -95,11 +97,16 @@ try {
     Object.assign(scores[0],saved);
   });
   await check('cancelled games and exhausted schedules do not leave an old banner',async()=>{
-    const saved={...scores[1]};scores[1].status='cancelled';
+    const saved=scores.map(score=>({...score}));
+    scores[1].status='cancelled';
+    if(fixtures.length>2) {
+      await home.reload();await home.locator(`[data-home-game="${fixtures[2].id}"]`).waitFor({state:'visible'});
+    }
+    scores.forEach(score=>score.status='cancelled');
     await home.reload();await home.locator('[data-home-empty]').waitFor({state:'visible'});
     assert.equal(await home.locator('[data-home-spotlight]:visible').count(),0);
-    Object.assign(scores[1],saved);
-    await home.clock.setFixedTime(new Date('2026-10-16T15:00:00Z'));
+    scores.forEach((score,i)=>Object.assign(score,saved[i]));
+    await home.clock.setFixedTime(new Date(Math.max(...schedule.map(event=>Date.parse(event.endsAt ?? event.startsAt)))+2*86400000));
     await home.reload();await home.locator('[data-home-empty]').waitFor({state:'visible'});
     assert.equal(await home.locator('[data-home-game]:visible').count(),0);
     await home.clock.setFixedTime(new Date());

@@ -38,6 +38,66 @@ class RosterTest(unittest.TestCase):
         self.assertEqual(schedule['status'], 'partial_view')
         self.assertEqual(schedule['incomplete_dates'][0]['date'], '2026-10-16')
 
+    def test_today_practices_regular_games_and_multiple_events_per_day(self):
+        capture = self.capture()
+        capture['data']['visibleText'] = """Next 7 days (Oct 18, 2026 - Oct 24, 2026)
+Print Schedule
+Add to Calendar
+TODAY, SUNDAY, OCTOBER 18, 2026
+Test Arena
+PRACTICE
+U13-B DAVEY
+U13 BMixed
+SUN, OCT 18
+01:15 P.M.
+to02:15 p.m.
+Test Arena
+EXHIBITION•12
+?
+SHEDIAC
+U13 BMixed
+SUN, OCT 18
+05:30 P.M.
+U13-B DAVEY
+U13 BMixed
+WEDNESDAY, OCTOBER 21, 2026
+Test Arena
+PRACTICE
+U13-B DAVEY
+U13 BMixed
+WED, OCT 21
+06:30 P.M.
+to07:30 p.m.
+FRIDAY, OCTOBER 23, 2026
+Test Arena
+REGULAR SEASON•980825
+?
+SHEDIAC CAP-PELÉ U13B
+U13 BMixed
+FRI, OCT 23
+06:15 P.M.
+U13-B DAVEY
+U13 BMixed
+Previous
+Next"""
+        schedule = module.schedule_from_capture(capture)
+        self.assertEqual(schedule['status'], 'captured_view')
+        self.assertEqual(len(schedule['games']), 2)
+        self.assertEqual(len(schedule['practices']), 2)
+        self.assertEqual(schedule['practices'][0]['date'], '2026-10-18')
+        self.assertEqual(schedule['practices'][0]['time_local'], '13:15')
+        self.assertEqual(schedule['practices'][0]['end_time_local'], '14:15')
+        self.assertEqual(schedule['practices'][1]['time_local'], '18:30')
+        self.assertEqual(schedule['games'][1]['event_type'], 'REGULAR SEASON')
+        self.assertEqual(schedule['games'][1]['game_number'], '980825')
+        self.assertEqual(schedule['games'][1]['home_team'], 'U13-B DAVEY')
+
+    def test_unsupported_schedule_cannot_replace_last_successful_capture(self):
+        capture = self.capture()
+        capture['data']['visibleText'] = 'Print Schedule\nAdd to Calendar\nSUNDAY, OCTOBER 18, 2026\nUnknown event'
+        with self.assertRaisesRegex(ValueError, 'existing schedule preserved'):
+            module.schedule_from_capture(capture)
+
     def standings_capture(self):
         capture = self.capture()
         capture['data']['headings'] = ['U13-B TEST', 'STANDINGS']

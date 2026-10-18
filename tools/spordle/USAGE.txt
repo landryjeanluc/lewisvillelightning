@@ -16,10 +16,26 @@ No automatic refreshing, alarm, or recurring task is enabled.
 
 To bring captures to Hecaton:
   python3 tools/spordle/pull_helios.py
-Only team browser-captures and latest-browser.json are transferred. Browser
-profiles, login state, and unrelated files remain on Helios. Capture data remains
-under the Git-ignored private directory on both machines. Roster normalization
-and future update automation still require the first real capture to be inspected.
+Only team browser-captures and latest-browser.json are imported. Browser
+profiles and login state are not imported. Capture data remains under the
+Git-ignored private directory on both machines.
+
+Capturing does NOT update lvlnb.ca automatically. After pulling captures:
+  python3 tools/spordle/normalize.py
+  python3 tools/spordle/to_data.py
+  python3 tools/assign_spotlight.py
+Review the data diff and any incomplete-date warnings, run the repository checks,
+commit the intended changes, then publish with:
+  nix develop --command bash deploy.sh
+Push the committed changes to keep the repository in sync with the release.
+
+The schedule normalizer supports practices (including end times), exhibition,
+regular-season, playoff and tournament games, and TODAY date headings. A rendered
+window is never treated as the whole season: previous events remain, and numbered
+games retain their local URLs when rescheduled. Missing or unsupported details
+are reported for review; a capture with no supported events cannot replace the
+last normalized schedule. Cancellations/removals and ambiguous same-day games
+still require review rather than guessing from an event's absence in a window.
 
 EXPERIMENTAL PLAYWRIGHT ADAPTER (not the current collection route)
 
