@@ -18,6 +18,7 @@ echo "postgres up"
 
 export DATABASE_URL="postgresql://postgres@/lvlnb?host=$PGHOST"
 export UPLOAD_DIR="$TEST_ROOT/uploads"; mkdir -p "$UPLOAD_DIR"
+export HIGHLIGHT_DIR="$TEST_ROOT/highlights"
 export SESSION_SECRET="test-secret-not-production-at-least-32-bytes"
 export DATA_DIR="$API_DIR/../data"
 export COOKIE_SECURE=0

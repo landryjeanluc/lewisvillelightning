@@ -1330,3 +1330,6 @@ app.include_router(account_router(current_user, db, contract, screen))
 
 from scoreboard import build_router as scoreboard_router
 app.include_router(scoreboard_router(require_admin, db, contract))
+
+from highlights import build_router as highlights_router
+app.include_router(highlights_router(require_admin, current_user, db, contract))

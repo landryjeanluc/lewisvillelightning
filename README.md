@@ -164,6 +164,30 @@ shut and says nothing either way.
 `tools/test_player_goals_ui.mjs` drives those rules in a real browser,
 including that the static HTML carries no goal of the player's.
 
+## Player highlights
+
+Each player profile has a **Highlights** section. Sign in as an admin, open a
+player from the roster, and choose **Add a highlight**. Add a title, optionally
+choose a game, and upload an MP4 exported with H.264 video (8-bit) and AAC audio.
+Clips can be up to 100 MB, three minutes, and 4K. They appear immediately after
+upload validation; no website rebuild is needed. Admins can remove clips from
+the same section. Signed-in team members can watch; signed-out visitors cannot
+load either videos or thumbnails.
+
+Uploads send bounded pieces and retry from the last acknowledged position while
+the page remains open. Keep the selected file in place and submit again after a
+network error. The server validates the actual media, strips container metadata,
+creates a thumbnail and prepares the MP4 for seeking. It does not transcode HEVC
+or other codecs: export H.264 from the editing application before uploading.
+
+Highlight records live in PostgreSQL; files live in
+`/opt/lvlnb/private/highlights` (override with `HIGHLIGHT_DIR`). This directory is
+outside the static site and is excluded from deployment deletion. Back it up
+alongside the database. Abandoned uploads older than 48 hours are cleaned up on
+the next upload; published clips remain until an admin removes them. API tests
+exercise real video validation and authenticated byte-range playback; the
+browser suite covers player placement, retries, permissions and removal.
+
 ## Plays of the week
 
 The coach draws a play on a rink in `/admin → Plays`; the team watches it run at

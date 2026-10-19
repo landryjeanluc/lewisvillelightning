@@ -20,6 +20,8 @@
           ];
           # render/ drives this binary directly rather than downloading one
           CHROME_PATH = "${pkgs.chromium}/bin/chromium";
+          # PyAV's bundled FFmpeg libraries need C++ and zlib on NixOS.
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib pkgs.zlib ];
           shellHook = ''
             echo "Lewisville Lightning dev shell — node $(node --version), chromium at \$CHROME_PATH"
           '';

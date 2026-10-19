@@ -12,6 +12,7 @@ dependencies = [
   "pydantic>=2.9",
   "pillow>=11.0",        # upload resizing
   "python-multipart>=0.0.12",  # file uploads
+  "av>=16,<20",
 ]
 
 [tool.uv]

@@ -124,6 +124,21 @@ CREATE TABLE IF NOT EXISTS game_notes (
   PRIMARY KEY (game_id, kind)
 );
 
+CREATE TABLE IF NOT EXISTS player_highlights (
+  id           UUID PRIMARY KEY,
+  player_id    TEXT NOT NULL,
+  title        TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 100),
+  game_id      TEXT,
+  bytes        BIGINT NOT NULL CHECK (bytes > 0 AND bytes <= 104857600),
+  received     BIGINT NOT NULL DEFAULT 0 CHECK (received >= 0 AND received <= bytes),
+  state        TEXT NOT NULL DEFAULT 'uploading' CHECK (state IN ('uploading', 'ready')),
+  duration     DOUBLE PRECISION,
+  created_by   BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS player_highlights_player ON player_highlights(player_id, created_at DESC) WHERE state='ready';
+
 CREATE TABLE IF NOT EXISTS uploads (
   id           BIGSERIAL PRIMARY KEY,
   path         TEXT NOT NULL UNIQUE,            -- /uploads/<name>

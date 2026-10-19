@@ -3,6 +3,7 @@ import LiveStats from "../../components/LiveStats.astro";
 import Base from "../../layouts/Base.astro";
 import PlayerCard from "../../components/PlayerCard.astro";
 import PlayerGoals from "../../components/PlayerGoals.astro";
+import PlayerHighlights from "../../components/PlayerHighlights.astro";
 import { roster, stats, displayName, showBirthYear } from "../../lib/data";
 import { svPct, gaa } from "../../lib/format";
 
@@ -63,6 +64,7 @@ const line = skater
 
   <section class="section" data-profile-detail={p.id} hidden><h2>About the player</h2><div></div></section>
   <LiveStats playerId={p.id} />
+  <PlayerHighlights playerId={p.id} />
   <PlayerGoals playerId={p.id} />
 
   <script>import "../../scripts/cardfx";</script>

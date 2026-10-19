@@ -1,0 +1,52 @@
+---
+import { games, sides } from "../lib/data";
+interface Props { playerId: string }
+const { playerId } = Astro.props;
+---
+<section class="section highlights" data-player-highlights={playerId} aria-labelledby="highlights-title">
+  <header class="highlights-head">
+    <div><span class="eyebrow">On the ice</span><h2 id="highlights-title">Highlights</h2></div>
+    <button type="button" class="hl-add" data-highlight-add hidden>Add a highlight</button>
+  </header>
+  <p class="dim" data-highlight-state role="status">Loading highlights…</p>
+  <p class="dim" data-highlight-feedback role="status" aria-live="polite"></p>
+  <button type="button" data-highlight-reload hidden>Try again</button>
+  <form class="card hl-form" data-highlight-form hidden>
+    <h3>Add a highlight</h3>
+    <p class="dim">Share a great play with the team. Clips appear on this player’s page.</p>
+    <label>Title<input name="title" required maxlength="100" placeholder="A great save, a big goal, a perfect pass…" /></label>
+    <label>Game (optional)<select name="game_id"><option value="">No game selected</option>
+      {[...games].reverse().map(game => <option value={game.id}>{game.startsAt.slice(0,10)} — {sides(game).weAreHome ? "vs" : "at"} {sides(game).them.short}</option>)}
+    </select></label>
+    <label>Video clip<input name="clip" type="file" accept="video/mp4,.mp4" required /></label>
+    <p class="dim hl-help">MP4 with H.264 video and AAC audio · Up to 100 MB and 3 minutes. Keep this page open while it uploads.</p>
+    <progress data-highlight-progress max="100" value="0" hidden aria-label="Video upload progress"></progress>
+    <p data-highlight-upload-state role="status" aria-live="polite"></p>
+    <div class="hl-actions"><button type="submit">Upload highlight</button><button type="button" data-highlight-cancel>Cancel</button></div>
+  </form>
+  <div class="hl-grid" data-highlight-list></div>
+</section>
+<script>import "../scripts/player-highlights";</script>
+<style>
+  .highlights { margin-top: var(--s-8); }
+  .highlights-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--s-4); margin-bottom:var(--s-5); }
+  .highlights-head h2 { margin-top:var(--s-2); }
+  .highlights button { border:1px solid var(--hairline); background:var(--surface-2); color:var(--text); border-radius:var(--r-md); padding:.7rem 1rem; cursor:pointer; font:inherit; font-weight:700; }
+  .highlights button:hover { border-color:var(--volt-500); }
+  .highlights button:disabled { opacity:.55; cursor:wait; }
+  .highlights .hl-add, .hl-form button[type="submit"] { background:var(--volt-500); color:var(--navy-950,#081525); }
+  .hl-form { padding:var(--s-5); margin-bottom:var(--s-6); }
+  .hl-form label { display:grid; gap:var(--s-2); margin-top:var(--s-4); font-weight:600; }
+  .hl-form input,.hl-form select { width:100%; min-width:0; padding:.7rem; background:var(--surface-2); color:var(--text); border:1px solid var(--hairline); border-radius:var(--r-md); font:inherit; }
+  .hl-help { font-size:var(--t-sm); margin-top:var(--s-3); }
+  .hl-form progress { width:100%; margin-top:var(--s-4); accent-color:var(--volt-500); }
+  .hl-actions { display:flex; gap:var(--s-3); flex-wrap:wrap; margin-top:var(--s-4); }
+  .hl-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); gap:var(--s-5); }
+  .hl-grid :global(.hl-card) { overflow:hidden; min-width:0; }
+  .hl-grid :global(video) { display:block; width:100%; aspect-ratio:16/9; object-fit:contain; background:#050914; }
+  .hl-grid :global(.hl-content) { padding:var(--s-4); }
+  .hl-grid :global(h3) { font-size:var(--t-lg); overflow-wrap:anywhere; }
+  .hl-grid :global(.hl-meta) { margin-top:var(--s-2); font-size:var(--t-sm); }
+  .hl-grid :global(.hl-remove) { margin-top:var(--s-4); font-size:var(--t-sm); }
+  .hl-grid :global(.hl-error) { margin-top:var(--s-3); }
+</style>
