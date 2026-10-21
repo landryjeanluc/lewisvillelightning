@@ -369,3 +369,88 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE game_results ADD COLUMN IF NOT EXISTS period TEXT
   CHECK (period IN ('1','2','3','OT','SO','INT1','INT2'));
 ALTER TABLE game_results ADD COLUMN IF NOT EXISTS revision BIGINT NOT NULL DEFAULT 0;
+
+-- --------------------------------------------------------- live broadcast --
+-- The team stream the site plays, with our own overlay drawn over it. Only the
+-- platform's video id is stored, never a pasted URL: the embed address is
+-- rebuilt from the id, so a stored value can never become an arbitrary frame.
+CREATE TABLE IF NOT EXISTS game_streams (
+  game_id    TEXT PRIMARY KEY,
+  provider   TEXT NOT NULL DEFAULT 'youtube' CHECK (provider IN ('youtube')),
+  video_id   TEXT NOT NULL CHECK (video_id ~ '^[A-Za-z0-9_-]{11}$'),
+  label      TEXT CHECK (label IS NULL OR length(label) <= 120),
+  state      TEXT NOT NULL DEFAULT 'scheduled' CHECK (state IN ('scheduled','live','ended')),
+  -- When the broadcast went live. Anchors highlight marks to a position in the
+  -- recording, which is what turns a mark into a jump-to-the-goal link.
+  started_at TIMESTAMPTZ,
+  updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- The broadcast clock, stored as INTENT rather than ticks: `remaining_ms` is
+-- the reading that was true at `anchor_at`, and every client derives the
+-- countdown from the server's own now(). One poll every few seconds then drives
+-- a smooth local countdown, every phone in the building agrees, and nothing
+-- depends on a device clock.
+--
+-- `elapsed_ms` is total game time played and only ever increases. Penalties are
+-- measured against it, so a penalty clock stops when the game clock stops and
+-- carries across periods of any length without any period arithmetic.
+CREATE TABLE IF NOT EXISTS game_clock (
+  game_id          TEXT PRIMARY KEY,
+  period           TEXT NOT NULL DEFAULT '1'
+                   CHECK (period IN ('1','2','3','OT','SO','INT1','INT2')),
+  period_length_ms INT NOT NULL DEFAULT 900000
+                   CHECK (period_length_ms BETWEEN 60000 AND 3600000),
+  remaining_ms     INT NOT NULL DEFAULT 900000
+                   CHECK (remaining_ms BETWEEN 0 AND 3600000),
+  elapsed_ms       BIGINT NOT NULL DEFAULT 0
+                   CHECK (elapsed_ms BETWEEN 0 AND 86400000),
+  running          BOOLEAN NOT NULL DEFAULT false,
+  anchor_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  revision         BIGINT NOT NULL DEFAULT 0,
+  updated_by       BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Append-only. Every visible number on the overlay — score, shots, penalties on
+-- ice, strength, scoring summary — is derived from this log, so there is exactly
+-- one reducer. A mis-tap is VOIDED, never deleted: the log is what happened.
+-- Idempotent on (game_id, client_id) so a retried tap on arena wifi cannot
+-- double-count a goal.
+CREATE TABLE IF NOT EXISTS game_events (
+  id          BIGSERIAL PRIMARY KEY,
+  game_id     TEXT NOT NULL,
+  kind        TEXT NOT NULL
+              CHECK (kind IN ('goal','shot','penalty','highlight','timeout','goalie','note')),
+  team        TEXT CHECK (team IN ('us','them')),
+  period      TEXT NOT NULL CHECK (period IN ('1','2','3','OT','SO','INT1','INT2')),
+  clock_ms    INT NOT NULL CHECK (clock_ms BETWEEN 0 AND 3600000),
+  elapsed_ms  BIGINT NOT NULL CHECK (elapsed_ms BETWEEN 0 AND 86400000),
+  player_id   TEXT,
+  assist1     TEXT,
+  assist2     TEXT,
+  minutes     INT CHECK (minutes IN (2,4,5,10)),
+  infraction  TEXT CHECK (infraction IS NULL OR length(infraction) <= 40),
+  strength    TEXT CHECK (strength IN ('even','pp','pk','en','ps','sh')),
+  note        TEXT CHECK (note IS NULL OR length(note) <= 200),
+  -- Seconds into the broadcast when this happened, when the stream's start is
+  -- known. Null for anything marked before the stream was declared live.
+  stream_offset_ms BIGINT CHECK (stream_offset_ms IS NULL OR stream_offset_ms >= 0),
+  client_id   UUID NOT NULL,
+  created_by  BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  voided_at   TIMESTAMPTZ,
+  voided_by   BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE (game_id, client_id),
+  CHECK (kind <> 'penalty' OR (team IS NOT NULL AND minutes IS NOT NULL)),
+  CHECK (kind NOT IN ('goal','shot','timeout','goalie') OR team IS NOT NULL),
+  -- Assists belong to a goal by one of ours, in order, and nobody assists
+  -- their own goal.
+  CHECK (assist1 IS NULL OR (kind = 'goal' AND player_id IS NOT NULL)),
+  CHECK (assist2 IS NULL OR assist1 IS NOT NULL),
+  CHECK (assist1 IS NULL OR assist1 <> player_id),
+  CHECK (assist2 IS NULL OR (assist2 <> player_id AND assist2 <> assist1))
+);
+CREATE INDEX IF NOT EXISTS game_events_game_idx ON game_events (game_id, id);
+CREATE INDEX IF NOT EXISTS game_events_live_idx ON game_events (game_id, kind) WHERE voided_at IS NULL;

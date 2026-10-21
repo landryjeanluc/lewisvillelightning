@@ -16,6 +16,7 @@ const nav = [
   { href: "/schedule", label: "Schedule" },
   { href: "/roster",   label: "Roster" },
   { href: "/stats",    label: "Stats" },
+  { href: "/watch",    label: "Watch" },
   { href: "/plays",    label: "Plays" },
   { href: "/goals",    label: "Goals" },
   { href: "/news",     label: "News" },
@@ -70,6 +71,9 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
               </li>
             ))}
             <li><a href="/account" aria-current={isActive("/account") ? "page" : undefined}>Account</a></li>
+            <li id="control-nav-item" hidden>
+              <a href="/control" aria-current={isActive("/control") ? "page" : undefined}>Console</a>
+            </li>
             <li id="admin-nav-item" hidden>
               <a href="/admin" aria-current={isActive("/admin") ? "page" : undefined}>Admin</a>
             </li>
@@ -198,14 +202,19 @@ const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWit
       const toggle = head.querySelector<HTMLButtonElement>(".menu-toggle")!;
       const mobile = matchMedia("(max-width: 900px)");
       const adminNav = head.querySelector<HTMLElement>("#admin-nav-item")!;
+      const controlNav = head.querySelector<HTMLElement>("#control-nav-item")!;
       let authRequest = 0;
       async function refreshAdminLink() {
         const request = ++authRequest;
         adminNav.hidden = true;
+        controlNav.hidden = true;
         try {
           const response = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
           const user = response.ok ? await response.json() : null;
-          if (request === authRequest) adminNav.hidden = user?.role !== "admin";
+          if (request === authRequest) {
+            adminNav.hidden = user?.role !== "admin";
+            controlNav.hidden = user?.role !== "admin";
+          }
         } catch { /* Keep the link hidden when the session cannot be checked. */ }
       }
       document.addEventListener("auth:changed", refreshAdminLink);

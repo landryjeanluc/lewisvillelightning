@@ -188,6 +188,35 @@ the next upload; published clips remain until an admin removes them. API tests
 exercise real video validation and authenticated byte-range playback; the
 browser suite covers player placement, retries, permissions and removal.
 
+## Live broadcast
+
+The team streams games on YouTube; the site plays them at `/watch` with our own
+broadcast overlay drawn over the video — scorebug, running clock, shots on goal,
+penalty boxes with their own clocks, strength, goal graphics, and intermission
+and final cards. An admin runs all of it from a phone in the stands at
+`/control`: start and stop the clock, tap goals with scorer and assists, shots,
+penalties, timeouts, and a one-tap **highlight mark** that becomes a jump link
+into the recording and a clip queue for the player highlights uploader.
+
+**Read `docs/BROADCAST.md` before running one.** The two things worth knowing
+up front: the team score and period publish to the rest of the site as you tap,
+so the homepage hero and the existing scoreboards need no extra work — but
+per-player goals and assists stay in the broadcast log until a human enters them
+in Admin → Game scoring, because a fat thumb on GOAL must not edit a child's
+season statistics. And the overlay shows true current state while YouTube live
+runs 15–30 seconds behind, so site viewers see a goal on the bug before the
+video gets there.
+
+The clock is stored as a reading plus the instant it was true, not as ticks, so
+every phone in the building derives the same countdown from a three-second poll
+and nothing depends on a device clock. The log is append-only — undo voids a
+row, never deletes it — and everything countable is derived from it server-side.
+Only a YouTube video id is ever stored, and no YouTube JavaScript runs on our
+pages.
+
+Deploying this needs one nginx change: the Content-Security-Policy must allow
+`frame-src` for YouTube. See `docs/DEPLOY.md`.
+
 ## Plays of the week
 
 The coach draws a play on a rink in `/admin → Plays`; the team watches it run at

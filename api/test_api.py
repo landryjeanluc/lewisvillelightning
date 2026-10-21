@@ -570,6 +570,9 @@ async def main():
             from test_highlights import run_highlight_tests
             results.extend(await run_highlight_tests(app, pool, ok))
 
+            from test_broadcast import run_broadcast_tests
+            results.extend(await run_broadcast_tests(app, pool, ok))
+
             print(f"\n{sum(results)}/{len(results)} passed")
             return 0 if all(results) else 1
 

@@ -1,0 +1,51 @@
+---
+import Base from "../../layouts/Base.astro";
+import BroadcastStage from "../../components/BroadcastStage.astro";
+import LiveGame from "../../components/LiveGame.astro";
+import Spotlight from "../../components/Spotlight.astro";
+import { games, sides, spotlightFor, team } from "../../lib/data";
+import { longDate, time, relativeDay } from "../../lib/format";
+
+export function getStaticPaths() {
+  return games.map((game) => ({ params: { id: game.id }, props: { game } }));
+}
+const { game } = Astro.props as { game: any };
+const s = sides(game);
+const star = spotlightFor(game.id);
+const title = `${s.weAreHome ? "vs" : "at"} ${s.them.short}`;
+---
+<Base title={`Watch · ${title}`} wide>
+  <a class="back" href="/watch">← All broadcasts</a>
+
+  <header class="head">
+    <span class="eyebrow">{team.level} {team.division} · {relativeDay(game.startsAt)}</span>
+    <h1 class="display--italic">{s.weAreHome ? "Lightning vs" : "Lightning at"} {s.them.short}</h1>
+    <p class="muted">{longDate(game.startsAt)} · {time(game.startsAt)} · {game.venue.name}</p>
+  </header>
+
+  <BroadcastStage game={game} />
+
+  <div class="after">
+    {star && <div class="spotwrap"><Spotlight player={star} size="md" /></div>}
+    <LiveGame gameId={game.id} />
+  </div>
+
+  <p class="dim foot">
+    The scorebug, penalty clocks and goal graphics are ours, driven from the bench.
+    <a href={`/schedule/${game.id}`}>Game details</a>.
+  </p>
+</Base>
+
+<style>
+  .back {
+    display: inline-block; margin-bottom: var(--s-5);
+    font-size: var(--t-sm); font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim); text-decoration: none;
+  }
+  .back:hover { color: var(--text); }
+  .head { text-align: center; margin-bottom: var(--s-5); }
+  .head h1 { font-size: var(--t-xl); margin-block: var(--s-2); }
+  .after { margin-top: var(--s-6); }
+  .spotwrap { display: flex; justify-content: center; margin-bottom: var(--s-6); }
+  .foot { margin-top: var(--s-6); text-align: center; font-size: var(--t-sm); }
+</style>

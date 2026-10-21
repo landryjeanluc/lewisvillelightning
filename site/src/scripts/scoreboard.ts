@@ -4,6 +4,14 @@ for(const board of document.querySelectorAll<HTMLElement>('[data-live-board]')) 
   const fallback=document.querySelector<HTMLElement>('[data-upcoming-hero]');
   let busy=false;
   let signature='';
+  // Which games have a stream changes on game night, not at build time, so the
+  // watch link is revealed from the API rather than rendered in.
+  let streamed=new Set<string>();
+  async function streams() {
+    const response=await api('/broadcast');
+    if(response.ok && Array.isArray(response.body?.streams))
+      streamed=new Set(response.body.streams.map((s:{game_id:string})=>s.game_id));
+  }
   async function refresh() {
     if(busy || document.hidden) return;
     busy=true;
@@ -26,6 +34,8 @@ for(const board of document.querySelectorAll<HTMLElement>('[data-live-board]')) 
     if(!score || !fixture) {signature='';return;}
     board.querySelector<HTMLAnchorElement>('[data-score-admin]')!.href=`/admin?game=${encodeURIComponent(score.game_id)}#sheet-tab`;
     connection.textContent=score.status==='in_progress'?'Scores update automatically.':'Final result';
+    const watch=fixture.querySelector<HTMLElement>('[data-live-watch]');
+    if(watch) watch.hidden=!streamed.has(score.game_id);
     const next=JSON.stringify([score.game_id,score.our_score,score.their_score,score.status,score.period]);
     if(next===signature) return;
     signature=next;
@@ -40,8 +50,10 @@ for(const board of document.querySelectorAll<HTMLElement>('[data-live-board]')) 
     const r=await api('/auth/me');
     board.querySelector<HTMLElement>('[data-score-admin]')!.hidden=!(r.ok && r.body?.role==='admin');
   }
-  void identity();void refresh();
+  void identity();void streams().then(refresh);
   setInterval(()=>void refresh(),5000);
+  // The stream list changes once or twice a night, not every five seconds.
+  setInterval(()=>void streams(),60000);
   document.addEventListener('visibilitychange',()=>void refresh());
-  document.addEventListener('auth:changed',()=>{void identity();void refresh();});
+  document.addEventListener('auth:changed',()=>{void identity();void streams().then(refresh);});
 }

@@ -1333,3 +1333,6 @@ app.include_router(scoreboard_router(require_admin, db, contract))
 
 from highlights import build_router as highlights_router
 app.include_router(highlights_router(require_admin, current_user, db, contract))
+
+from broadcast import build_router as broadcast_router
+app.include_router(broadcast_router(current_user, require_admin, db, contract))

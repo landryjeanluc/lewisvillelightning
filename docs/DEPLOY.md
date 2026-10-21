@@ -95,6 +95,13 @@ feeding HTML to `fetch()` when a session expires.
 - Set no-referrer, nosniff, framing protection and a content security policy.
   Disable reset-query logging at both proxies. Configure HTTPS redirect/HSTS on
   the TLS terminator and firewall the internal listener from public access.
+- **That policy must allow the broadcast frame**:
+  `frame-src https://www.youtube-nocookie.com https://www.youtube.com`. `/watch`
+  plays the team's YouTube stream in an iframe under our own overlay; without
+  this the player is blocked and the page shows an empty frame. `script-src`
+  stays `'self'` — no YouTube JavaScript runs on our pages. The deployed vhost
+  has no CSP today, so /watch works there now; this applies whenever the
+  reference policy is adopted. See `docs/BROADCAST.md`.
 - Permit 13 MB request bodies at the proxy for 12 MB image uploads plus multipart
   overhead. The app independently enforces request size, format and pixel limits.
 
