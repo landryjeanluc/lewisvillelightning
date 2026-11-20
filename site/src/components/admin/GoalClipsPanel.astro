@@ -1,0 +1,49 @@
+---
+import { roster } from "../../lib/data";
+const players = [...roster.players].sort((a: any, b: any) => a.number - b.number)
+  .map((p: any) => ({ id: p.id, number: p.number, name: `${p.firstName} ${p.lastName}` }));
+---
+<section class="clips" data-goal-clips aria-labelledby="clips-title">
+  <h2 id="clips-title">Goal clips</h2>
+  <p class="dim">Clips cut from the game replay by <code>tools/replay/goal_clips.py</code>. Watch each goal, say who scored and who was on the ice, then copy the totals to the scoresheet above.</p>
+  <label class="clips-add">Add clips for this game
+    <input type="file" accept="video/mp4,.mp4" multiple data-clip-files />
+  </label>
+  <progress max="100" value="0" hidden data-clip-progress aria-label="Clip upload progress"></progress>
+  <p role="status" aria-live="polite" data-clip-status></p>
+  <div class="clip-list" data-clip-list></div>
+  <div class="clip-apply card" data-clip-apply hidden>
+    <p data-clip-summary></p>
+    <button type="button" data-clip-copy>Copy goals, assists and +/− to the scoresheet</button>
+    <p class="dim">Penalty minutes are not on video; type those in. Nothing is saved until you press Save changes.</p>
+  </div>
+  <script type="application/json" data-clip-players set:html={JSON.stringify(players).replace(/</g, "\\u003c")}></script>
+</section>
+<script>import "../../scripts/goal-clips";</script>
+<style>
+  .clips { margin-top: var(--s-8); }
+  .clips h2 { margin-bottom: var(--s-3); }
+  .clips-add { display: grid; gap: var(--s-2); margin-top: var(--s-4); max-width: 28rem; font-weight: 600; }
+  .clips progress { width: 100%; max-width: 28rem; margin-top: var(--s-3); accent-color: var(--volt-500); }
+  .clip-list { display: grid; gap: var(--s-5); margin-top: var(--s-4);
+               grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+  .clip-apply { padding: var(--s-4); margin-top: var(--s-5); display: grid; gap: var(--s-3); justify-items: start; }
+  /* Cards are built at runtime, so their rules must be global to reach them. */
+  .clip-list :global(.clip) { overflow: hidden; min-width: 0; }
+  .clip-list :global(video) { display: block; width: 100%; aspect-ratio: 16/9; background: #050914; }
+  .clip-list :global(.clip-body) { padding: var(--s-4); display: grid; gap: var(--s-3); }
+  .clip-list :global(.clip-head) { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); }
+  .clip-list :global(h3) { font-size: var(--t-md); }
+  .clip-list :global(.clip-fields) { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+  .clip-list :global(.clip-fields label) { display: grid; gap: var(--s-2); font-size: var(--t-sm); font-weight: 600; min-width: 0; }
+  .clip-list :global(select) { width: 100%; min-width: 0; }
+  .clip-list :global(.clip-ice) { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+  .clip-list :global(.clip-ice button) { min-width: 2.75rem; padding: var(--s-2); background: var(--surface-2);
+    color: var(--text-dim); border: 1px solid var(--hairline); border-radius: var(--r-md); font-weight: 700; }
+  .clip-list :global(.clip-ice button[aria-pressed="true"]) { color: var(--text); border-color: var(--volt-500); background: var(--bg-raised); }
+  .clip-list :global(.clip-pp) { display: flex; align-items: center; gap: var(--s-2); font-size: var(--t-sm); }
+  .clip-list :global(.clip-pp input) { width: auto; }
+  .clip-list :global(.clip-remove) { background: none; border: 0; padding: 0; color: var(--loss); font-size: var(--t-sm);
+    font-weight: 600; text-transform: none; letter-spacing: 0; cursor: pointer; }
+  .clip-list :global(.clip-note) { font-size: var(--t-sm); min-height: 1.2em; }
+</style>

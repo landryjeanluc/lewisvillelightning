@@ -16,6 +16,12 @@ to `/stats` and player pages. Both team scores are required. This also works for
 a completed game entered afterwards without first starting it live. For later
 corrections, load the final game, edit the entries, and press Save changes.
 
+When the game was recorded, the **Goal clips** section under the player table
+can fill the goals, assists and plus/minus for you: upload the clips cut by
+`tools/replay/goal_clips.py`, tag each goal, and copy the totals to the sheet.
+See "Goal clips from game replays" in the README. Copying only changes the form;
+Save changes or Finish game publishes it, exactly as for typed entries.
+
 The status selector also supports Not started, Postponed, and Cancelled. Those
 states preserve saved player entries but exclude the game from season totals.
 The editor explains whether the selected status contributes to the stats pages.

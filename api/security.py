@@ -80,7 +80,7 @@ class SecurityMiddleware:
 
         path = scope["path"].rstrip("/")
         limit = 13 * 1024 * 1024 if path in ("/uploads", "/api/uploads") else 1024 * 1024
-        if scope["method"] == "PUT" and re.fullmatch(r"(?:/api)?/highlights/uploads/[0-9a-fA-F-]{36}", path):
+        if scope["method"] == "PUT" and re.fullmatch(r"(?:/api)?/(?:highlights|goal-clips)/uploads/[0-9a-fA-F-]{36}", path):
             limit = 8 * 1024 * 1024
         try:
             declared = int(headers.get("content-length", "0"))

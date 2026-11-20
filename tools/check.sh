@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 (cd site && npm ci --no-audit && npm run validate)
 uv run --project api --frozen bash api/test.sh
 python -m unittest discover -s tools/spordle -p '*_test.py'
+python -m unittest discover -s tools/replay -p '*_test.py'
 node --test tools/spordle/core.test.mjs
 for test in tools/test_*_ui.mjs tools/test_pwa.mjs; do
   node "$test"

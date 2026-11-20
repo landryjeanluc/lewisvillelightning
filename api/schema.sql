@@ -139,6 +139,29 @@ CREATE TABLE IF NOT EXISTS player_highlights (
 );
 CREATE INDEX IF NOT EXISTS player_highlights_player ON player_highlights(player_id, created_at DESC) WHERE state='ready';
 
+-- One clip per goal, cut from the game replay by tools/replay/goal_clips.py.
+-- The tags (scorer, assists, on the ice) add up to scoresheet columns; a goal
+-- is `seq` in game order, and a replacement clip must remove the old one first.
+CREATE TABLE IF NOT EXISTS goal_clips (
+  id           UUID PRIMARY KEY,
+  game_id      TEXT NOT NULL,
+  seq          INT NOT NULL CHECK (seq BETWEEN 1 AND 99),
+  team         TEXT NOT NULL CHECK (team IN ('us', 'them')),
+  scorer       TEXT,
+  assist1      TEXT,
+  assist2      TEXT,
+  on_ice       TEXT[] NOT NULL DEFAULT '{}',
+  power_play   BOOLEAN NOT NULL DEFAULT false,   -- counts for nobody's plus/minus
+  bytes        BIGINT NOT NULL CHECK (bytes > 0 AND bytes <= 104857600),
+  received     BIGINT NOT NULL DEFAULT 0 CHECK (received >= 0 AND received <= bytes),
+  state        TEXT NOT NULL DEFAULT 'uploading' CHECK (state IN ('uploading', 'ready')),
+  duration     DOUBLE PRECISION,
+  created_by   BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (game_id, seq)
+);
+
 CREATE TABLE IF NOT EXISTS uploads (
   id           BIGSERIAL PRIMARY KEY,
   path         TEXT NOT NULL UNIQUE,            -- /uploads/<name>

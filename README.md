@@ -18,6 +18,7 @@ assets/
 site/          Astro site (static output)
 render/        headless-chromium game-day graphics renderer
 tools/spordle/ capture collector + to_data.py adapter onto the contract
+tools/replay/  goal_clips.py: cut one clip per goal out of a game replay
 output/<date>/ rendered posters
 ```
 
@@ -205,6 +206,45 @@ alongside the database. Abandoned uploads older than 48 hours are cleaned up on
 the next upload; published clips remain until an admin removes them. API tests
 exercise real video validation and authenticated byte-range playback; the
 browser suite covers player placement, retries, permissions and removal.
+
+## Goal clips from game replays
+
+The XbotGo recordings on the team's YouTube channel carry a score box in the
+top-left corner. `tools/replay/goal_clips.py` reads it, finds every score
+change, and cuts a clip around each goal:
+
+```
+yt-dlp -f "bv*[height<=1080]+ba" <replay url>          # or download it any other way
+python3 tools/replay/goal_clips.py "<video file>" --game g-2026-10-23-shediac
+```
+
+A 78-minute game takes about 20 seconds to read and a minute to cut. Clips land
+in `private/replays/<game id>/` (git-ignored: they show real children), named
+`<game id>.goal-03.us.2-1.mp4`. `--list` reports the goals without cutting,
+`--before`/`--after` change how many seconds are kept around the score change
+(40 and 8 by default), and `--us-row top|bottom` says which row of the box is
+ours when the default (home team on top) is wrong.
+
+Then open **Admin → Game scoring**, choose the game, and under **Goal clips**
+select the clip files. For each goal, pick the scorer and assists and tap the
+jersey numbers that were on the ice; every change saves at once. **Copy goals,
+assists and +/− to the scoresheet** fills those columns from the tags, leaving
+penalty minutes alone, and nothing is published until **Save changes** or
+**Finish game**. Plus/minus follows the usual rule: +1 or −1 for each skater on
+the ice, nothing for goalies, nothing on a goal ticked as a power play.
+
+What the video cannot tell you:
+
+- The score box is updated by hand, so the goal is some seconds before
+  the change and a tap the operator missed is a clip the tool missed. Check the
+  goal count against the game sheet.
+- Jersey numbers are readable on the near side and mostly not at the far net.
+  Who was on the ice is a person's call; the tool does not guess.
+- Penalties and the game clock are not on the video at all.
+
+Clip records live in PostgreSQL (`goal_clips`); files live in
+`/opt/lvlnb/private/goal-clips` (override with `GOAL_CLIP_DIR`), beside the
+highlights and backed up the same way. Only admins can list, watch or tag them.
 
 ## Plays of the week
 

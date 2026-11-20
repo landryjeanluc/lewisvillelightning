@@ -119,7 +119,7 @@ rsync -rlptD --delay-updates --delete-delay \
 # so a schedule or roster change needs it to re-read. /reload needs an admin
 # session; a restart is the version that works from a script.
 echo "==> reloading the API"
-ssh "$HOST" "sudo install -d -o lvlnb -g lvlnb -m 700 /opt/lvlnb/private/highlights"
+ssh "$HOST" "sudo install -d -o lvlnb -g lvlnb -m 700 /opt/lvlnb/private/highlights /opt/lvlnb/private/goal-clips"
 ssh "$HOST" "bash -c 'cd /opt/lvlnb && uv sync --frozen --no-dev && sudo systemctl restart lvlnb-api'"
 
 echo "==> verifying"

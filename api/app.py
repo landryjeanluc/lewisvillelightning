@@ -1333,3 +1333,6 @@ app.include_router(scoreboard_router(require_admin, db, contract))
 
 from highlights import build_router as highlights_router
 app.include_router(highlights_router(require_admin, current_user, db, contract))
+
+from goal_clips import build_router as goal_clips_router
+app.include_router(goal_clips_router(require_admin, db, contract))

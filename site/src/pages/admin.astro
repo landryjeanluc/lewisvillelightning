@@ -7,6 +7,7 @@ import PlaysPanel from "../components/admin/PlaysPanel.astro";
 import JobsPanel from "../components/admin/JobsPanel.astro";
 import ModerationPanel from "../components/admin/ModerationPanel.astro";
 import GoalsPanel from "../components/admin/GoalsPanel.astro";
+import GoalClipsPanel from "../components/admin/GoalClipsPanel.astro";
 import { roster, games, sides } from "../lib/data";
 
 // Roster and fixtures are build-time data; only the stats themselves are live.
@@ -97,6 +98,7 @@ const gameList = games.map((g: any) => {
       </table>
     </div>
 
+    <GoalClipsPanel />
     </section>
 
     <section id="news-tab" hidden><NewsPanel /></section>
@@ -169,6 +171,7 @@ const gameList = games.map((g: any) => {
       : state === "scheduled" ? "Start game when play begins, or use Finish game to enter a completed game."
       : "Saved player entries are kept, but this game does not count toward season totals.";
     for (const el of document.querySelectorAll<HTMLInputElement>("#sheet-tab input, #sheet-tab select, #sheet-tab button:not([data-logout])")) {
+      if (el.closest("[data-goal-clips]")) continue;   // the clips panel runs its own controls
       el.disabled = sheetSaving || (!sheetReady && el.id !== "game" && el.id !== "reload-sheet");
     }
   }
@@ -202,6 +205,7 @@ const gameList = games.map((g: any) => {
     if (load !== sheetLoad) return;
     if (!ok) { $("#status").textContent = "Could not load scoresheet. Select the game again to retry."; return; }
     loadedSheetGame = id;
+    document.dispatchEvent(new CustomEvent("sheet:loaded", { detail: id }));
     sheetRevision = body?.result?.revision ?? 0;
     $("#sheet-state").value = body?.result?.status ?? "scheduled";
     $("#sheet-period").value = body?.result?.period ?? (body?.result?.status === "in_progress" ? "1" : "");

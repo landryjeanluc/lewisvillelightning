@@ -16,6 +16,7 @@
             postgresql
             uv
             imagemagick        # crest extraction, poster crops
+            ffmpeg             # tools/replay: reading and cutting game replays
             chromium           # headless poster rendering
           ];
           # render/ drives this binary directly rather than downloading one
