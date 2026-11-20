@@ -1,0 +1,411 @@
+---
+import Base from "../../layouts/Base.astro";
+import { games, roster, sides } from "../../lib/data";
+import { shortDate } from "../../lib/format";
+
+/**
+ * The broadcast console.
+ *
+ * Built for one cold thumb on a phone in the stands, which is the only place it
+ * will ever be used. Every control that gets pressed during play is at least
+ * 56px tall, the clock and the primary actions are reachable without moving
+ * your hand, and nothing destructive is next to anything frequent — undo lives
+ * in the feed, not beside GOAL.
+ *
+ * Player names are rendered here, into a page served behind the login gate, and
+ * are deliberately never imported by the script; see BroadcastStage.astro.
+ */
+const players = [...roster.players].sort((a, b) => a.number - b.number);
+const gameList = [...games].reverse().map((game) => {
+  const s = sides(game);
+  return {
+    id: game.id,
+    label: `${shortDate(game.startsAt)} · ${s.weAreHome ? "vs" : "at"} ${s.them.short}`,
+    us: s.us.short,
+    them: s.them.short,
+  };
+});
+const rosterJson = JSON.stringify(
+  Object.fromEntries(players.map((p) => [p.id, { n: p.number, first: p.firstName, last: p.lastName }])),
+).replace(/</g, "\\u003c");
+
+const INFRACTIONS = [
+  "Tripping", "Hooking", "Slashing", "Holding", "Interference", "Roughing",
+  "Cross-checking", "High-sticking", "Body checking", "Boarding", "Elbowing",
+  "Delay of game", "Too many men", "Unsportsmanlike", "Misconduct",
+];
+---
+<Base title="Broadcast console" wide>
+  <script is:inline type="application/json" data-control-roster set:html={rosterJson} />
+
+  <div id="gate" class="card gate" hidden>
+    <h2>Admins only</h2>
+    <p class="dim">The broadcast console records the game for everyone watching.
+      <a href="/login">Sign in</a> with an admin account.</p>
+  </div>
+
+  <div id="console" hidden data-console>
+    <!-- ------------------------------------------------------------ header -->
+    <header class="top card">
+      <label class="pick">Game
+        <select id="game" data-game-select>
+          {gameList.map((g) => <option value={g.id} data-us={g.us} data-them={g.them}>{g.label}</option>)}
+        </select>
+      </label>
+      <span class="badge" data-stream-badge>No stream</span>
+      <a class="ghost small" data-watch href="#">Viewer page ↗</a>
+    </header>
+
+    <p class="say" role="status" aria-live="polite" data-say></p>
+
+    <!-- ------------------------------------------------------------- clock -->
+    <section class="card clock" aria-label="Game clock">
+      <div class="clock-read">
+        <span class="clock-period" data-period>1ST</span>
+        <strong class="clock-time num" data-clock>15:00</strong>
+        <span class="clock-strength" data-strength></span>
+      </div>
+
+      <button type="button" class="run" data-run>Start clock</button>
+
+      <div class="nudges">
+        <button type="button" class="ghost" data-nudge="-10000">−10s</button>
+        <button type="button" class="ghost" data-nudge="-1000">−1s</button>
+        <button type="button" class="ghost" data-nudge="1000">+1s</button>
+        <button type="button" class="ghost" data-nudge="10000">+10s</button>
+      </div>
+
+      <div class="periods" role="group" aria-label="Period">
+        {[["1", "1st"], ["INT1", "Int 1"], ["2", "2nd"], ["INT2", "Int 2"], ["3", "3rd"], ["OT", "OT"], ["SO", "SO"]].map(
+          ([value, label]) => <button type="button" class="chip" data-period-set={value}>{label}</button>)}
+      </div>
+
+      <details class="tweak">
+        <summary>Set the clock exactly</summary>
+        <div class="tweak-body">
+          <label>Clock reads
+            <input type="text" inputmode="numeric" placeholder="12:48" data-clock-input size="6" />
+          </label>
+          <button type="button" class="ghost" data-clock-apply>Set</button>
+          <label>Period length
+            <select data-period-length>
+              <option value="720000">12 minutes</option>
+              <option value="900000" selected>15 minutes</option>
+              <option value="1200000">20 minutes</option>
+            </select>
+          </label>
+          <button type="button" class="ghost" data-period-reset>Reset to full period</button>
+        </div>
+      </details>
+    </section>
+
+    <!-- --------------------------------------------------------- scoreline -->
+    <section class="card line" aria-label="Current state">
+      <div class="line-side">
+        <span class="line-abbr" data-abbr="us">LWV</span>
+        <strong class="num" data-score="us">0</strong>
+        <span class="dim">SOG <b class="num" data-sog="us">0</b></span>
+      </div>
+      <div class="line-mid">
+        <span class="line-pp" data-pp hidden></span>
+        <ul class="line-boxes" data-boxes></ul>
+      </div>
+      <div class="line-side line-side--right">
+        <span class="line-abbr" data-abbr="them">OPP</span>
+        <strong class="num" data-score="them">0</strong>
+        <span class="dim">SOG <b class="num" data-sog="them">0</b></span>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------------------------- actions -->
+    <section class="pads" aria-label="Record play">
+      <button type="button" class="pad pad--goal" data-act="goal" data-team="us">
+        <span class="pad-k">Goal</span><span class="pad-t" data-abbr="us">LWV</span>
+      </button>
+      <button type="button" class="pad pad--goal pad--them" data-act="goal" data-team="them">
+        <span class="pad-k">Goal</span><span class="pad-t" data-abbr="them">OPP</span>
+      </button>
+      <button type="button" class="pad" data-act="shot" data-team="us">
+        <span class="pad-k">Shot</span><span class="pad-t" data-abbr="us">LWV</span>
+      </button>
+      <button type="button" class="pad pad--them" data-act="shot" data-team="them">
+        <span class="pad-k">Shot</span><span class="pad-t" data-abbr="them">OPP</span>
+      </button>
+      <button type="button" class="pad pad--pen" data-act="penalty" data-team="us">
+        <span class="pad-k">Penalty</span><span class="pad-t" data-abbr="us">LWV</span>
+      </button>
+      <button type="button" class="pad pad--pen pad--them" data-act="penalty" data-team="them">
+        <span class="pad-k">Penalty</span><span class="pad-t" data-abbr="them">OPP</span>
+      </button>
+      <button type="button" class="pad pad--mark" data-act="highlight">
+        <span class="pad-k">Mark</span><span class="pad-t">Highlight</span>
+      </button>
+      <button type="button" class="pad pad--quiet" data-act="timeout" data-team="us">
+        <span class="pad-k">Timeout</span><span class="pad-t" data-abbr="us">LWV</span>
+      </button>
+    </section>
+
+    <!-- ------------------------------------------------------------ sheets -->
+    <div class="sheet card" data-sheet="goal" hidden>
+      <h3 data-goal-title>Lightning goal</h3>
+      <p class="dim">Who scored?</p>
+      <div class="chips" data-scorer>
+        {players.map((p) => (
+          <button type="button" class="chip chip--p" data-player={p.id}>
+            <b class="num">{p.number}</b> {p.lastName}
+          </button>
+        ))}
+        <button type="button" class="chip" data-player="">Not sure</button>
+      </div>
+      <p class="dim">Assists — up to two, in order</p>
+      <div class="chips" data-assists>
+        {players.map((p) => (
+          <button type="button" class="chip chip--p" data-player={p.id}>
+            <b class="num">{p.number}</b> {p.lastName}
+          </button>
+        ))}
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="ghost" data-cancel>Cancel</button>
+        <button type="button" data-confirm>Record the goal</button>
+      </div>
+    </div>
+
+    <div class="sheet card" data-sheet="penalty" hidden>
+      <h3 data-pen-title>Lightning penalty</h3>
+      <div class="chips" data-pen-player>
+        {players.map((p) => (
+          <button type="button" class="chip chip--p" data-player={p.id}>
+            <b class="num">{p.number}</b> {p.lastName}
+          </button>
+        ))}
+        <button type="button" class="chip" data-player="">No number</button>
+      </div>
+      <p class="dim">Infraction</p>
+      <div class="chips" data-pen-infraction>
+        {INFRACTIONS.map((name) => <button type="button" class="chip" data-infraction={name}>{name}</button>)}
+      </div>
+      <p class="dim">Minutes</p>
+      <div class="chips" data-pen-minutes>
+        {[2, 4, 5, 10].map((m) => <button type="button" class="chip chip--m" data-minutes={m}>{m}</button>)}
+      </div>
+      <div class="sheet-foot">
+        <button type="button" class="ghost" data-cancel>Cancel</button>
+        <button type="button" data-confirm>Record the penalty</button>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------- feed -->
+    <section class="card feed" aria-label="What has been recorded">
+      <h3>Recorded</h3>
+      <ul data-feed><li class="dim">Nothing yet.</li></ul>
+    </section>
+
+    <!-- ---------------------------------------------------------- settings -->
+    <details class="card settings">
+      <summary>Stream and scoresheet</summary>
+      <div class="settings-body">
+        <label>YouTube link or video id
+          <input type="text" data-stream-url placeholder="https://youtu.be/… or the live URL"
+                 autocomplete="off" spellcheck="false" />
+        </label>
+        <label>Label shown to viewers (optional)
+          <input type="text" data-stream-label maxlength="120" autocomplete="off" />
+        </label>
+        <label>Stream state
+          <select data-stream-state>
+            <option value="scheduled">Set up — not started</option>
+            <option value="live">Live now</option>
+            <option value="ended">Ended — replay available</option>
+          </select>
+        </label>
+        <div class="settings-actions">
+          <button type="button" data-stream-save>Save the stream</button>
+          <button type="button" class="ghost danger" data-stream-clear>Remove the stream</button>
+        </div>
+        <hr />
+        <p class="dim">After the final whistle, turn what you tapped into the official
+          scoresheet. It opens in Game scoring for you to check before it reaches season stats.</p>
+        <div class="settings-actions">
+          <button type="button" class="ghost" data-sheet-preview>Show the derived scoresheet</button>
+        </div>
+        <pre class="derived" data-derived hidden></pre>
+      </div>
+    </details>
+  </div>
+</Base>
+
+<script>import "../../scripts/control";</script>
+
+<style>
+  [hidden] { display: none !important; }
+  .gate { padding: var(--s-5); display: grid; gap: var(--s-3); max-width: 30rem; }
+  .card { border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--bg-raised); }
+  [data-console] { display: grid; gap: var(--s-4); max-width: 44rem; margin-inline: auto; }
+
+  .top { display: flex; flex-wrap: wrap; align-items: end; gap: var(--s-3); padding: var(--s-4); }
+  .pick { flex: 1 1 14rem; display: grid; gap: var(--s-2); font-size: var(--t-sm); }
+  .badge {
+    padding: var(--s-2) var(--s-3); border-radius: 999px;
+    border: 1px solid var(--hairline); font-size: var(--t-micro); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--text-dim);
+  }
+  .badge[data-state="live"] {
+    color: var(--white); border-color: rgb(255 77 77 / .6); background: rgb(255 77 77 / .16);
+  }
+  .small { padding: var(--s-2) var(--s-3); font-size: var(--t-xs); text-decoration: none; }
+  .say {
+    min-height: 1.4em; margin-block: calc(var(--s-3) * -1);
+    font-size: var(--t-sm); color: var(--accent-text); text-align: center;
+  }
+  .say[data-bad] { color: var(--loss); }
+
+  /* ----------------------------------------------------------------- clock */
+  .clock { display: grid; gap: var(--s-4); padding: var(--s-5) var(--s-4); text-align: center; }
+  .clock-read { display: grid; gap: var(--s-1); }
+  .clock-period {
+    font-size: var(--t-xs); font-weight: 700; letter-spacing: var(--track-label);
+    text-transform: uppercase; color: var(--volt-300);
+  }
+  .clock-time {
+    font-size: clamp(3.75rem, 20vw, 6rem); line-height: .95; color: var(--white);
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 40px rgb(28 143 232 / .35);
+  }
+  .clock-strength {
+    min-height: 1.2em; font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--volt-400);
+  }
+  /* The one control pressed most often, so it is the biggest thing on screen. */
+  .run { min-height: 68px; font-size: var(--t-md); }
+  .run[data-running] {
+    background: var(--live); border-color: var(--live);
+    box-shadow: 0 0 32px -6px rgb(255 77 77 / .6);
+  }
+  .nudges, .periods { display: grid; gap: var(--s-2); }
+  .nudges { grid-template-columns: repeat(4, 1fr); }
+  .periods { grid-template-columns: repeat(4, 1fr); }
+  .nudges button, .periods button { min-height: 48px; padding-inline: 0; }
+
+  .chip {
+    min-height: 48px; padding: var(--s-2) var(--s-3);
+    background: var(--surface); color: var(--text-muted);
+    border: 1px solid var(--hairline); border-radius: var(--r-md);
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
+  }
+  .chip[aria-pressed="true"], .chip.is-on {
+    color: var(--white); border-color: var(--volt-500); background: rgb(28 143 232 / .18);
+  }
+  .chip--p b { color: var(--volt-300); margin-right: 2px; }
+  .chip--p .num { font-size: var(--t-xs); }
+
+  .tweak { font-size: var(--t-sm); }
+  .tweak summary { cursor: pointer; color: var(--text-dim); }
+  .tweak-body {
+    display: grid; gap: var(--s-3); margin-top: var(--s-3);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    text-align: left; align-items: end;
+  }
+  .tweak-body label { display: grid; gap: var(--s-2); }
+
+  /* ------------------------------------------------------------- scoreline */
+  .line {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--s-4); align-items: center; padding: var(--s-4);
+  }
+  .line-side { display: grid; justify-items: center; gap: 2px; font-size: var(--t-xs); }
+  .line-side strong { font-size: var(--t-lg); line-height: 1; color: var(--white); }
+  .line-abbr { font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ice-300); }
+  .line-mid { display: grid; gap: var(--s-2); justify-items: center; }
+  .line-pp {
+    font-size: var(--t-xs); font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--volt-300);
+  }
+  .line-boxes { display: grid; gap: 2px; list-style: none; margin: 0; padding: 0; width: 100%; }
+  .line-boxes :global(li) {
+    display: flex; gap: var(--s-2); font-size: var(--t-xs); color: var(--text-muted);
+  }
+  .line-boxes :global(li b) { margin-left: auto; color: var(--white); font-variant-numeric: tabular-nums; }
+
+  /* --------------------------------------------------------------- actions */
+  .pads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+  .pad {
+    display: grid; gap: 2px; place-content: center; min-height: 76px;
+    padding: var(--s-3); border-radius: var(--r-lg); cursor: pointer;
+    font-family: var(--font-ui); border: 1px solid var(--hairline-sv);
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    color: var(--text);
+  }
+  .pad:active { transform: translateY(1px); }
+  .pad-k {
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: var(--track-label);
+    text-transform: uppercase; color: var(--text-dim);
+  }
+  .pad-t {
+    font-family: var(--font-display); font-weight: 900; font-style: italic;
+    font-size: var(--t-md); text-transform: uppercase; line-height: 1;
+  }
+  .pad--goal {
+    border-color: var(--volt-500);
+    background: linear-gradient(180deg, rgb(28 143 232 / .32), rgb(28 143 232 / .12));
+  }
+  .pad--goal .pad-k { color: var(--volt-300); }
+  .pad--pen { border-color: rgb(224 86 107 / .45); }
+  .pad--pen .pad-k { color: var(--loss); }
+  .pad--mark {
+    border-color: rgb(47 191 113 / .5);
+    background: linear-gradient(180deg, rgb(47 191 113 / .22), rgb(47 191 113 / .08));
+  }
+  .pad--mark .pad-k { color: var(--win); }
+  .pad--them { opacity: .88; }
+  .pad--quiet { min-height: 60px; }
+  .pad[disabled] { opacity: .45; cursor: default; }
+
+  /* ---------------------------------------------------------------- sheets */
+  .sheet { display: grid; gap: var(--s-3); padding: var(--s-4); }
+  .sheet h3 { font-size: var(--t-md); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+  .chips .chip--m { min-width: 56px; }
+  .sheet-foot { display: flex; gap: var(--s-3); justify-content: flex-end; flex-wrap: wrap; }
+  .sheet-foot button { min-height: 52px; flex: 1 1 10rem; }
+
+  /* ------------------------------------------------------------------ feed */
+  .feed { padding: var(--s-4); }
+  .feed h3 { font-size: var(--t-md); margin-bottom: var(--s-3); }
+  .feed ul { display: grid; gap: var(--s-1); list-style: none; margin: 0; padding: 0; }
+  .feed :global(li) {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-2) 0; border-top: 1px solid var(--hairline); font-size: var(--t-sm);
+  }
+  .feed :global(li:first-child) { border-top: 0; }
+  .feed :global(li .fd-stamp) {
+    min-width: 5.5rem; font-variant-numeric: tabular-nums; color: var(--text-dim);
+    font-size: var(--t-xs);
+  }
+  .feed :global(li .fd-what) { flex: 1; min-width: 0; }
+  .feed :global(li .fd-mark) { color: var(--win); }
+  .feed :global(li button) {
+    background: none; border: 0; padding: var(--s-2); cursor: pointer;
+    color: var(--loss); font-family: var(--font-ui); font-size: var(--t-xs);
+    font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .feed :global(li a) { color: var(--accent-text); font-size: var(--t-xs); }
+
+  /* -------------------------------------------------------------- settings */
+  .settings { padding: var(--s-4); }
+  .settings summary { cursor: pointer; font-weight: 700; }
+  .settings-body { display: grid; gap: var(--s-4); margin-top: var(--s-4); }
+  .settings-body label { display: grid; gap: var(--s-2); font-size: var(--t-sm); }
+  .settings-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+  .settings hr { border: 0; border-top: 1px solid var(--hairline); }
+  .danger { color: var(--loss); border-color: rgb(224 86 107 / .4); }
+  .derived {
+    padding: var(--s-3); overflow-x: auto; font-size: var(--t-xs);
+    background: var(--bg-sunken); border: 1px solid var(--hairline); border-radius: var(--r-md);
+  }
+
+  @media (min-width: 560px) {
+    .pads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .periods { grid-template-columns: repeat(7, 1fr); }
+  }
+</style>

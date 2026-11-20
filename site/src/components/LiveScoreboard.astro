@@ -16,7 +16,10 @@ const fixtures = gameId ? games.filter(g=>g.id===gameId) : games;
         <div class="live-team"><span class="eyebrow">Home</span><TeamCrest team={s.right} eager /><h2>{s.right.short}</h2><strong class="live-score num" data-home-score>—</strong></div>
       </div>
       <p class="dim">{game.venue.name}</p>
-      <a href={`/schedule/${game.id}`}>Game details →</a>
+      <p class="live-links">
+        <a href={`/schedule/${game.id}`}>Game details →</a>
+        <a href={`/watch/${game.id}`} data-live-watch hidden>Watch the broadcast →</a>
+      </p>
     </div>;
   })}
   <p class="dim" data-score-connection role="status"></p>
@@ -34,5 +37,7 @@ const fixtures = gameId ? games.filter(g=>g.id===gameId) : games;
   .live-divider { font-size:var(--t-xl); color:var(--text-dim); }
   [data-score-state] { color:var(--volt-300); }
   [data-score-admin] { display:inline-block; margin-top:var(--s-3); }
+  .live-links { display:flex; flex-wrap:wrap; gap:var(--s-4); justify-content:center; }
+  [data-live-watch] { color:var(--accent-text); font-weight:700; }
   @media(max-width:520px) { .live-board { padding:var(--s-4); } .live-teams { gap:var(--s-2); } }
 </style>

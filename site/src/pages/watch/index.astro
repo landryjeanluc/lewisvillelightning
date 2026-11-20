@@ -1,0 +1,123 @@
+---
+import Base from "../../layouts/Base.astro";
+import TeamCrest from "../../components/TeamCrest.astro";
+import EmptyState from "../../components/EmptyState.astro";
+import { games, sides } from "../../lib/data";
+import { shortDate, time, relativeDay } from "../../lib/format";
+
+// Which games actually have a stream is live state, so the list ships with every
+// game and the page reveals the ones the API knows about. A rebuild is never
+// needed to put a broadcast on this page.
+const listed = [...games].reverse().map((game) => {
+  const s = sides(game);
+  return {
+    id: game.id,
+    label: `${s.weAreHome ? "vs" : "at"} ${s.them.short}`,
+    when: `${shortDate(game.startsAt)} · ${time(game.startsAt)}`,
+    relative: relativeDay(game.startsAt),
+    venue: game.venue.name,
+    them: s.them,
+  };
+});
+---
+<Base title="Watch" wide>
+  <header class="page-head">
+    <span class="eyebrow">Lightning broadcasts</span>
+    <h1 class="display--italic">Watch</h1>
+    <p class="muted">Games stream here with our own scorebug, penalty clocks and goal graphics over them.</p>
+  </header>
+
+  <p class="dim" role="status" data-watch-status>Looking for broadcasts…</p>
+
+  <ul class="list" data-watch-list>
+    {listed.map((game) => (
+      <li class="row" data-game={game.id} hidden>
+        <a class="row-link" href={`/watch/${game.id}`}>
+          <TeamCrest team={game.them} size={52} />
+          <span class="row-text">
+            <strong class="row-title">Lightning {game.label}</strong>
+            <span class="dim row-when">{game.when} · {game.venue}</span>
+          </span>
+          <span class="row-state" data-state>{game.relative}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <div data-watch-empty hidden>
+    <EmptyState
+      title="No broadcasts yet"
+      note="When a game is streamed it appears here. An admin adds the stream from the broadcast console." />
+  </div>
+</Base>
+
+<script>
+  import { api } from "../../scripts/api-client";
+
+  const status = document.querySelector<HTMLElement>("[data-watch-status]")!;
+  const empty = document.querySelector<HTMLElement>("[data-watch-empty]")!;
+  const rows = new Map<string, HTMLElement>();
+  for (const row of document.querySelectorAll<HTMLElement>("[data-game]")) rows.set(row.dataset.game!, row);
+
+  const WORDS: Record<string, string> = { live: "Live now", ended: "Replay", scheduled: "Starting soon" };
+
+  async function load() {
+    const { ok, body } = await api("/broadcast");
+    if (!ok || !Array.isArray(body?.streams)) {
+      status.textContent = "Could not load the broadcast list. Please reload to try again.";
+      return;
+    }
+    const streams = body.streams as { game_id: string; state: string }[];
+    for (const row of rows.values()) row.hidden = true;
+    const list = document.querySelector<HTMLElement>("[data-watch-list]")!;
+    for (const stream of streams) {
+      const row = rows.get(stream.game_id);
+      if (!row) continue;
+      row.hidden = false;
+      row.dataset.streamState = stream.state;
+      const state = row.querySelector<HTMLElement>("[data-state]")!;
+      state.textContent = WORDS[stream.state] ?? stream.state;
+      // Live first, in the order the API already sorted them.
+      if (stream.state === "live") list.prepend(row);
+    }
+    const shown = streams.filter((s) => rows.has(s.game_id)).length;
+    empty.hidden = shown > 0;
+    status.hidden = shown > 0;
+    status.textContent = shown ? "" : "";
+  }
+
+  void load();
+  document.addEventListener("auth:changed", () => void load());
+</script>
+
+<style>
+  .page-head { text-align: center; margin-bottom: var(--s-6); }
+  .page-head h1 { font-size: var(--t-xxl); margin-block: var(--s-2); }
+  .list { display: grid; gap: var(--s-3); list-style: none; padding: 0; }
+  .row-link {
+    display: flex; align-items: center; gap: var(--s-4);
+    padding: var(--s-4); text-decoration: none;
+    border: 1px solid var(--hairline); border-radius: var(--r-lg);
+    background: var(--bg-raised); transition: border-color .18s var(--ease);
+  }
+  .row-link:hover { border-color: var(--volt-500); }
+  .row-link :global(.tc) { --crest-size: 52px; }
+  .row-text { display: grid; gap: 2px; min-width: 0; }
+  .row-title { font-family: var(--font-display); font-size: var(--t-md); text-transform: uppercase; }
+  .row-when { font-size: var(--t-sm); }
+  .row-state {
+    margin-left: auto; padding: var(--s-2) var(--s-3); white-space: nowrap;
+    font-size: var(--t-micro); font-weight: 700; letter-spacing: var(--track-label);
+    text-transform: uppercase; color: var(--text-dim);
+    border: 1px solid var(--hairline); border-radius: 999px;
+  }
+  [data-stream-state="live"] .row-state {
+    color: var(--white); border-color: rgb(255 77 77 / .55);
+    background: rgb(255 77 77 / .14);
+  }
+  [data-stream-state="live"] .row-link { border-color: rgb(255 77 77 / .45); }
+  @media (max-width: 520px) {
+    .row-link { flex-wrap: wrap; }
+    .row-state { margin-left: 0; }
+  }
+</style>

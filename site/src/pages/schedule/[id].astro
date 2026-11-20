@@ -6,6 +6,7 @@ import Base from "../../layouts/Base.astro";
 import Matchup from "../../components/Matchup.astro";
 import Spotlight from "../../components/Spotlight.astro";
 import AddToCalendar from "../../components/AddToCalendar.astro";
+import WatchLink from "../../components/WatchLink.astro";
 import { allEvents, sides, outcome, team, spotlightFor } from "../../lib/data";
 import { longDate, time, relativeDay, machine, isToday } from "../../lib/format";
 
@@ -54,7 +55,10 @@ const star = isGame ? spotlightFor(event.id) : undefined;
       {event.notes && <div><dt class="eyebrow">Notes</dt><dd>{event.notes}</dd></div>}
     </dl>
 
-    <div class="gd-actions"><AddToCalendar event={event} /></div>
+    <div class="gd-actions">
+      <AddToCalendar event={event} />
+      {isGame && <WatchLink gameId={event.id} />}
+    </div>
 
     {star && (
       <div class="spotwrap">
@@ -109,7 +113,10 @@ const star = isGame ? spotlightFor(event.id) : undefined;
     text-align: center; font-weight: 700;
   }
   .banner--bad { border-color: rgb(224 86 107 / .5); color: var(--loss); }
-  .gd-actions { display: flex; justify-content: center; margin-top: var(--s-6); }
+  .gd-actions {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: var(--s-4); margin-top: var(--s-6);
+  }
   .spotwrap {
     display: flex; justify-content: center;
     margin-top: var(--s-7); padding-top: var(--s-6);

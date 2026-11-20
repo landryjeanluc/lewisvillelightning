@@ -1336,3 +1336,6 @@ app.include_router(highlights_router(require_admin, current_user, db, contract))
 
 from goal_clips import build_router as goal_clips_router
 app.include_router(goal_clips_router(require_admin, db, contract))
+
+from broadcast import build_router as broadcast_router
+app.include_router(broadcast_router(current_user, require_admin, db, contract))

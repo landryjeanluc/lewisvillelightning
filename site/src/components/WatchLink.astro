@@ -1,0 +1,63 @@
+---
+/**
+ * "Watch the broadcast" — revealed only when a stream actually exists.
+ *
+ * Streams are added on game night from the console, long after the build, so
+ * the link ships hidden and the API decides. A static link would promise a
+ * broadcast for every game in the season, most of which will never have one.
+ */
+interface Props { gameId: string }
+const { gameId } = Astro.props;
+---
+<a class="watch-cta" data-watch-cta={gameId} href={`/watch/${gameId}`} hidden>
+  <span class="watch-dot" aria-hidden="true"></span>
+  <span data-watch-cta-label>Watch the broadcast</span>
+</a>
+
+<script>
+  import { api } from "../scripts/api-client";
+
+  const WORDS: Record<string, string> = {
+    live: "Watch live now",
+    ended: "Watch the replay",
+    scheduled: "Broadcast set up",
+  };
+
+  for (const link of document.querySelectorAll<HTMLAnchorElement>("[data-watch-cta]")) {
+    const gameId = link.dataset.watchCta!;
+    const reveal = async () => {
+      const { ok, body } = await api(`/broadcast/${encodeURIComponent(gameId)}`);
+      const stream = ok ? body?.stream : null;
+      link.hidden = !stream;
+      if (!stream) return;
+      link.dataset.state = stream.state;
+      link.querySelector<HTMLElement>("[data-watch-cta-label]")!.textContent =
+        WORDS[stream.state] ?? "Watch the broadcast";
+    };
+    void reveal();
+    document.addEventListener("auth:changed", () => void reveal());
+  }
+</script>
+
+<style>
+  .watch-cta {
+    display: inline-flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-5); text-decoration: none;
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--white);
+    border: 1px solid var(--volt-500); border-radius: var(--r-md);
+    background: linear-gradient(180deg, rgb(28 143 232 / .26), rgb(28 143 232 / .08));
+    transition: box-shadow .18s var(--ease);
+  }
+  .watch-cta:hover { box-shadow: var(--glow-volt); }
+  .watch-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--steel-400);
+  }
+  .watch-cta[data-state="live"] { border-color: rgb(255 77 77 / .6); }
+  .watch-cta[data-state="live"] .watch-dot {
+    background: var(--live); box-shadow: 0 0 12px rgb(255 77 77 / .9);
+    animation: watch-pulse 2s var(--ease) infinite;
+  }
+  @keyframes watch-pulse { 50% { opacity: .35; } }
+</style>
