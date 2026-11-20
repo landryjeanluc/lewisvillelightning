@@ -3,8 +3,8 @@
   "source": {
     "provider": "spordle",
     "teamId": "223790",
-    "fetchedAt": "2026-10-18T14:01:07.337+00:00",
-    "note": "Rendered schedule view only, not a complete season schedule. filter=Season 2026-27 (Sep 12, 2026 - Jan 3, 2027)"
+    "fetchedAt": "2026-11-20T13:31:41.723+00:00",
+    "note": "Rendered schedule view only, not a complete season schedule. filter=Season 2026-27 (Sep 12, 2026 - Mar 21, 2027)"
   },
   "events": [
     {
@@ -79,7 +79,7 @@
       "startsAt": "2026-10-15T16:30:00-03:00",
       "endsAt": null,
       "venue": {
-        "name": "Uniplex (Rink 1) - Dieppe, NB",
+        "name": "UNIplex (Coop IGA) - Dieppe, NB",
         "surface": null,
         "address": null,
         "mapUrl": null
@@ -245,6 +245,56 @@
       "spordleId": null
     },
     {
+      "id": "g-2026-11-01-kent",
+      "type": "game",
+      "startsAt": "2026-11-01T16:15:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "kent-centre",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981022"
+    },
+    {
+      "id": "g-2026-11-02-dieppe",
+      "type": "game",
+      "startsAt": "2026-11-02T18:30:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Greenfoot Energy Centre (C) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "dieppe",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981023"
+    },
+    {
       "id": "p-2026-11-04-1830",
       "type": "practice",
       "practiceKind": "on_ice",
@@ -277,6 +327,81 @@
       "spordleId": null
     },
     {
+      "id": "g-2026-11-12-kent",
+      "type": "game",
+      "startsAt": "2026-11-12T18:30:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "kent-centre",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981024"
+    },
+    {
+      "id": "g-2026-11-14-shediac",
+      "type": "game",
+      "startsAt": "2026-11-14T14:00:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Festival Arena (Main) - Shediac, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "shediac-cap-pele-predators",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981025"
+    },
+    {
+      "id": "g-2026-11-15-dieppe",
+      "type": "game",
+      "startsAt": "2026-11-15T15:30:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Arena Eugene Leblanc (1) - Memramcook, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "dieppe",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981026"
+    },
+    {
       "id": "p-2026-11-18-1830",
       "type": "practice",
       "practiceKind": "on_ice",
@@ -293,6 +418,106 @@
       "spordleId": null
     },
     {
+      "id": "g-2026-11-19-kent",
+      "type": "game",
+      "startsAt": "2026-11-19T18:50:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Festival Arena (Main) - Shediac, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "kent-sud",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "tournament",
+      "league": null,
+      "notes": "Game Vs Kent-Sud Flames Away game - White Jersey",
+      "spordleId": null
+    },
+    {
+      "id": "g-2026-11-20-cole",
+      "type": "game",
+      "startsAt": "2026-11-20T13:10:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Cocagne Arena (1) - Cocagne, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "cole-harbour",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "tournament",
+      "league": null,
+      "notes": "Game Vs Cole Harbour Wings Home game - Blue Jersey",
+      "spordleId": null
+    },
+    {
+      "id": "g-2026-11-21-kent",
+      "type": "game",
+      "startsAt": "2026-11-21T10:20:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Arena Cap-Pele (Main) - Cap‑Pelé, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "kent-centre",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "tournament",
+      "league": null,
+      "notes": "Game Vs Kent Centre Bears Away Game - White Jersey",
+      "spordleId": null
+    },
+    {
+      "id": "g-2026-11-23-dieppe",
+      "type": "game",
+      "startsAt": "2026-11-23T19:00:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Arena Eugene Leblanc (1) - Memramcook, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "dieppe",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981030"
+    },
+    {
       "id": "p-2026-11-25-1600",
       "type": "practice",
       "practiceKind": "on_ice",
@@ -307,6 +532,81 @@
       "status": "scheduled",
       "notes": null,
       "spordleId": null
+    },
+    {
+      "id": "g-2026-11-27-tbd",
+      "type": "game",
+      "startsAt": "2026-11-27T10:30:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "tbd",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "tournament",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "2"
+    },
+    {
+      "id": "g-2026-11-27-tbd-3",
+      "type": "game",
+      "startsAt": "2026-11-27T16:45:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "tbd",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "tournament",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "3"
+    },
+    {
+      "id": "g-2026-11-28-hampton",
+      "type": "game",
+      "startsAt": "2026-11-28T11:30:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "hampton-u13a-b-huskies",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "tournament",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "6"
     },
     {
       "id": "p-2026-11-30-1830",
@@ -341,6 +641,106 @@
       "spordleId": null
     },
     {
+      "id": "g-2026-12-04-shediac",
+      "type": "game",
+      "startsAt": "2026-12-04T18:15:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "shediac-cap-pele-predators",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981031"
+    },
+    {
+      "id": "g-2026-12-06-petitcodiac",
+      "type": "game",
+      "startsAt": "2026-12-06T17:15:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Peticodiac Arena (Main) - Petitcodiac, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "petitcodiac-salisbury",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "1012306"
+    },
+    {
+      "id": "g-2026-12-09-dieppe",
+      "type": "game",
+      "startsAt": "2026-12-09T18:30:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Kay Arena (Main) - Moncton, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "away": {
+        "teamId": "dieppe",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981032"
+    },
+    {
+      "id": "g-2026-12-13-shediac",
+      "type": "game",
+      "startsAt": "2026-12-13T11:40:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Festival Arena (Main) - Shediac, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "shediac-cap-pele-predators",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981033"
+    },
+    {
       "id": "p-2026-12-16-1600",
       "type": "practice",
       "practiceKind": "on_ice",
@@ -355,6 +755,31 @@
       "status": "scheduled",
       "notes": null,
       "spordleId": null
+    },
+    {
+      "id": "g-2026-12-19-kent",
+      "type": "game",
+      "startsAt": "2026-12-19T14:10:00-04:00",
+      "endsAt": null,
+      "venue": {
+        "name": "Imperial Kent North Centre (1) - Richibucto, NB",
+        "surface": null,
+        "address": null,
+        "mapUrl": null
+      },
+      "home": {
+        "teamId": "kent-centre",
+        "score": null
+      },
+      "away": {
+        "teamId": "lewisville-lightning",
+        "score": null
+      },
+      "status": "scheduled",
+      "gameType": "regular",
+      "league": "U13 BMixed",
+      "notes": null,
+      "spordleId": "981034"
     },
     {
       "id": "p-2026-12-23-1830",

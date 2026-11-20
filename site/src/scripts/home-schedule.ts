@@ -1,10 +1,10 @@
-import { upcomingEvents, type UpcomingEvent } from '../lib/schedule';
-import { isToday, relativeDay } from '../lib/format';
+import { upcomingEvents, onAirEvent, laterTodayStream, type UpcomingEvent } from '../lib/schedule';
+import { isToday, relativeDay, time } from '../lib/format';
 import type { Score } from '../lib/scoreboard';
 
 const source = document.querySelector('#home-events');
 if (source) {
-  const events: (UpcomingEvent & {type:string})[] = JSON.parse(source.textContent ?? '[]');
+  const events: (UpcomingEvent & {type:string; stream:boolean})[] = JSON.parse(source.textContent ?? '[]');
   let statuses = new Map<string, string>();
   function refresh() {
     const now = new Date();
@@ -26,6 +26,19 @@ if (source) {
       if (relative && event) relative.textContent = relativeDay(event.startsAt, now);
     }
     document.querySelector<HTMLElement>('[data-home-upcoming-empty]')!.hidden = rest.length > 0;
+    const watch = document.querySelector<HTMLElement>('[data-watch-live]');
+    if (watch) {
+      const current = events.map(e => ({...e, status:statuses.get(e.id) ?? e.status}));
+      const onAir = onAirEvent(current, now.getTime());
+      const later = onAir ? undefined : laterTodayStream(current, now.getTime());
+      watch.dataset.state = onAir ? 'live' : later ? 'today' : 'idle';
+      watch.querySelector('[data-watch-title]')!.textContent =
+        onAir ? 'Game time — watch live now' : later ? `Live today at ${time(later.startsAt)}` : 'Watch our games live';
+      watch.querySelector('[data-watch-sub]')!.textContent =
+        onAir ? 'The stream is on our YouTube channel. It may take a few minutes to start.'
+          : later ? 'The stream opens on our YouTube channel shortly before the game.'
+          : 'Every game is streamed on our YouTube channel.';
+    }
   }
   document.addEventListener('scoreboard:updated', ((event: CustomEvent<Score[]>) => {
     statuses = new Map(event.detail.map(g => [g.game_id, g.status]));

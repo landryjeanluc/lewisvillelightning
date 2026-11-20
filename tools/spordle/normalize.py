@@ -81,11 +81,14 @@ def schedule_from_capture(capture):
     pieces = re.split(r'^' + day + r'$', text, flags=re.MULTILINE)
     games, practices, incomplete = [], [], []
     window = re.search(r'(?:Next \d+ days|Season \d{4}-\d{2}) \([^\n]+\)', text)
-    event_pattern = r'(?:EXHIBITION|REGULAR SEASON|REGULAR|PLAYOFF|TOURNAMENT)\s*•\s*\d+|PRACTICE'
-    clock_pattern = r'\d{1,2}:\d{2}\s*[AP]\.?M\.?'
+    # Spordle labels some entries PRACTICE•OTHER (e.g. tournament games entered
+    # by the team) and, since November 2026, appends the zone to times (AST/ADT).
+    event_pattern = r'(?:EXHIBITION|REGULAR SEASON|REGULAR|PLAYOFF|TOURNAMENT)\s*•\s*\d+|PRACTICE(?:\s*•\s*[A-Z][A-Z ]*)?'
+    clock_pattern = r'\d{1,2}:\d{2}\s*[AP]\.?M\.?(?:\s+A[SD]T)?'
 
     def clock(value):
-        return datetime.strptime(value.upper().replace('.', ''), '%I:%M %p').strftime('%H:%M')
+        value = re.sub(r'\s+A[SD]T$', '', value.upper().replace('.', '').strip())
+        return datetime.strptime(value, '%I:%M %p').strftime('%H:%M')
 
     for i in range(1, len(pieces), 2):
         date = datetime.strptime(pieces[i].title(), '%A, %B %d, %Y').date().isoformat()
@@ -105,13 +108,16 @@ def schedule_from_capture(capture):
                 continue
             common = {'date': date, 'time_local': clock(details[time_index]),
                       'venue_display': block[event - 1]}
-            if block[event] == 'PRACTICE':
-                end = next((re.fullmatch(r'to\s*(' + clock_pattern + ')', line, re.IGNORECASE)
-                            for line in details[time_index + 1:] if line.lower().startswith('to')), None)
-                if not end or len(details[:time_index]) != 3:
+            if block[event].startswith('PRACTICE'):
+                end_index = next((j for j in range(time_index + 1, len(details))
+                                  if re.fullmatch(r'to\s*(' + clock_pattern + ')', details[j], re.IGNORECASE)), None)
+                if end_index is None or len(details[:time_index]) != 3:
                     incomplete.append({'date': date, 'reason': 'Practice details incomplete.'})
                     continue
-                practices.append(dict(common, end_time_local=clock(end[1])))
+                end = re.fullmatch(r'to\s*(' + clock_pattern + ')', details[end_index], re.IGNORECASE)
+                note = ' '.join(line for line in details[end_index + 1:] if line not in {'Previous', 'Next'}) or None
+                label = block[event].split('•')[-1].strip() if '•' in block[event] else None
+                practices.append(dict(common, end_time_local=clock(end[1]), label=label, note=note))
                 continue
             before = [line for line in details[:time_index]
                       if line != '?' and not re.match(r'^(?:MON|TUE|WED|THU|FRI|SAT|SUN),', line)]

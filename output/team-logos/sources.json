@@ -30,5 +30,20 @@
     "page": "https://play.sedmha.com/l/1073/u11-b/teams/schedule/11277/kentcentrebears/",
     "download": "https://play.sedmha.com/img/43180",
     "note": "Previously verified and downloaded bear crest, retained existing approved poster."
+  },
+  "kent-sud": {
+    "asset": "output/team-logos/kent-sud-flames-source.png",
+    "page": "https://play.sedmha.com/l/1075/U13-AA/teams/11308/kent-sud-flames/",
+    "download": "https://play.sedmha.com/img/43169",
+    "verifiedAt": "2026-11-19",
+    "note": "Flaming red KS with stick and puck, taken from the Kent Sud Flames U13 AA team page on the league site (998x998). Not cross-checked against the association's own site; not yet copied to assets/brand or data/opponents.json."
+  },
+  "cole-harbour": {
+    "asset": "output/team-logos/cole-harbour-wings-source.png",
+    "page": "https://coleharbourmha.grayjayleagues.com/l/8/u13-b/",
+    "download": "https://coleharbourmha.grayjayleagues.com/img/1297",
+    "crossCheck": "https://tasamha.grayjayleagues.com/img/43142 (same wordmark in a red ring, Cole Harbour U13 B team page)",
+    "verifiedAt": "2026-11-20",
+    "note": "Cole Harbour Bel Ayr Minor Hockey Association wordmark crest: COLE HARBOUR over red WINGS with a feathered wing (3345x1391). Not yet copied to assets/brand or data/opponents.json."
   }
 }

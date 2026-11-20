@@ -27,9 +27,22 @@ TEAM_IDS = {
     "SHEDIAC": "shediac-cap-pele-predators",
     "SHEDIAC CAP-PELÉ U13B": "shediac-cap-pele-predators",
     "DIEPPE": "dieppe",
+    # Labels Spordle switched to for the regular season (seen 2026-11-20).
+    "HDM AIGLES U13 B": "dieppe",
+    "SHEDIAC/CAP-PELE - U13 B - GALLANT": "shediac-cap-pele-predators",
+    "KENT CENTRE BEARS B": "kent-centre",
+    # Opponents named only in the notes of team-entered tournament games.
+    "KENT-SUD FLAMES": "kent-sud",
+    "KENT SUD FLAMES": "kent-sud",
+    "COLE HARBOUR WINGS": "cole-harbour",
+    "KENT CENTRE BEARS": "kent-centre",
+    # Tournament slot whose opponent Spordle has not named yet.
+    "U13 B": "tbd",
 }
 
 POSITIONS = {"Forward": "F", "Defence": "D", "Goalie": "G"}
+US = "lewisville-lightning"
+TEAM_GAME_NOTE = re.compile(r"^\s*Game\s+vs\.?\s+(?P<opponent>.+?)\s+(?P<side>Home|Away)\s+game\b", re.I)
 
 # ---------------------------------------------------------------- names ----
 
@@ -248,10 +261,16 @@ def build_roster(src: dict, overrides: dict) -> dict:
 
 def build_schedule(src: dict) -> dict:
     events = []
+    used = set()
     for g in src["games"]:
         home, away = team_id(g["home_team"]), team_id(g["away_team"])
+        gid = f"g-{g['date']}-{away.split('-')[0] if home=='lewisville-lightning' else home.split('-')[0]}"
+        if gid in used and g.get("game_number"):
+            # Two games against the same label on one day (tournament slots).
+            gid = f"{gid}-{g['game_number']}"
+        used.add(gid)
         events.append({
-            "id": f"g-{g['date']}-{away.split('-')[0] if home=='lewisville-lightning' else home.split('-')[0]}",
+            "id": gid,
             "type": "game",
             "startsAt": to_iso(g["date"], g["time_local"]),
             "endsAt": None,
@@ -267,6 +286,26 @@ def build_schedule(src: dict) -> dict:
             "spordleId": g.get("game_number"),
         })
     for p in src.get("practices", []):
+        entered = TEAM_GAME_NOTE.match(p.get("note") or "") if p.get("label") == "OTHER" else None
+        if entered:
+            # The team enters tournament games itself as PRACTICE•OTHER with a
+            # note such as "Game Vs Kent-Sud Flames Away game - White Jersey".
+            them = team_id(entered["opponent"].strip().upper())
+            we_host = entered["side"].lower() == "home"
+            gid = f"g-{p['date']}-{them.split('-')[0]}"
+            if gid in used:
+                gid = f"{gid}-{p['time_local'].replace(':', '')}"
+            used.add(gid)
+            events.append({
+                "id": gid, "type": "game",
+                "startsAt": to_iso(p["date"], p["time_local"]), "endsAt": None,
+                "venue": {"name": p["venue_display"], "surface": None, "address": None, "mapUrl": None},
+                "home": {"teamId": US if we_host else them, "score": None},
+                "away": {"teamId": them if we_host else US, "score": None},
+                "status": "scheduled", "gameType": "tournament", "league": None,
+                "notes": p["note"], "spordleId": None,
+            })
+            continue
         starts_at = to_iso(p["date"], p["time_local"])
         ends_at = to_iso(p["date"], p["end_time_local"])
         if ends_at <= starts_at:
@@ -278,7 +317,7 @@ def build_schedule(src: dict) -> dict:
             "startsAt": starts_at,
             "endsAt": ends_at,
             "venue": {"name": p["venue_display"], "surface": None, "address": None, "mapUrl": None},
-            "status": "scheduled", "notes": None, "spordleId": None,
+            "status": "scheduled", "notes": p.get("note") or None, "spordleId": None,
         })
     events.sort(key=lambda e: e["startsAt"])
     return {

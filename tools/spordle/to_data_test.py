@@ -74,6 +74,21 @@ class ImportSafety(unittest.TestCase):
         event = to_data.build_schedule({'team_id':'223790','captured_at':'2026-10-18T13:53:17Z','games':[game]})['events'][0]
         self.assertEqual(event['away']['teamId'], 'shediac-cap-pele-predators')
         self.assertEqual(event['gameType'], 'regular')
+    def test_team_entered_game_notes_become_games(self):
+        src = {'team_id':'223790','captured_at':'2026-11-20T12:00:00Z','games':[],'practices':[
+            {'date':'2026-11-20','time_local':'13:10','end_time_local':'14:10','venue_display':'Test Arena',
+             'label':'OTHER','note':'Game Vs Cole Harbour Wings Home game - Blue Jersey'},
+            {'date':'2026-11-21','time_local':'10:20','end_time_local':'11:20','venue_display':'Test Arena',
+             'label':'OTHER','note':'Game Vs Kent Centre Bears Away Game - White Jersey'},
+            {'date':'2026-11-25','time_local':'16:00','end_time_local':'17:00','venue_display':'Test Arena',
+             'label':None,'note':None}]}
+        events = {e['id']: e for e in to_data.build_schedule(src)['events']}
+        home = events['g-2026-11-20-cole']
+        self.assertEqual((home['type'], home['gameType']), ('game', 'tournament'))
+        self.assertEqual((home['home']['teamId'], home['away']['teamId']), ('lewisville-lightning', 'cole-harbour'))
+        self.assertEqual(events['g-2026-11-21-kent']['home']['teamId'], 'kent-centre')
+        self.assertEqual(events['p-2026-11-25-1600']['type'], 'practice')
+
 
 if __name__ == '__main__':
     unittest.main()

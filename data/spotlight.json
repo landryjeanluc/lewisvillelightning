@@ -2,11 +2,18 @@
   "version": 1,
   "note": "Written by tools/assign_spotlight.py. assignments are permanent once made; cycle restarts when every player has been featured.",
   "assignments": {
-    "g-2026-10-13-shediac": "pl-02",
-    "g-2026-10-15-dieppe": "pl-12",
-    "g-2026-10-23-shediac": "pl-07",
-    "g-2026-10-11-moncton": "pl-09",
-    "g-2026-10-17-kent": "pl-14"
+    "g-2026-11-19-kent": "pl-17",
+    "g-2026-11-20-cole": "pl-12",
+    "g-2026-11-21-kent": "pl-31",
+    "g-2026-11-23-dieppe": "pl-08",
+    "g-2026-11-27-tbd": "pl-07",
+    "g-2026-11-27-tbd-3": "pl-11",
+    "g-2026-11-28-hampton": "pl-16",
+    "g-2026-12-04-shediac": "pl-29",
+    "g-2026-12-06-petitcodiac": "pl-15",
+    "g-2026-12-09-dieppe": "pl-02",
+    "g-2026-12-13-shediac": "pl-03",
+    "g-2026-12-19-kent": "pl-14"
   },
-  "cycle": 1
+  "cycle": 2
 }

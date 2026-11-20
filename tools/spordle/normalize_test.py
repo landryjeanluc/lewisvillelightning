@@ -38,6 +38,40 @@ class RosterTest(unittest.TestCase):
         self.assertEqual(schedule['status'], 'partial_view')
         self.assertEqual(schedule['incomplete_dates'][0]['date'], '2026-10-16')
 
+    def test_zone_suffixed_times_and_other_practices_with_notes(self):
+        capture = self.capture()
+        capture['data']['visibleText'] = """Season 2026-27 (Sep 12, 2026 - Mar 21, 2027)
+Print Schedule
+Add to Calendar
+THURSDAY, NOVEMBER 12, 2026
+Test Arena
+REGULAR SEASON•981024
+OPPONENT B
+U13 BMixed
+THU, NOV 12
+6:30 P.M. AST
+U13-B DAVEY
+U13 BMixed
+TODAY, FRIDAY, NOVEMBER 20, 2026
+Other Arena
+PRACTICE•OTHER
+U13-B DAVEY
+U13 BMixed
+FRI, NOV 20
+1:10 P.M.
+to2:10 p.m. AST
+Game Vs Example Home game
+Previous
+Next"""
+        schedule = module.schedule_from_capture(capture)
+        self.assertEqual(schedule['games'][0]['time_local'], '18:30')
+        self.assertEqual(schedule['games'][0]['away_team'], 'OPPONENT B')
+        practice = schedule['practices'][0]
+        self.assertEqual((practice['time_local'], practice['end_time_local']), ('13:10', '14:10'))
+        self.assertEqual(practice['label'], 'OTHER')
+        self.assertEqual(practice['note'], 'Game Vs Example Home game')
+        self.assertEqual(schedule['incomplete_dates'], [])
+
     def test_today_practices_regular_games_and_multiple_events_per_day(self):
         capture = self.capture()
         capture['data']['visibleText'] = """Season 2026-27 (Sep 12, 2026 - Jan 3, 2027)

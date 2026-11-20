@@ -35,6 +35,7 @@ export const spotlight = parse<Spotlight>(spotlightSchema, spotlightRaw, "spotli
 export const team = teamRaw as {
   name: string; division: string; level: string; home_arena: string;
   association_website: string;
+  youtube_channel?: string;
   slogan?: string; season?: string; team_photo?: string;
 };
 

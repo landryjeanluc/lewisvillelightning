@@ -107,10 +107,28 @@ is printed for confirmation and can be pinned in
 
 The extension saves locally on Helios; it does not publish the website. Review
 and commit the imported data, then run `deploy.sh` and push the commit. The latest
-schedule capture was taken October 18 with a filter through January 3, 2027:
-five games and sixteen practices, with the last listed event on December 30. Imports retain earlier events because a displayed window is not a complete
+schedule capture was taken November 20 with a filter through March 21, 2027:
+nineteen games and nineteen practices, with the last listed event on December 30
+(only the first page of the list was captured; later pages need "Next").
+Spordle loads each day's events as the page scrolls, so scroll to the bottom
+before capturing. Entries Spordle labels `PRACTICE•OTHER` (the team uses these
+for tournament games it enters itself) import as practices with the Spordle
+note kept in `notes`. Tournament slots with no named opponent use team id `tbd`. Imports retain earlier events because a displayed window is not a complete
 season schedule. No player stats or news view has been collected; live player
 statistics come from completed scoresheets entered on the site.
+
+## Watch live (YouTube)
+
+`team.json` → `youtube_channel` holds the team's channel. The home page shows a
+"Watch live" bar (`site/src/components/WatchLive.astro`) linking to
+`<channel>/live`, which YouTube sends to the current stream. It is a plain link
+on purpose: the CSP in `ops/nginx.conf` allows no third-party frames or
+requests, so there is no embed and no check of whether the stream is really up.
+The bar turns red from 20 minutes before a streamed event until 2.5 hours after
+its start, or while the game's saved status is `in_progress`
+(`onAirEvent` in `site/src/lib/schedule.ts`). Streamed events are games, plus
+practices whose note starts with "Game" (how tournament games the team enters
+in Spordle arrive). Remove the key to hide the bar.
 
 ## Player spotlight
 

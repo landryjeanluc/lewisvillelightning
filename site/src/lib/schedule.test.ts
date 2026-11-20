@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { upcomingEvents, practiceLabel } from './schedule';
+import { upcomingEvents, practiceLabel, isStreamed, onAirEvent } from './schedule';
 import { scheduleSchema } from './schema';
 import { eventLines } from './ics';
 
@@ -21,4 +21,18 @@ test('old practices default to ice; off-ice practices preserve their label in ca
   assert.ok(eventLines(off,'20261013T120000Z').some(line=>line.includes('off-ice practice')));
   assert.equal(practiceLabel({practiceKind:'off_ice'}),'Off-ice practice');
   assert.throws(()=>parse({...practice,practiceKind:'unknown'}));
+});
+
+test('streamed events: games and team-entered tournament games; on air from 20 minutes before to 2.5 hours after',()=>{
+  assert.equal(isStreamed({type:'game'}),true);
+  assert.equal(isStreamed({type:'practice',notes:'Game Vs Example Home game'}),true);
+  assert.equal(isStreamed({type:'practice',notes:null}),false);
+  const g={id:'g',startsAt:'2026-11-20T13:10:00-04:00',status:'scheduled',stream:true};
+  const at=(iso:string)=>onAirEvent([g,{...g,id:'p',stream:false}],Date.parse(iso))?.id;
+  assert.equal(at('2026-11-20T12:45:00-04:00'),undefined);
+  assert.equal(at('2026-11-20T12:55:00-04:00'),'g');
+  assert.equal(at('2026-11-20T15:30:00-04:00'),'g');
+  assert.equal(at('2026-11-20T15:45:00-04:00'),undefined);
+  assert.equal(onAirEvent([{...g,status:'final'}],Date.parse('2026-11-20T13:30:00-04:00')),undefined);
+  assert.equal(onAirEvent([{...g,status:'in_progress'}],Date.parse('2026-11-21T09:00:00-04:00'))?.id,'g');
 });

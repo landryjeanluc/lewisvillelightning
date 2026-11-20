@@ -1,0 +1,57 @@
+---
+/** Link to the team's YouTube live stream. Always on the home page; it lights
+ *  up around game time (scripts/home-schedule.ts sets data-state). It is a
+ *  plain link: the site's CSP allows no third-party frames or requests, and we
+ *  cannot ask YouTube whether the stream has actually started. */
+import { team } from "../lib/data";
+const channel = team.youtube_channel?.replace(/\/+$/, "");
+---
+{channel && (
+  <a class="watch" data-watch-live data-state="idle" href={`${channel}/live`} target="_blank" rel="noopener noreferrer">
+    <span class="watch-dot" aria-hidden="true"></span>
+    <span class="watch-text">
+      <strong data-watch-title>Watch our games live</strong>
+      <span class="watch-sub" data-watch-sub>Every game is streamed on our YouTube channel.</span>
+    </span>
+    <span class="watch-go">YouTube <span aria-hidden="true">→</span></span>
+  </a>
+)}
+
+<style>
+  .watch {
+    display: flex; align-items: center; gap: var(--s-4);
+    margin-bottom: var(--s-5); padding: var(--s-3) var(--s-5);
+    border: 1px solid var(--hairline); border-radius: var(--r-xl);
+    background: var(--bg-raised); color: var(--text); text-decoration: none;
+    transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .watch:hover { border-color: var(--volt-500); }
+  .watch-dot { flex: none; width: .7rem; height: .7rem; border-radius: 50%; background: var(--steel-500); }
+  .watch-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .watch-text strong {
+    font-family: var(--font-ui); font-weight: 700; font-size: var(--t-sm);
+    letter-spacing: var(--track-label); text-transform: uppercase; color: var(--white);
+  }
+  .watch-sub { font-size: var(--t-sm); color: var(--text-dim); }
+  .watch-go {
+    flex: none; padding: var(--s-2) var(--s-4); border-radius: 999px;
+    font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 700;
+    letter-spacing: var(--track-label); text-transform: uppercase;
+    color: var(--white); border: 1px solid var(--hairline);
+  }
+  .watch[data-state="today"] .watch-dot { background: var(--volt-500); }
+  .watch[data-state="live"] {
+    padding-block: var(--s-4);
+    border-color: #e5383b; box-shadow: 0 0 40px -10px rgb(229 56 59 / .7);
+    background: linear-gradient(180deg, rgb(229 56 59 / .16), var(--bg-raised));
+  }
+  .watch[data-state="live"] .watch-dot { background: #ff4d4f; animation: watch-pulse 1.4s ease-in-out infinite; }
+  .watch[data-state="live"] .watch-text strong { font-size: var(--t-md); }
+  .watch[data-state="live"] .watch-go { background: #e5383b; border-color: #e5383b; }
+  @keyframes watch-pulse { 50% { opacity: .35; transform: scale(.8); } }
+  @media (prefers-reduced-motion: reduce) { .watch-dot { animation: none !important; } }
+  @media (max-width: 600px) {
+    .watch { padding-inline: var(--s-3); gap: var(--s-3); }
+    .watch-go { padding-inline: var(--s-3); }
+  }
+</style>

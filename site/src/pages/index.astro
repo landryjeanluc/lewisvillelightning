@@ -12,15 +12,19 @@ import PlayerCard from "../components/PlayerCard.astro";
 import HomeGoals from "../components/HomeGoals.astro";
 import NewsFeed from "../components/NewsFeed.astro";
 import InstallApp from "../components/InstallApp.astro";
+import WatchLive from "../components/WatchLive.astro";
+import { isStreamed } from "../lib/schedule";
 import { displayName, team, games, practices, allEvents, results, sides, spotlightFor, spotlightProgress } from "../lib/data";
 import { longDate, time, relativeDay, machine, shortDate } from "../lib/format";
 
 const recent = results();
 const rot = spotlightProgress();
-const homeEvents = allEvents.map(({id, type, startsAt, endsAt, status}) => ({id, type, startsAt, endsAt, status}));
+const homeEvents = allEvents.map(e => ({id: e.id, type: e.type, startsAt: e.startsAt, endsAt: e.endsAt, status: e.status, stream: isStreamed(e)}));
 ---
 <Base wide>
   <HomeGoals slot="header-footer" />
+
+  <WatchLive />
 
   <LiveScoreboard />
 

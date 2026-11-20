@@ -11,6 +11,13 @@ Its ID is oinaiobkbpedpffnkohdkfbhlgfkdbkh.
 The native receiver ca.lewisville.private_capture writes owner-only files on Helios.
 Open the normal Spordle team page, choose a roster/schedule/results view, click
 the extension and Capture this team page. Capture each desired view separately.
+The schedule fills in each day as you scroll and is split into pages: scroll to
+the bottom until every day shows its events before capturing, then use Next and
+capture each further page. "0 tables captured" is normal for the schedule view.
+When this checkout is on Helios itself, pull_helios.py cannot scp to its own
+host; copy browser-captures/*.json and latest-browser.json from
+~/.local/share/lewisville-collector/private/spordle/223790 into
+private/spordle/223790 instead.
 It reads the active page only after a click; it has no cookies or network permissions.
 No automatic refreshing, alarm, or recurring task is enabled.
 

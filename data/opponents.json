@@ -64,6 +64,66 @@
         "secondary": "#707277",
         "accent": "#C8102E"
       }
+    },
+    {
+      "id": "tbd",
+      "name": "To Be Determined",
+      "short": "TBD",
+      "town": null,
+      "crest": null,
+      "colours": {
+        "primary": "#3A4A63",
+        "secondary": "#17202E",
+        "accent": "#8FA3BF"
+      }
+    },
+    {
+      "id": "hampton-u13a-b-huskies",
+      "name": "Hampton Huskies",
+      "short": "Huskies",
+      "town": "Hampton",
+      "crest": null,
+      "colours": {
+        "primary": "#3A4A63",
+        "secondary": "#17202E",
+        "accent": "#8FA3BF"
+      }
+    },
+    {
+      "id": "petitcodiac-salisbury",
+      "name": "Petitcodiac / Salisbury",
+      "short": "Petitcodiac",
+      "town": "Petitcodiac",
+      "crest": null,
+      "colours": {
+        "primary": "#3A4A63",
+        "secondary": "#17202E",
+        "accent": "#8FA3BF"
+      }
+    },
+    {
+      "id": "kent-sud",
+      "name": "Kent Sud Flames",
+      "short": "Flames",
+      "town": "Cocagne",
+      "crest": "assets/brand/kent-sud-flames-crest.png",
+      "colours": {
+        "primary": "#E3000F",
+        "secondary": "#111111",
+        "accent": "#C9A24B"
+      }
+    },
+    {
+      "id": "cole-harbour",
+      "name": "Cole Harbour Wings",
+      "short": "Wings",
+      "town": "Cole Harbour",
+      "crest": "assets/brand/cole-harbour-wings-crest.png",
+      "colours": {
+        "primary": "#D1202F",
+        "secondary": "#111111",
+        "accent": "#FFFFFF"
+      }
     }
   ]
 }
