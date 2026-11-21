@@ -1,0 +1,20 @@
+{
+  "gameId": "g-2026-11-21-kent",
+  "gameDate": "2026-11-21",
+  "startTime": "10:20",
+  "timeZone": "America/Moncton",
+  "venue": "Cap-Pelé Arena, Cap-Pelé, NB",
+  "venueSource": "data/schedule.json lists \"Arena Cap-Pele (Main) - Cap-Pelé, NB\"; written as CAP-PELÉ ARENA to match the series (COCAGNE ARENA, FESTIVAL ARENA).",
+  "event": "Colin Coleman Memorial Tournament, game 3",
+  "eventSource": "JL asked for a banner for today's tournament game against the Bears on November 21, 2026. The schedule marks the game as a tournament game but does not name the tournament; the name is carried over from the November 19 and 20 posters.",
+  "awayTeam": "Lewisville Lightning",
+  "homeTeam": "Kent Centre Bears",
+  "homeAwaySource": "data/schedule.json (home kent-centre, away lewisville-lightning; note: Away Game - White Jersey)",
+  "layout": "Away left, home right: Lightning left, Bears right, same as the November 19 and 20 tournament posters.",
+  "opponentLogo": "assets/brand/kent-centre-bears-crest.png (see output/team-logos/sources.json, kent-centre)",
+  "poster": "output/2026-11-21/lightning-vs-bears-master.png",
+  "prompt": "output/2026-11-21/generation-prompt.txt",
+  "generation": "Higgsfield gpt_image_2_6, 16:9, quality high, 2k (2688x1520), job 04812351-f74a-4a1c-8c64-77d8d75b32df",
+  "referencePoster": "output/2026-11-20/lightning-vs-wings-master.png",
+  "scope": "Banner only; no schedule edits or site deployment."
+}
